@@ -1,0 +1,26 @@
+{
+  "name": "ql-trading-ai-complete",
+  "version": "2.1.0",
+  "description": "QL Trading AI v2.1 FINAL - Complete System",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "NODE_ENV=development node server/index.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.2",
+    "node-telegram-bot-api": "^0.66.0",
+    "pg": "^8.11.5",
+    "uuid": "^9.0.1",
+    "ws": "^8.18.0"
+  }
+}
