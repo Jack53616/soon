@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Subscription keys
-CREATE TABLE IF NOT EXISTS keys (
+CREATE TABLE IF NOT EXISTS subscription_keys (
   id SERIAL PRIMARY KEY,
   key_code TEXT UNIQUE NOT NULL,
   days INT DEFAULT 30,

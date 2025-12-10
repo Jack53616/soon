@@ -21,7 +21,7 @@ export const activate = async (req, res) => {
 
     // Check if key exists and not used
     const keyResult = await query(
-      "SELECT * FROM keys WHERE key_code = $1 AND used_by IS NULL",
+      "SELECT * FROM subscription_keys WHERE key_code = $1 AND used_by IS NULL",
       [key]
     );
 
@@ -72,7 +72,7 @@ export const activate = async (req, res) => {
 
     // Mark key as used
     await query(
-      "UPDATE keys SET used_by = $1, used_at = NOW() WHERE id = $2",
+      "UPDATE subscription_keys SET used_by = $1, used_at = NOW() WHERE id = $2",
       [tg_id, keyData.id]
     );
 

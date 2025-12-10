@@ -2,20 +2,36 @@
 import dotenv from "dotenv";
 import TelegramBot from "node-telegram-bot-api";
 import pkg from "pg";
+import path from "path";
+import { fileURLToPath } from "url";
+
 const { Pool } = pkg;
 
-dotenv.config();
+// Explicitly load .env from project root
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 console.log("🤖 Telegram bot initialized via webhook mode");
 
-const { BOT_TOKEN, ADMIN_ID, DATABASE_URL } = process.env;
+const { BOT_TOKEN, ADMIN_ID } = process.env;
+
+// Fallback to hardcoded URL if env var is wrong
+const CORRECT_DB_URL = "postgresql://jack_is2t_user:xUCymi9CMft6fG1ZpkVaxEyBRXaWZB47@dpg-d4s8o3vpm1nc7390j2l0-a.virginia-postgres.render.com/jack_is2t";
+const DATABASE_URL = process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith("postgres") 
+  ? process.env.DATABASE_URL 
+  : CORRECT_DB_URL;
+
 if (!BOT_TOKEN) { console.error("BOT_TOKEN missing"); process.exit(1); }
-if (!DATABASE_URL) { console.error("DATABASE_URL missing"); process.exit(1); }
 
 const bot = new TelegramBot(BOT_TOKEN);
 console.log("✅ Connected to PostgreSQL via", (DATABASE_URL||"").split("@").pop());
+
+// Force SSL for Render/Neon databases
+const sslConfig = { rejectUnauthorized: false };
+
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: process.env.PGSSLMODE ? { rejectUnauthorized: false } : false
+  ssl: sslConfig // Always enforce SSL
 });
 
 const INVISIBLE_CHARS = /[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g;
@@ -218,7 +234,7 @@ bot.onText(/^\/create_key\s+(\S+)(?:\s+(\d+))?$/, async (msg, m) => {
   const key = cleanKey(m[1]); const days = Number(m[2] || 30);
   if (!key) return bot.sendMessage(msg.chat.id, "❌ Invalid key format");
   try {
-    await q(`INSERT INTO keys (key_code, days) VALUES ($1,$2)`, [key, days]);
+    await q(`INSERT INTO subscription_keys (key_code, days) VALUES ($1,$2)`, [key, days]);
     console.log("🧩 New key created:", key, days, "days");
     bot.sendMessage(msg.chat.id, `✅ Key created: ${key} (${days}d)`);
   } catch (e) { bot.sendMessage(msg.chat.id, `❌ ${e.message}`); }
