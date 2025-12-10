@@ -17,7 +17,7 @@ import analyticsRoutes from "./routes/analytics.routes.js";
 import leaderboardRoutes from "./routes/leaderboard.routes.js";
 
 // Bot
-import bot from "../bot/bot.js";
+import bot from "./bot/bot.js";
 
 // Services
 import { startTradingEngine } from "./services/tradingEngine.js";

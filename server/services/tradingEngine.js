@@ -1,5 +1,5 @@
 import { query } from "../config/db.js";
-import bot from "../../bot/bot.js";
+import bot from "../bot/bot.js";
 
 // Real Gold price cache
 let goldPriceCache = 2650;

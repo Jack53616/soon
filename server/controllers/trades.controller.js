@@ -1,6 +1,6 @@
 import { query } from "../config/db.js";
 import { validateTelegramId } from "../config/security.js";
-import bot from "../../bot/bot.js";
+import bot from "../bot/bot.js";
 
 export const getActiveTrades = async (req, res) => {
   try {
