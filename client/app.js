@@ -834,14 +834,23 @@ function startFeed(){
     
     const r = Math.random();
     const name = names[Math.floor(Math.random()*names.length)];
-    if(r<0.34){
+    
+    if(r < 0.25){
+      // Withdrawal (25%)
       const v = 50+Math.floor(Math.random()*200);
       push(`🪙 ${name} سحب ${v}$ بنجاح`);
-    }else if(r<0.67){
+    } else if(r < 0.55){
+      // Profit (30%)
       const v = 20+Math.floor(Math.random()*120);
       const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
       push(`💰 ${name} ربح ${v}$ من صفقة ${m}`);
-    }else{
+    } else if(r < 0.75){
+      // Loss (20%) - NEW
+      const v = 10+Math.floor(Math.random()*80);
+      const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
+      push(`🔻 ${name} خسر ${v}$ في صفقة ${m}`);
+    } else {
+      // New Deposit (25%)
       const v = 150+Math.floor(Math.random()*400);
       push(`🎉 مستخدم جديد انضم وأودع ${v}$`);
     }
