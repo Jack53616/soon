@@ -246,22 +246,22 @@ bot.onText(/^\/help$/, (msg) => {
 🛠 *Admin Dashboard*
 
 👤 *User Management*
-`/addbalance <tg_id> <amount>` - Add/Deduct balance
-`/setstats <tg_id> <wins> <losses>` - Set custom stats
-`/create_key <KEY> <DAYS>` - Create subscription key
+\`/addbalance <tg_id> <amount>\` - Add/Deduct balance
+\`/setstats <tg_id> <wins> <losses>\` - Set custom stats
+\`/create_key <KEY> <DAYS>\` - Create subscription key
 
 📈 *Trading Operations*
-`/open <tg_id> <hours> <target>` - Open smart trade
-`/close_trade <trade_id> <pnl>` - Force close trade
-`/setdaily <tg_id> <amount>` - Set daily profit target
+\`/open <tg_id> <hours> <target>\` - Open smart trade
+\`/close_trade <trade_id> <pnl>\` - Force close trade
+\`/setdaily <tg_id> <amount>\` - Set daily profit target
 
 💸 *Withdrawals*
-`/approve_withdraw <id>` - Approve request
-`/reject_withdraw <id> <reason>` - Reject request
+\`/approve_withdraw <id>\` - Approve request
+\`/reject_withdraw <id> <reason>\` - Reject request
 
 📢 *Communication*
-`/broadcast all <message>` - Send to all users
-`/notify <tg_id> <message>` - Send private message
+\`/broadcast all <message>\` - Send to all users
+\`/notify <tg_id> <message>\` - Send private message
   `.trim());
 });
 
