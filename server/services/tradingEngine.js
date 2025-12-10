@@ -161,8 +161,9 @@ const updateTrades = async () => {
         });
 
         // Check if should close
-        const elapsed = Math.floor((new Date() - new Date(trade.opened_at)) / 1000);
-        const duration = Number(trade.duration_seconds) || 3600;
+        // elapsed is already calculated above
+        // const elapsed = Math.floor((new Date() - new Date(trade.opened_at)) / 1000);
+        // const duration = Number(trade.duration_seconds) || 3600;
         const target_pnl = Number(trade.target_pnl) || 0;
         
         let shouldClose = false;
