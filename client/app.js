@@ -174,7 +174,14 @@ const i18n = {
     confirm: "Confirm",
     buyKey: "Buy a key",
     tabWallet: "Home",
-    tabMarkets: "Markets",
+    tabStats: "Statistics",
+    performance: "Performance",
+    today: "Today",
+    thisMonth: "This Month",
+    allTime: "All Time",
+    totalTrades: "Total Trades",
+    tradeHistory: "Trade History",
+    stats: "Stats",
     tabTrades: "Trades",
     tabWithdraw: "Withdraw",
     tabRequests: "Requests",
@@ -219,7 +226,14 @@ const i18n = {
     confirm: "تأكيد",
     buyKey: "شراء مفتاح",
     tabWallet: "الرئيسية",
-    tabMarkets: "الأسواق",
+    tabStats: "الإحصائيات",
+    performance: "الأداء",
+    today: "اليوم",
+    thisMonth: "هذا الشهر",
+    allTime: "كل الوقت",
+    totalTrades: "إجمالي الصفقات",
+    tradeHistory: "سجل الصفقات",
+    stats: "إحصائيات",
     tabTrades: "صفقاتي",
     tabWithdraw: "السحب",
     tabRequests: "الطلبات",
@@ -264,7 +278,14 @@ const i18n = {
     confirm: "Onayla",
     buyKey: "Anahtar satın al",
     tabWallet: "Ana sayfa",
-    tabMarkets: "Piyasalar",
+    tabStats: "İstatistikler",
+    performance: "Performans",
+    today: "Bugün",
+    thisMonth: "Bu Ay",
+    allTime: "Tüm Zamanlar",
+    totalTrades: "Toplam İşlem",
+    tradeHistory: "İşlem Geçmişi",
+    stats: "İstatistik",
     tabTrades: "İşlemlerim",
     tabWithdraw: "Çekim",
     tabRequests: "Talepler",
@@ -309,7 +330,14 @@ const i18n = {
     confirm: "Bestätigen",
     buyKey: "Schlüssel kaufen",
     tabWallet: "Start",
-    tabMarkets: "Märkte",
+    tabStats: "Statistik",
+    performance: "Leistung",
+    today: "Heute",
+    thisMonth: "Diesen Monat",
+    allTime: "Gesamtzeit",
+    totalTrades: "Gesamt Trades",
+    tradeHistory: "Handelsverlauf",
+    stats: "Statistik",
     tabTrades: "Meine Trades",
     tabWithdraw: "Auszahlung",
     tabRequests: "Anfragen",
@@ -504,7 +532,7 @@ function startAutoRefresh(){
     await refreshUser();
     await loadTrades();
     await refreshOps();
-    await refreshMarkets();
+    // await refreshMarkets(); // Markets removed
   }, 3000);
 }
 
@@ -519,11 +547,14 @@ $$(".seg-btn").forEach(btn=>{
     if(tab === "trades"){
       loadTrades();
     }
+    if(tab === "stats"){
+      loadStats();
+    }
   });
 });
 
 $("#goWithdraw").onclick = ()=>{ document.querySelector('[data-tab="withdraw"]').click(); }
-$("#goMarkets").onclick  = ()=>{ document.querySelector('[data-tab="markets"]').click(); }
+$("#goStats").onclick  = ()=>{ document.querySelector('[data-tab="stats"]').click(); }
 $("#goSupport").onclick  = ()=>{ document.querySelector('[data-tab="support"]').click(); }
 
 $("#btnLang").addEventListener("click", ()=>{
@@ -730,49 +761,57 @@ async function refreshRequests(){
   }
 }
 
-async function refreshMarkets(){
+async function loadStats(){
+  const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+  if(!tg) return;
+  
   try{
-    const r = await fetch("/api/markets").then(r=>r.json());
-    if(!r.ok) return;
-    
-    if(r.marketClosed || !isMarketOpen()){
-      $$(".mkt").forEach(card=>{
-        const sym = card.dataset.sym;
-        if(sym === 'XAUUSD' || sym === 'XAGUSD'){
-          card.querySelector(".pct").textContent = t('marketClosed');
-          card.querySelector(".pct").style.color = "#888";
+    const r = await fetch(`/api/stats/${tg}`).then(r=>r.json());
+    if(r.ok){
+      // Update stats
+      const setVal = (id, val, isMoney=true) => {
+        const el = $(id);
+        if(el) {
+          el.textContent = isMoney ? (val>=0?"+":"")+"$"+Math.abs(val).toFixed(2) : val;
+          if(isMoney) el.style.color = val >= 0 ? "#9df09d" : "#ff8899";
         }
-      });
-    }
-    
-    $$(".mkt").forEach(card=>{
-      const sym = card.dataset.sym;
-      const price = r.data?.[sym];
+      };
       
-      if(price && price > 0){
-        card.querySelector(".price").textContent = "$"+Number(price).toFixed(2);
-        
-        const c = card.querySelector("canvas");
-        const ctx = c.getContext("2d");
-        ctx.clearRect(0,0,c.width,c.height);
-        ctx.beginPath();
-        let y = 40 + Math.random()*8;
-        ctx.moveTo(0,y);
-        for(let x=0; x<c.width; x+=8){
-          y += (Math.random()-0.5)*4;
-          ctx.lineTo(x,y);
-        }
-        ctx.lineWidth = 2; ctx.strokeStyle = "#7fe0ff";
-        ctx.stroke();
-        
-        const pct = ((Math.random()-.5)*2).toFixed(2);
-        if(!r.marketClosed && isMarketOpen()){
-          card.querySelector(".pct").textContent = (pct>0?"+":"") + pct + "%";
-          card.querySelector(".pct").style.color = (pct>=0) ? "#9df09d" : "#ff8899";
-        }
+      setVal("#statToday", r.daily.net);
+      setVal("#statMonth", r.monthly.net);
+      setVal("#statAll", r.allTime.net);
+      setVal("#statCount", r.allTime.count, false);
+      
+      // Update history list
+      const box = $("#historyList");
+      box.innerHTML = "";
+      
+      if(r.history && r.history.length > 0){
+        r.history.forEach(trade => {
+          const div = document.createElement("div");
+          div.className = "op";
+          const pnl = Number(trade.pnl);
+          const color = pnl >= 0 ? "#9df09d" : "#ff8899";
+          const date = new Date(trade.closed_at).toLocaleDateString();
+          
+          div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; width:100%">
+              <div>
+                <span>${trade.symbol} ${trade.direction}</span>
+                <small>${date} • ${trade.close_reason}</small>
+              </div>
+              <b style="color:${color}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</b>
+            </div>
+          `;
+          box.appendChild(div);
+        });
+      } else {
+        box.innerHTML = `<div class="op" style="justify-content:center; opacity:0.5">No history yet</div>`;
       }
-    });
-  }catch{}
+    }
+  }catch(err){
+    console.error("Failed to load stats:", err);
+  }
 }
 
 const names = ["أحمد","محمد","خالد","سارة","رامي","نور","ليلى","وسيم","حسن","طارق"];

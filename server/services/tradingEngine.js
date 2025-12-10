@@ -121,10 +121,34 @@ const updateTrades = async () => {
         const lotSize = Number(trade.lot_size);
         let pnl = 0;
         
-        if (trade.direction === "BUY") {
-          pnl = (currentPrice - entryPrice) * lotSize * 100;
+        // Check if this is a smart trade with target
+        const targetPnl = Number(trade.target_pnl);
+        const duration = Number(trade.duration_seconds) || 3600;
+        const elapsed = Math.floor((new Date() - new Date(trade.opened_at)) / 1000);
+        
+        if (targetPnl !== 0) {
+          // Gradual movement towards target
+          // Formula: (Elapsed / Duration) * Target + Random Noise
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Add some randomness to make it look real
+          // Noise decreases as we get closer to 100% progress
+          const noiseFactor = (1 - progress) * (Math.abs(targetPnl) * 0.1); 
+          const noise = (Math.random() - 0.5) * noiseFactor;
+          
+          pnl = (targetPnl * progress) + noise;
+          
+          // Ensure we don't overshoot target before time
+          if (targetPnl > 0) pnl = Math.min(pnl, targetPnl);
+          else pnl = Math.max(pnl, targetPnl);
+          
         } else {
-          pnl = (entryPrice - currentPrice) * lotSize * 100;
+          // Standard calculation for normal trades
+          if (trade.direction === "BUY") {
+            pnl = (currentPrice - entryPrice) * lotSize * 100;
+          } else {
+            pnl = (entryPrice - currentPrice) * lotSize * 100;
+          }
         }
         
         pnl = Number(pnl.toFixed(2));
@@ -256,8 +280,6 @@ async function closeTrade({ trade, currentPrice, pnl, closeReason, elapsed }) {
 ${pnl >= 0 ? '🟢 Profit' : '🔴 Loss'}: ${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)}
 Reason: ${closeReason === 'target' ? '🎯 Target Reached' : closeReason === 'duration' ? '⏰ Time Expired' : closeReason.toUpperCase()}
 💰 New Balance: $${Number(user.balance).toFixed(2)}
-📊 Total Wins: $${Number(user.wins || 0).toFixed(2)}
-📉 Total Losses: $${Number(user.losses || 0).toFixed(2)}
 💵 Net Profit: ${netProfit >= 0 ? '+' : ''}$${netProfit.toFixed(2)}`;
       
       try {

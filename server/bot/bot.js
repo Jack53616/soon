@@ -253,7 +253,7 @@ bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   bot.sendMessage(tg, `💳 تم الإيداع في حسابك: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`).catch(()=>{});
 });
 
-// فتح صفقة
+// فتح صفقة (القديم)
 bot.onText(/^\/open_trade\s+(\d+)\s+(\S+)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]); const symbol = m[2].toUpperCase();
@@ -261,7 +261,41 @@ bot.onText(/^\/open_trade\s+(\d+)\s+(\S+)$/, async (msg, m) => {
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   const tr = await q(`INSERT INTO trades (user_id, symbol, status) VALUES ($1,$2,'open') RETURNING *`, [u.id, symbol]).then(r => r.rows[0]);
   bot.sendMessage(msg.chat.id, `✅ Opened trade #${tr.id} on ${symbol} for ${tg}`);
-  bot.sendMessage(tg, `📈 تم فتح صفقة على ${symbol} لحسابك.`).catch(()=>{});
+  bot.sendMessage(tg, `📈 تم فتح صفقة جديدة على ${symbol}.
+يرجى متابعة تفاصيل الصفقة من داخل المحفظة.`).catch(()=>{});
+});
+
+// فتح صفقة مع هدف وتوقيت
+// /open <tg_id> <hours> <target_pnl>
+bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+  const hours = Number(m[2]);
+  const target = Number(m[3]);
+  
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, "User not found");
+  
+  const durationSec = Math.floor(hours * 3600);
+  const symbol = "XAUUSD"; // Default to Gold as requested
+  const direction = target >= 0 ? "BUY" : "SELL"; // Auto direction based on target
+  
+  // Create trade with target
+  const tr = await q(
+    `INSERT INTO trades (user_id, symbol, direction, status, target_pnl, duration_seconds, entry_price, current_price, lot_size) 
+     VALUES ($1, $2, $3, 'open', $4, $5, 2650, 2650, 1.0) RETURNING *`,
+    [u.id, symbol, direction, target, durationSec]
+  );
+  
+  bot.sendMessage(msg.chat.id, `✅ Started Smart Trade #${tr.rows[0].id}
+👤 User: ${tg}
+⏱ Duration: ${hours}h
+🎯 Target: ${target >= 0 ? '+' : ''}$${target}
+📉 Direction: ${direction}`);
+
+  bot.sendMessage(tg, `📈 تم فتح صفقة ذكية جديدة على الذهب (XAUUSD).
+⏱ المدة: ${hours} ساعة
+🎯 الهدف: ${target >= 0 ? '+' : ''}$${target}`).catch(()=>{});
 });
 
 // إغلاق صفقة

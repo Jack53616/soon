@@ -68,6 +68,7 @@ body:not(.is-gated) #gate{
 .gate .bg{
   position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:blur(6px) brightness(.5);
   z-index:-1;
+  pointer-events: none;
 }
 .gate .glass{position:relative; z-index:1;}
 .card.glass{
@@ -75,16 +76,18 @@ body:not(.is-gated) #gate{
   border:1px solid #ffffff1a;
   border-radius:16px; padding:18px; box-shadow:0 10px 40px #00000066; backdrop-filter: blur(12px);
 }
-.gate-card{ width:min(480px,92%); z-index:2; animation:fadeIn .8s ease}
+.gate-card{ width:min(480px,92%); z-index:2; animation:fadeIn .8s ease; pointer-events: auto; }
 .g-title{font-size:20px; font-weight:800; margin-bottom:6px}
 .g-sub{font-size:13px; color:var(--muted); margin-bottom:14px}
 .input{
   width:100%; padding:12px 14px; border-radius:12px; border:1px solid #ffffff22; background:#0e0d14; color:var(--txt); outline:none; margin-bottom:10px;
+  touch-action: manipulation;
 }
 .row{display:flex; gap:10px; flex-wrap:wrap}
 .btn{
   flex:1; padding:12px 14px; border-radius:12px; border:1px solid #6e40ff66; color:#fff; background:linear-gradient(180deg,#6e40ff,#522acb);
   box-shadow:0 8px 24px #6e40ff55; cursor:pointer; font-weight:700; transition:transform .1s ease, filter .2s;
+  touch-action: manipulation;
 }
 .btn:active{transform:scale(.98)}
 .btn.ghost{
@@ -283,4 +286,42 @@ body:not(.is-gated) #gate{
   border-radius:999px;
   background:#ffffff12;
   color:var(--muted);
+}
+
+/* Statistics Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat-box {
+  background: #0e0d14;
+  border: 1px solid #ffffff12;
+  padding: 12px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.stat-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+#historyList .op {
+  font-size: 13px;
+}
+
+#historyList .op small {
+  display: block;
+  opacity: 0.6;
+  font-size: 11px;
+  margin-top: 2px;
 }

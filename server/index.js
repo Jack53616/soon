@@ -64,6 +64,83 @@ app.use("/api/markets", marketsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 
+// Get user statistics (Direct endpoint for frontend)
+app.get("/api/stats/:tg_id", async (req, res) => {
+  try {
+    const user = await pool.query("SELECT id FROM users WHERE tg_id = $1", [req.params.tg_id]);
+    if (user.rows.length === 0) return res.json({ ok: false, error: "User not found" });
+    
+    const userId = user.rows[0].id;
+    
+    // Calculate daily PnL (today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const dailyStats = await pool.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses
+      FROM trades_history 
+      WHERE user_id = $1 AND closed_at >= $2
+    `, [userId, today.toISOString()]);
+    
+    // Calculate monthly PnL (this month)
+    const month = new Date();
+    month.setDate(1);
+    month.setHours(0, 0, 0, 0);
+    
+    const monthlyStats = await pool.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses
+      FROM trades_history 
+      WHERE user_id = $1 AND closed_at >= $2
+    `, [userId, month.toISOString()]);
+    
+    // Get all time stats
+    const allTimeStats = await pool.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses,
+        COUNT(*) as total_trades
+      FROM trades_history 
+      WHERE user_id = $1
+    `, [userId]);
+
+    // Get recent history
+    const history = await pool.query(`
+      SELECT * FROM trades_history 
+      WHERE user_id = $1 
+      ORDER BY closed_at DESC 
+      LIMIT 20
+    `, [userId]);
+    
+    res.json({
+      ok: true,
+      daily: {
+        wins: Number(dailyStats.rows[0].wins),
+        losses: Number(dailyStats.rows[0].losses),
+        net: Number(dailyStats.rows[0].wins) - Number(dailyStats.rows[0].losses)
+      },
+      monthly: {
+        wins: Number(monthlyStats.rows[0].wins),
+        losses: Number(monthlyStats.rows[0].losses),
+        net: Number(monthlyStats.rows[0].wins) - Number(monthlyStats.rows[0].losses)
+      },
+      allTime: {
+        wins: Number(allTimeStats.rows[0].wins),
+        losses: Number(allTimeStats.rows[0].losses),
+        net: Number(allTimeStats.rows[0].wins) - Number(allTimeStats.rows[0].losses),
+        count: Number(allTimeStats.rows[0].total_trades)
+      },
+      history: history.rows
+    });
+    
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // Telegram Webhook
 app.post(`/webhook/${process.env.BOT_TOKEN}`, (req, res) => {
   bot.processUpdate(req.body);

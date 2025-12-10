@@ -49,7 +49,7 @@
       </div>
       <nav class="seg glass">
         <button class="seg-btn active" data-tab="wallet" data-i18n="tabWallet">Home</button>
-        <button class="seg-btn" data-tab="markets" data-i18n="tabMarkets">Markets</button>
+        <button class="seg-btn" data-tab="stats" data-i18n="tabStats">Statistics</button>
         <button class="seg-btn" data-tab="trades" data-i18n="tabTrades">Trades</button>
         <button class="seg-btn" data-tab="withdraw" data-i18n="tabWithdraw">Withdraw</button>
         <button class="seg-btn" data-tab="requests" data-i18n="tabRequests">Requests</button>
@@ -73,7 +73,7 @@
 
           <div class="quick">
             <button class="qa" id="goWithdraw">⬇<small data-i18n="withdraw">Withdraw</small></button>
-            <button class="qa" id="goMarkets">📈<small data-i18n="markets">Markets</small></button>
+            <button class="qa" id="goStats">📊<small data-i18n="stats">Stats</small></button>
             <button class="qa" id="goSupport">🛟<small data-i18n="support">Support</small></button>
           </div>
         </div>
@@ -103,13 +103,33 @@
         </div>
       </section>
 
-      <!-- Markets -->
-      <section id="tab-markets" class="tab">
-        <div class="grid">
-          <div class="mkt glass" data-sym="XAUUSD"><div class="mh"><b>Gold</b><span class="pct">+0.0%</span></div><div class="price">$—</div><canvas class="spark" width="340" height="60"></canvas></div>
-          <div class="mkt glass" data-sym="XAGUSD"><div class="mh"><b>Silver</b><span class="pct">+0.0%</span></div><div class="price">$—</div><canvas class="spark" width="340" height="60"></canvas></div>
-          <div class="mkt glass" data-sym="BTCUSDT"><div class="mh"><b>BTC</b><span class="pct">+0.0%</span></div><div class="price">$—</div><canvas class="spark" width="340" height="60"></canvas></div>
-          <div class="mkt glass" data-sym="ETHUSDT"><div class="mh"><b>ETH</b><span class="pct">+0.0%</span></div><div class="price">$—</div><canvas class="spark" width="340" height="60"></canvas></div>
+      <!-- Statistics -->
+      <section id="tab-stats" class="tab">
+        <div class="card glass">
+          <div class="c-title" data-i18n="performance">Performance</div>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-label" data-i18n="today">Today</div>
+              <div class="stat-val" id="statToday">$0.00</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label" data-i18n="thisMonth">This Month</div>
+              <div class="stat-val" id="statMonth">$0.00</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label" data-i18n="allTime">All Time</div>
+              <div class="stat-val" id="statAll">$0.00</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label" data-i18n="totalTrades">Total Trades</div>
+              <div class="stat-val" id="statCount">0</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card glass" style="margin-top:12px">
+          <div class="c-title" data-i18n="tradeHistory">Trade History</div>
+          <div id="historyList" class="ops"></div>
         </div>
       </section>
 
