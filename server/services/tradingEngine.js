@@ -127,20 +127,24 @@ const updateTrades = async () => {
         const elapsed = Math.floor((new Date() - new Date(trade.opened_at)) / 1000);
         
         if (targetPnl !== 0) {
-          // Gradual movement towards target
-          // Formula: (Elapsed / Duration) * Target + Random Noise
+          // Gradual movement towards target with realistic fluctuation
           const progress = Math.min(elapsed / duration, 1);
           
-          // Add some randomness to make it look real
-          // Noise decreases as we get closer to 100% progress
-          const noiseFactor = (1 - progress) * (Math.abs(targetPnl) * 0.1); 
-          const noise = (Math.random() - 0.5) * noiseFactor;
+          // Base PnL follows the progress line
+          const basePnl = targetPnl * progress;
           
-          pnl = (targetPnl * progress) + noise;
+          // Add significant noise to simulate market volatility
+          // Noise is higher in the middle of the trade and reduces near the end
+          // Max noise is 30% of the target value
+          const volatility = Math.sin(progress * Math.PI) * (Math.abs(targetPnl) * 0.3);
+          const randomNoise = (Math.random() - 0.5) * 2 * volatility;
           
-          // Ensure we don't overshoot target before time
-          if (targetPnl > 0) pnl = Math.min(pnl, targetPnl);
-          else pnl = Math.max(pnl, targetPnl);
+          pnl = basePnl + randomNoise;
+          
+          // Ensure final value matches target exactly when time is up
+          if (progress >= 0.99) {
+            pnl = targetPnl;
+          }
           
         } else {
           // Standard calculation for normal trades

@@ -196,35 +196,72 @@ async function q(sql, params = []) {
 const isAdmin = (msg) => Number(msg?.from?.id) === Number(ADMIN_ID);
 
 // رسالة ترحيب خارج الويب
-bot.onText(/^\/start$/, (msg) => {
-  const t = `👋 Welcome to QL Trading AI
+bot.onText(/^\/start$/, async (msg) => {
+  const name = msg.from.first_name;
+  const welcomeCaption = `👋 *Welcome to QL Trading AI, ${name}!*
+  
+🚀 Your smart trading wallet is ready.
 🤖 The smart trading bot that works automatically for you.
 💰 Just deposit funds and watch profits added to your wallet.
 📊 Track balance, trades, and withdrawals inside your wallet.
 🕒 24/7 support via WhatsApp or Telegram.
 
-👋 أهلاً بك في QL Trading AI
+👋 *أهلاً بك في QL Trading AI*
 🤖 البوت الذكي الذي يعمل تلقائياً لإدارة تداولاتك.
 💰 كل ما عليك هو الإيداع وانتظر الأرباح تُضاف تلقائياً.
 📊 تابع رصيدك، صفقاتك، وطلبات السحب من داخل المحفظة.
-🕒 دعم 24/7 عبر واتساب أو تيليجرام.`;
-  bot.sendMessage(msg.chat.id, t);
+🕒 دعم 24/7 عبر واتساب أو تيليجرام.
+
+👇 *Click below to access your dashboard:*`;
+
+  // Send photo with caption
+  const photoUrl = `${process.env.WEBAPP_URL}/public/bot_welcome.jpg`;
+  
+  try {
+    await bot.sendPhoto(msg.chat.id, photoUrl, {
+      caption: welcomeCaption,
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📱 Open Wallet | فتح المحفظة", web_app: { url: process.env.WEBAPP_URL } }],
+          [{ text: "💬 Support | الدعم الفني", url: "https://t.me/QL_Support" }]
+        ]
+      }
+    });
+  } catch (e) {
+    // Fallback if photo fails
+    bot.sendMessage(msg.chat.id, welcomeCaption, {
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: [[{ text: "📱 Open Wallet | فتح المحفظة", web_app: { url: process.env.WEBAPP_URL } }]]
+      }
+    });
+  }
 });
 
 // ===== أوامر الأدمن =====
 bot.onText(/^\/help$/, (msg) => {
   if (!isAdmin(msg)) return;
   bot.sendMessage(msg.chat.id, `
-🛠 Admin Commands
-/create_key <KEY> <DAYS>
-/addbalance <tg_id> <amount>
-/open_trade <tg_id> <symbol>
-/close_trade <trade_id> <pnl>
-/setdaily <tg_id> <amount>
-/approve_withdraw <id>
-/reject_withdraw <id> <reason>
-/broadcast all <message>
-/notify <tg_id> <message>
+🛠 *Admin Dashboard*
+
+👤 *User Management*
+`/addbalance <tg_id> <amount>` - Add/Deduct balance
+`/setstats <tg_id> <wins> <losses>` - Set custom stats
+`/create_key <KEY> <DAYS>` - Create subscription key
+
+📈 *Trading Operations*
+`/open <tg_id> <hours> <target>` - Open smart trade
+`/close_trade <trade_id> <pnl>` - Force close trade
+`/setdaily <tg_id> <amount>` - Set daily profit target
+
+💸 *Withdrawals*
+`/approve_withdraw <id>` - Approve request
+`/reject_withdraw <id> <reason>` - Reject request
+
+📢 *Communication*
+`/broadcast all <message>` - Send to all users
+`/notify <tg_id> <message>` - Send private message
   `.trim());
 });
 
@@ -296,6 +333,24 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
   bot.sendMessage(tg, `📈 تم فتح صفقة ذكية جديدة على الذهب (XAUUSD).
 ⏱ المدة: ${hours} ساعة
 🎯 الهدف: ${target >= 0 ? '+' : ''}$${target}`).catch(()=>{});
+});
+
+// تعيين إحصائيات مخصصة
+// /setstats <tg_id> <wins> <losses>
+bot.onText(/^\/setstats\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+  const wins = Number(m[2]);
+  const losses = Number(m[3]);
+  
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, "User not found");
+  
+  await q(`UPDATE users SET wins=$1, losses=$2 WHERE id=$3`, [wins, losses, u.id]);
+  
+  bot.sendMessage(msg.chat.id, `✅ Updated stats for user ${tg}:
+🟢 Wins: $${wins}
+🔴 Losses: $${losses}`);
 });
 
 // إغلاق صفقة
