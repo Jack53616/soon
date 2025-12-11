@@ -72,6 +72,11 @@ app.get("/api/stats/:tg_id", async (req, res) => {
     
     const userId = user.rows[0].id;
     
+    // Get user manual stats
+    const userStats = await pool.query("SELECT wins, losses FROM users WHERE id = $1", [userId]);
+    const manualWins = Number(userStats.rows[0].wins || 0);
+    const manualLosses = Number(userStats.rows[0].losses || 0);
+
     // Calculate daily PnL (today)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -97,7 +102,7 @@ app.get("/api/stats/:tg_id", async (req, res) => {
       WHERE user_id = $1 AND closed_at >= $2
     `, [userId, month.toISOString()]);
     
-    // Get all time stats
+    // Get all time stats (Real + Manual)
     const allTimeStats = await pool.query(`
       SELECT 
         COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
@@ -128,9 +133,9 @@ app.get("/api/stats/:tg_id", async (req, res) => {
         net: Number(monthlyStats.rows[0].wins) - Number(monthlyStats.rows[0].losses)
       },
       allTime: {
-        wins: Number(allTimeStats.rows[0].wins),
-        losses: Number(allTimeStats.rows[0].losses),
-        net: Number(allTimeStats.rows[0].wins) - Number(allTimeStats.rows[0].losses),
+        wins: Number(allTimeStats.rows[0].wins) + manualWins,
+        losses: Number(allTimeStats.rows[0].losses) + manualLosses,
+        net: (Number(allTimeStats.rows[0].wins) + manualWins) - (Number(allTimeStats.rows[0].losses) + manualLosses),
         count: Number(allTimeStats.rows[0].total_trades)
       },
       history: history.rows

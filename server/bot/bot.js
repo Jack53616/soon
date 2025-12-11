@@ -328,7 +328,9 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
 👤 User: ${tg}
 ⏱ Duration: ${hours}h
 🎯 Target: ${target >= 0 ? '+' : ''}$${target}
-📉 Direction: ${direction}`);
+📉 Direction: ${direction}
+
+⚠️ *Note:* The target PnL is hidden from the user in the app.`);
 
   bot.sendMessage(tg, `📈 تم فتح صفقة ذكية جديدة على الذهب (XAUUSD).
 ⏱ المدة: ${hours} ساعة
