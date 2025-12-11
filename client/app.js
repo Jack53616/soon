@@ -891,7 +891,7 @@ async function loadTrades(){
           <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:8px;">
             <div style="flex:1;">
               <div>${trade.symbol} ${trade.direction} (${trade.lot_size})</div>
-              <small style="opacity:0.6">⏱ ${timeStr} | 🎯 ${target >= 0 ? '+' : ''}$${target}</small>
+              <small style="opacity:0.6">⏱ ${timeStr}</small>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
               <b style="color:${pnlColor}">${pnlSign}$${pnl.toFixed(2)}</b>
