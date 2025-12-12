@@ -333,9 +333,13 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
 
 ⚠️ *Note:* The target PnL is hidden from the user in the app.`);
 
-  bot.sendMessage(tg, `📈 تم فتح صفقة ذكية جديدة على الذهب (XAUUSD).
-⏱ المدة: ${hours} ساعة
-🎯 الهدف: ${target >= 0 ? '+' : ''}$${target}`).catch(()=>{});
+  bot.sendMessage(tg, `🚀 *New Smart Trade Activated*
+
+🔸 *Symbol:* XAUUSD (Gold)
+⏱ *Duration:* ${hours} Hours
+📊 *Status:* Active & Monitored
+
+💡 _Check your wallet for live updates._`).catch(()=>{});
 });
 
 // تعيين إحصائيات مخصصة (إضافة رصيد وهمي للإحصائيات)
