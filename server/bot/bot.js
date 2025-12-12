@@ -247,7 +247,8 @@ bot.onText(/^\/help$/, (msg) => {
 
 👤 *User Management*
 \`/addbalance <tg_id> <amount>\` - Add/Deduct balance
-\`/setstats <tg_id> <wins> <losses>\` - Set custom stats
+\`/setstats <tg_id> <wins> <losses>\` - Add manual stats
+\`/resetstats <tg_id>\` - Reset manual stats
 \`/create_key <KEY> <DAYS>\` - Create subscription key
 
 📈 *Trading Operations*
@@ -337,9 +338,9 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
 🎯 الهدف: ${target >= 0 ? '+' : ''}$${target}`).catch(()=>{});
 });
 
-// تعيين إحصائيات مخصصة
+// تعيين إحصائيات مخصصة (إضافة رصيد وهمي للإحصائيات)
 // /setstats <tg_id> <wins> <losses>
-bot.onText(/^\/setstats\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
+bot.onText(/\/setstats\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]);
   const wins = Number(m[2]);
@@ -350,9 +351,28 @@ bot.onText(/^\/setstats\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)$/, async (ms
   
   await q(`UPDATE users SET wins=$1, losses=$2 WHERE id=$3`, [wins, losses, u.id]);
   
-  bot.sendMessage(msg.chat.id, `✅ Updated stats for user ${tg}:
-🟢 Wins: $${wins}
-🔴 Losses: $${losses}`);
+  bot.sendMessage(msg.chat.id, `✅ Added MANUAL stats for user ${tg}:
+🟢 Extra Wins: +$${wins}
+🔴 Extra Losses: +$${losses}
+
+⚠️ Note: These numbers are ADDED to the real trade history.
+Total displayed = Real Trades + These Numbers.
+Use /resetstats to clear these.`);
+});
+
+// تصفير الإحصائيات اليدوية
+// /resetstats <tg_id>
+bot.onText(/\/resetstats\s+(\d+)/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+  
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, "User not found");
+  
+  await q(`UPDATE users SET wins=0, losses=0 WHERE id=$1`, [u.id]);
+  
+  bot.sendMessage(msg.chat.id, `✅ Manual stats reset for user ${tg}.
+Now showing only REAL trade history.`);
 });
 
 // إغلاق صفقة
