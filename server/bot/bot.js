@@ -246,7 +246,8 @@ bot.onText(/^\/help$/, (msg) => {
 🛠 *Admin Dashboard*
 
 👤 *User Management*
-\`/addbalance <tg_id> <amount>\` - Add/Deduct balance
+\`/addbalance <tg_id> <amount>` - Add/Deduct balance
+\`/setmoney <tg_id> <amount>\` - Migration deposit
 \`/setstats <tg_id> <wins> <losses>\` - Add manual stats
 \`/resetstats <tg_id>\` - Reset manual stats
 \`/create_key <KEY> <DAYS>\` - Create subscription key
@@ -278,7 +279,7 @@ bot.onText(/^\/create_key\s+(\S+)(?:\s+(\d+))?$/, async (msg, m) => {
   } catch (e) { bot.sendMessage(msg.chat.id, `❌ ${e.message}`); }
 });
 
-// إيداع/خصم رصيد
+// إيداع/خصم رصيد (عادي)
 bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]); const amount = Number(m[2]);
@@ -289,6 +290,31 @@ bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   bot.sendMessage(msg.chat.id, `✅ Balance updated for tg:${tg} by ${amount}`);
   // إشعار للمستخدم بدون ذكر أدمن
   bot.sendMessage(tg, `💳 تم الإيداع في حسابك: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`).catch(()=>{});
+});
+
+// إيداع رصيد (نقل حساب)
+// /setmoney <tg_id> <amount>
+bot.onText(/^\/setmoney\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]); const amount = Number(m[2]);
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, "User not found");
+  
+  await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [amount, u.id]);
+  await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'account migration')`, [u.id, amount]);
+  
+  bot.sendMessage(msg.chat.id, `✅ Account migration deposit done for tg:${tg} by ${amount}`);
+  
+  // إشعار خاص للمستخدم (نقل حساب)
+  bot.sendMessage(tg, `✅ *Account Linked Successfully*
+Your old account has been successfully linked to your new account.
+💰 *Balance Transferred:* $${amount}
+
+---
+
+✅ *تم ربط الحساب بنجاح*
+تم ربط حسابك القديم بحسابك الجديد بنجاح.
+💰 *الرصيد المحول:* $${amount}`).catch(()=>{});
 });
 
 // فتح صفقة (القديم)
