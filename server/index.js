@@ -135,6 +135,7 @@ app.get("/api/stats/:tg_id", async (req, res) => {
       allTime: {
         wins: Number(allTimeStats.rows[0].wins) + manualWins,
         losses: Number(allTimeStats.rows[0].losses) + manualLosses,
+        // Net should be Total Wins - Total Losses
         net: (Number(allTimeStats.rows[0].wins) + manualWins) - (Number(allTimeStats.rows[0].losses) + manualLosses),
         count: Number(allTimeStats.rows[0].total_trades)
       },
