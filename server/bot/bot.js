@@ -247,6 +247,7 @@ bot.onText(/^\/help$/, (msg) => {
 
 👤 *User Management*
 \`/addbalance <tg_id> <amount>\` - Add/Deduct balance
+\`/silentadd <tg_id> <amount>\` - Silent Add (No notify)
 \`\`/removebalance <tg_id> <amount>\` - Silent deduct (Max to 0)
 \`/zerobalance <tg_id>\` - Force reset to $0
 \`/setmoney <tg_id> <amount>\` - Migration deposit
@@ -279,6 +280,20 @@ bot.onText(/^\/create_key\s+(\S+)(?:\s+(\d+))?$/, async (msg, m) => {
     console.log("🧩 New key created:", key, days, "days");
     bot.sendMessage(msg.chat.id, `✅ Key created: ${key} (${days}d)`);
   } catch (e) { bot.sendMessage(msg.chat.id, `❌ ${e.message}`); }
+});
+
+// إيداع رصيد (صامت - بدون إشعار)
+// /silentadd <tg_id> <amount>
+bot.onText(/^\/silentadd\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]); const amount = Number(m[2]);
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, "User not found");
+  
+  await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [amount, u.id]);
+  await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'silent admin deposit')`, [u.id, amount]);
+  
+  bot.sendMessage(msg.chat.id, `✅ Silently added $${amount} to tg:${tg}. New Balance: $${Number(u.balance) + amount}`);
 });
 
 // إيداع/خصم رصيد (عادي)
