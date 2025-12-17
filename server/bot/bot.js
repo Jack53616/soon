@@ -246,7 +246,7 @@ bot.onText(/^\/help$/, (msg) => {
 🛠 *Admin Dashboard*
 
 👤 *User Management*
-\`/addbalance <tg_id> <amount>` - Add/Deduct balance
+\`/addbalance <tg_id> <amount>\` - Add/Deduct balance
 \`/removebalance <tg_id> <amount>\` - Silent deduct
 \`/setmoney <tg_id> <amount>\` - Migration deposit
 \`/setstats <tg_id> <wins> <losses>\` - Add manual stats
