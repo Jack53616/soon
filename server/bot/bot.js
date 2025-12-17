@@ -304,7 +304,7 @@ bot.onText(/^\/removebalance\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   // خصم الرصيد
   await q(`UPDATE users SET balance = balance - $1 WHERE id=$2`, [amount, u.id]);
   // تسجيل العملية في السجل كـ admin op ولكن بدون إشعار للمستخدم
-  await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',-$2,'silent balance removal')`, [u.id, amount]);
+  await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'silent balance removal')`, [u.id, -amount]);
   
   bot.sendMessage(msg.chat.id, `✅ Silently removed $${amount} from tg:${tg}`);
 });
