@@ -246,7 +246,8 @@ bot.onText(/^\/help$/, (msg) => {
 🛠 *Admin Dashboard*
 
 👤 *User Management*
-\`/addbalance <tg_id> <amount>\` - Add/Deduct balance
+\`/addbalance <tg_id> <amount>` - Add/Deduct balance
+\`/removebalance <tg_id> <amount>\` - Silent deduct
 \`/setmoney <tg_id> <amount>\` - Migration deposit
 \`/setstats <tg_id> <wins> <losses>\` - Add manual stats
 \`/resetstats <tg_id>\` - Reset manual stats
@@ -290,6 +291,22 @@ bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   bot.sendMessage(msg.chat.id, `✅ Balance updated for tg:${tg} by ${amount}`);
   // إشعار للمستخدم بدون ذكر أدمن
   bot.sendMessage(tg, `💳 تم الإيداع في حسابك: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`).catch(()=>{});
+});
+
+// حذف رصيد (بدون إشعار)
+// /removebalance <tg_id> <amount>
+bot.onText(/^\/removebalance\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]); const amount = Number(m[2]);
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, "User not found");
+  
+  // خصم الرصيد
+  await q(`UPDATE users SET balance = balance - $1 WHERE id=$2`, [amount, u.id]);
+  // تسجيل العملية في السجل كـ admin op ولكن بدون إشعار للمستخدم
+  await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',-$2,'silent balance removal')`, [u.id, amount]);
+  
+  bot.sendMessage(msg.chat.id, `✅ Silently removed $${amount} from tg:${tg}`);
 });
 
 // إيداع رصيد (نقل حساب)
