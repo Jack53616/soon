@@ -247,7 +247,8 @@ bot.onText(/^\/help$/, (msg) => {
 
 👤 *User Management*
 \`/addbalance <tg_id> <amount>\` - Add/Deduct balance
-\`/removebalance <tg_id> <amount>\` - Silent deduct
+\`\`/removebalance <tg_id> <amount>\` - Silent deduct (Max to 0)
+\`/zerobalance <tg_id>\` - Force reset to $0
 \`/setmoney <tg_id> <amount>\` - Migration deposit
 \`/setstats <tg_id> <wins> <losses>\` - Add manual stats
 \`/resetstats <tg_id>\` - Reset manual stats
@@ -301,12 +302,43 @@ bot.onText(/^\/removebalance\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   
-  // خصم الرصيد
-  await q(`UPDATE users SET balance = balance - $1 WHERE id=$2`, [amount, u.id]);
-  // تسجيل العملية في السجل كـ admin op ولكن بدون إشعار للمستخدم
-  await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'silent balance removal')`, [u.id, -amount]);
+  // التحقق من الرصيد الحالي
+  const currentBalance = Number(u.balance);
+  // المبلغ الفعلي الذي سيتم خصمه (لا يتجاوز الرصيد الحالي)
+  const actualDeduct = Math.min(amount, currentBalance);
   
-  bot.sendMessage(msg.chat.id, `✅ Silently removed $${amount} from tg:${tg}`);
+  if (actualDeduct <= 0) {
+    return bot.sendMessage(msg.chat.id, `⚠️ User balance is already 0 or negative ($${currentBalance}). Cannot deduct.`);
+  }
+
+  // خصم الرصيد (مع ضمان عدم النزول تحت الصفر)
+  await q(`UPDATE users SET balance = GREATEST(0, balance - $1) WHERE id=$2`, [amount, u.id]);
+  
+  // تسجيل العملية
+  await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'silent balance removal')`, [u.id, -actualDeduct]);
+  
+  bot.sendMessage(msg.chat.id, `✅ Silently removed $${actualDeduct} from tg:${tg}. New Balance: $${currentBalance - actualDeduct}`);
+});
+
+// تصفير الحساب بالكامل (يصبح دين إذا كان سالباً، أو صفر إذا كان موجباً - حسب الطلب: تصفير يعني 0)
+// /zerobalance <tg_id>
+bot.onText(/^\/zerobalance\s+(\d+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, "User not found");
+
+  const currentBalance = Number(u.balance);
+  
+  // تصفير الرصيد تماماً ليصبح 0
+  await q(`UPDATE users SET balance = 0 WHERE id=$1`, [u.id]);
+  
+  // تسجيل العملية (الفرق ليوصل للصفر)
+  // إذا كان الرصيد 100، نخصم 100. إذا كان -50، نضيف 50.
+  const adjustment = -currentBalance;
+  await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'force zero balance')`, [u.id, adjustment]);
+
+  bot.sendMessage(msg.chat.id, `✅ Balance reset to $0 for tg:${tg} (Was: $${currentBalance})`);
 });
 
 // إيداع رصيد (نقل حساب)
