@@ -1,7 +1,8 @@
 // QL Trading AI v2.3 — Frontend logic (Enhanced with Target PnL & Real Prices)
 // ✅ Updated to use standardized API responses with { ok, data, error }
+// ✅ Compatible with all browsers (no optional chaining issues)
 
-const TWA = window.Telegram?.WebApp;
+const TWA = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 const INVISIBLE_CHARS = /[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g;
 const VALID_KEY_CHARS = /^[A-Za-z0-9._\-+=]+$/;
 const KEY_FRAGMENT_RE = /[A-Za-z0-9][A-Za-z0-9._\-+=]{3,}[A-Za-z0-9=]?/g;
@@ -401,124 +402,157 @@ function isMarketOpen(){
 const $ = (q)=>document.querySelector(q);
 const $$ = (q)=>document.querySelectorAll(q);
 
-setTimeout(()=> { $("#splash")?.classList.add("hidden"); }, 1800);
+setTimeout(()=> { 
+  var splash = $("#splash");
+  if(splash) splash.classList.add("hidden"); 
+}, 1800);
 
 const cleanKeyInput = (value = "") => extractKeyCandidates(value)[0] || "";
 
 function detectTG(){
   try{
-    const initDataUnsafe = TWA?.initDataUnsafe;
-    const tgId = initDataUnsafe?.user?.id || null;
+    var initDataUnsafe = TWA && TWA.initDataUnsafe ? TWA.initDataUnsafe : null;
+    var tgId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
     state.tg_id = tgId;
-  }catch{ state.tg_id = null; }
+  }catch(e){ 
+    state.tg_id = null; 
+  }
 }
 
 // ✅ UPDATED: استخدام data wrapper
 async function getToken(){
   if(!state.tg_id) return;
-  const r = await fetch("/api/token",{
+  var r = await fetch("/api/token",{
     method:"POST", 
     headers:{"Content-Type":"application/json"}, 
     body:JSON.stringify({tg_id: state.tg_id})
   }).then(r=>r.json());
   
-  if(r.ok && r.data) state.token = r.data.token;
+  if(r.ok && r.data && r.data.token) {
+    state.token = r.data.token;
+  }
 }
 
-const gateBtn = $("#g-activate");
-gateBtn?.addEventListener("click", async ()=>{
-  if(gateBtn.disabled) return;
-  const rawKey = $("#g-key").value || "";
-  const candidates = extractKeyCandidates(rawKey);
-  const key = candidates[0] || cleanKeyInput(rawKey);
-  const name = $("#g-name").value.trim();
-  const email = $("#g-email").value.trim();
-  if(!key) return toast("Enter key");
-  const tg_id = state.tg_id || Number(prompt("Enter Telegram ID (test):","1262317603"));
-  if(!tg_id){ toast("Missing Telegram ID"); return; }
-  const initData = TWA?.initData || null;
-  const payload = { key, rawKey, candidates, tg_id, name, email, initData };
-
-  const restore = gateBtn.textContent;
-  gateBtn.disabled = true;
-  gateBtn.textContent = "...";
-
-  try{
-    const r = await fetch("/api/activate",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload)
-    }).then(r=>r.json());
+var gateBtn = $("#g-activate");
+if(gateBtn) {
+  gateBtn.addEventListener("click", async ()=>{
+    if(gateBtn.disabled) return;
     
-    if(!r?.ok){
-      toast(r?.error || "Invalid key");
-      return;
-    }
+    var gKeyEl = $("#g-key");
+    var gNameEl = $("#g-name");
+    var gEmailEl = $("#g-email");
     
-    // ✅ UPDATED: استخدام r.data بدلاً من الوصول المباشر
-    state.user = r.data.user;
-    localStorage.setItem("tg", r.data.user.tg_id);
-    hydrateUser(r.data.user);
-    unlockGate();
-    $("#g-key").value = "";
+    var rawKey = gKeyEl ? (gKeyEl.value || "") : "";
+    var candidates = extractKeyCandidates(rawKey);
+    var key = candidates[0] || cleanKeyInput(rawKey);
+    var name = gNameEl ? gNameEl.value.trim() : "";
+    var email = gEmailEl ? gEmailEl.value.trim() : "";
     
-    if(r.data.reused){ 
-      notify("🔓 Session restored"); 
-    }
+    if(!key) return toast("Enter key");
     
-    const opened = await openApp(r.data.user);
-    localStorage.setItem("activated", "yes");
+    var tg_id = state.tg_id || Number(prompt("Enter Telegram ID (test):","1262317603"));
+    if(!tg_id){ toast("Missing Telegram ID"); return; }
+    
+    var initData = TWA && TWA.initData ? TWA.initData : null;
+    var payload = { key: key, rawKey: rawKey, candidates: candidates, tg_id: tg_id, name: name, email: email, initData: initData };
 
-    document.body.classList.remove("is-gated");
-    const gateEl = document.querySelector(".gate");
-    if(gateEl){
-        gateEl.classList.add("hidden");
-        gateEl.style.pointerEvents = "none";
-    }
+    var restore = gateBtn.textContent;
+    gateBtn.disabled = true;
+    gateBtn.textContent = "...";
 
-    if(!opened){
-      showGate();
-      toast("Unable to open wallet");
+    try{
+      var r = await fetch("/api/activate",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(payload)
+      }).then(r=>r.json());
+      
+      if(!r || !r.ok){
+        toast(r && r.error ? r.error : "Invalid key");
+        return;
+      }
+      
+      // ✅ UPDATED: استخدام r.data بدلاً من الوصول المباشر
+      if(!r.data || !r.data.user) {
+        toast("Invalid response from server");
+        return;
+      }
+      
+      state.user = r.data.user;
+      localStorage.setItem("tg", r.data.user.tg_id);
+      hydrateUser(r.data.user);
+      unlockGate();
+      
+      if(gKeyEl) gKeyEl.value = "";
+      
+      if(r.data.reused){ 
+        notify("🔓 Session restored"); 
+      }
+      
+      var opened = await openApp(r.data.user);
+      localStorage.setItem("activated", "yes");
+
+      document.body.classList.remove("is-gated");
+      var gateEl = document.querySelector(".gate");
+      if(gateEl){
+          gateEl.classList.add("hidden");
+          gateEl.style.pointerEvents = "none";
+      }
+
+      if(!opened){
+        showGate();
+        toast("Unable to open wallet");
+      }
+    }catch(err){
+      console.error("Activation failed", err);
+      toast("Connection error");
+    }finally{
+      gateBtn.disabled = false;
+      gateBtn.textContent = restore;
     }
-  }catch(err){
-    console.error("Activation failed", err);
-    toast("Connection error");
-  }finally{
-    gateBtn.disabled = false;
-    gateBtn.textContent = restore;
-  }
-});
+  });
+}
 
 function toast(msg){ 
-  const el=$("#g-toast"); 
-  el.textContent=msg; 
-  setTimeout(()=> el.textContent="", 2500); 
+  var el = $("#g-toast");
+  if(el) {
+    el.textContent = msg; 
+    setTimeout(()=> el.textContent="", 2500); 
+  }
 }
 
 function showGate(){
   if(state.feedTimer){ clearInterval(state.feedTimer); state.feedTimer = null; }
   if(state.refreshTimer){ clearInterval(state.refreshTimer); state.refreshTimer = null; }
   document.body.classList.add("is-gated");
-  $(".gate")?.classList.remove("hidden");
-  $("#app")?.classList.add("hidden");
+  var gateEl = $(".gate");
+  if(gateEl) gateEl.classList.remove("hidden");
+  var appEl = $("#app");
+  if(appEl) appEl.classList.add("hidden");
 }
 
 function unlockGate(){
   document.body.classList.remove("is-gated");
-  $(".gate")?.classList.add("hidden");
-  $("#app")?.classList.remove("hidden");
+  var gateEl = $(".gate");
+  if(gateEl) gateEl.classList.add("hidden");
+  var appEl = $("#app");
+  if(appEl) appEl.classList.remove("hidden");
 }
 
-async function openApp(user = null, { auto = false } = {}){
+async function openApp(user = null, opts = {}){
+  var auto = opts.auto || false;
+  
   if(user){
     state.user = user;
     hydrateUser(user);
   }
-  if(!state.user?.tg_id){
+  
+  if(!state.user || !state.user.tg_id){
     if(!auto) toast("Please sign in again");
     showGate();
     return false;
   }
+  
   if(!user){
     try{
       await refreshUser(true);
@@ -530,16 +564,20 @@ async function openApp(user = null, { auto = false } = {}){
       return false;
     }
   }
+  
   unlockGate();
   applyI18n();
+  
   if(user){
     refreshUser();
   }
+  
   startFeed();
   refreshOps();
   refreshRequests();
   loadTrades();
   startAutoRefresh();
+  
   return true;
 }
 
@@ -553,13 +591,14 @@ function startAutoRefresh(){
   }, 3000);
 }
 
-$$(".seg-btn").forEach(btn=>{
+$$.call(document, ".seg-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{
-    $$(".seg-btn").forEach(b=>b.classList.remove("active"));
+    $$.call(document, ".seg-btn").forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
-    const tab = btn.dataset.tab;
-    $$(".tab").forEach(s=>s.classList.remove("show"));
-    $(`#tab-${tab}`)?.classList.add("show");
+    var tab = btn.dataset.tab;
+    $$.call(document, ".tab").forEach(s=>s.classList.remove("show"));
+    var tabEl = $(`#tab-${tab}`);
+    if(tabEl) tabEl.classList.add("show");
     
     if(tab === "trades"){
       loadTrades();
@@ -570,102 +609,130 @@ $$(".seg-btn").forEach(btn=>{
   });
 });
 
-$("#goWithdraw")?.addEventListener("click", ()=>{ 
-  document.querySelector('[data-tab="withdraw"]')?.click(); 
-});
+var goWithdrawBtn = $("#goWithdraw");
+if(goWithdrawBtn) {
+  goWithdrawBtn.onclick = ()=>{ 
+    var btn = document.querySelector('[data-tab="withdraw"]');
+    if(btn) btn.click(); 
+  };
+}
 
-$("#goStats")?.addEventListener("click", ()=>{ 
-  document.querySelector('[data-tab="stats"]')?.click(); 
-});
+var goStatsBtn = $("#goStats");
+if(goStatsBtn) {
+  goStatsBtn.onclick = ()=>{ 
+    var btn = document.querySelector('[data-tab="stats"]');
+    if(btn) btn.click(); 
+  };
+}
 
-$("#goSupport")?.addEventListener("click", ()=>{ 
-  document.querySelector('[data-tab="support"]')?.click(); 
-});
+var goSupportBtn = $("#goSupport");
+if(goSupportBtn) {
+  goSupportBtn.onclick = ()=>{ 
+    var btn = document.querySelector('[data-tab="support"]');
+    if(btn) btn.click(); 
+  };
+}
 
-$("#btnLang")?.addEventListener("click", ()=>{
-  const langSheet = document.createElement("div");
-  langSheet.className = "sheet show";
-  langSheet.innerHTML = `
-    <div class="handle"></div>
-    <div class="s-title">${t('selectLanguage')}</div>
-    <button class="s-item" data-lang="en">🇬🇧 English</button>
-    <button class="s-item" data-lang="ar">🇸🇦 العربية</button>
-    <button class="s-item" data-lang="tr">🇹🇷 Türkçe</button>
-    <button class="s-item" data-lang="de">🇩🇪 Deutsch</button>
-    <button class="s-cancel">${t('cancel')}</button>
-  `;
-  
-  document.body.appendChild(langSheet);
-  
-  langSheet.querySelectorAll(".s-item").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      state.lang = btn.dataset.lang;
-      localStorage.setItem("lang", state.lang);
-      applyI18n();
-      langSheet.classList.remove("show");
-      setTimeout(()=> langSheet.remove(), 300);
+var btnLang = $("#btnLang");
+if(btnLang) {
+  btnLang.addEventListener("click", ()=>{
+    var langSheet = document.createElement("div");
+    langSheet.className = "sheet show";
+    langSheet.innerHTML = `
+      <div class="handle"></div>
+      <div class="s-title">${t('selectLanguage')}</div>
+      <button class="s-item" data-lang="en">🇬🇧 English</button>
+      <button class="s-item" data-lang="ar">🇸🇦 العربية</button>
+      <button class="s-item" data-lang="tr">🇹🇷 Türkçe</button>
+      <button class="s-item" data-lang="de">🇩🇪 Deutsch</button>
+      <button class="s-cancel">${t('cancel')}</button>
+    `;
+    
+    document.body.appendChild(langSheet);
+    
+    langSheet.querySelectorAll(".s-item").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        state.lang = btn.dataset.lang;
+        localStorage.setItem("lang", state.lang);
+        applyI18n();
+        langSheet.classList.remove("show");
+        setTimeout(()=> langSheet.remove(), 300);
+      });
     });
+    
+    var cancelBtn = langSheet.querySelector(".s-cancel");
+    if(cancelBtn) {
+      cancelBtn.addEventListener("click", ()=>{
+        langSheet.classList.remove("show");
+        setTimeout(()=> langSheet.remove(), 300);
+      });
+    }
   });
-  
-  langSheet.querySelector(".s-cancel")?.addEventListener("click", ()=>{
-    langSheet.classList.remove("show");
-    setTimeout(()=> langSheet.remove(), 300);
-  });
-});
+}
 
-const settingsPanel = $("#settingsPanel");
-const settingsBackdrop = $("#settingsBackdrop");
-const btnSettings = $("#btnSettings");
-const spClose = $("#spClose");
+var settingsPanel = $("#settingsPanel");
+var settingsBackdrop = $("#settingsBackdrop");
+var btnSettings = $("#btnSettings");
+var spClose = $("#spClose");
 
 function openSettings(){
   if(!settingsPanel) return;
   settingsPanel.classList.remove("hidden");
   settingsPanel.classList.add("show");
-  settingsBackdrop?.classList.remove("hidden");
-  settingsBackdrop?.classList.add("show");
+  if(settingsBackdrop) {
+    settingsBackdrop.classList.remove("hidden");
+    settingsBackdrop.classList.add("show");
+  }
 }
 
 function closeSettings(){
-  settingsPanel?.classList.remove("show");
-  settingsBackdrop?.classList.remove("show");
+  if(settingsPanel) settingsPanel.classList.remove("show");
+  if(settingsBackdrop) settingsBackdrop.classList.remove("show");
   setTimeout(()=>{
-    settingsPanel?.classList.add("hidden");
-    settingsBackdrop?.classList.add("hidden");
+    if(settingsPanel) settingsPanel.classList.add("hidden");
+    if(settingsBackdrop) settingsBackdrop.classList.add("hidden");
   },200);
 }
 
-btnSettings?.addEventListener("click", openSettings);
-spClose?.addEventListener("click", closeSettings);
-settingsBackdrop?.addEventListener("click", closeSettings);
+if(btnSettings) btnSettings.addEventListener("click", openSettings);
+if(spClose) spClose.addEventListener("click", closeSettings);
+if(settingsBackdrop) settingsBackdrop.addEventListener("click", closeSettings);
 
-const sheet = $("#sheet");
-$("#pickMethod")?.addEventListener("click", ()=> sheet?.classList.add("show"));
-$("#sCancel")?.addEventListener("click", ()=> sheet?.classList.remove("show"));
+var sheet = $("#sheet");
+var pickMethodBtn = $("#pickMethod");
+if(pickMethodBtn && sheet) {
+  pickMethodBtn.addEventListener("click", ()=> sheet.classList.add("show"));
+}
 
-$$(".s-item").forEach(b=>{
+var sCancelBtn = $("#sCancel");
+if(sCancelBtn && sheet) {
+  sCancelBtn.addEventListener("click", ()=> sheet.classList.remove("show"));
+}
+
+$$.call(document, ".s-item").forEach(b=>{
   b.addEventListener("click", ()=>{
     state.method = b.dataset.method;
-    $("#methodLabel").textContent = b.textContent;
+    var methodLabel = $("#methodLabel");
+    if(methodLabel) methodLabel.textContent = b.textContent;
     renderMethod();
-    sheet?.classList.remove("show");
+    if(sheet) sheet.classList.remove("show");
   });
 });
 
 function renderMethod(){
-  const map = {
+  var map = {
     usdt_trc20: "USDT (TRC20)",
     usdt_erc20: "USDT (ERC20)",
     btc: "Bitcoin",
     eth: "Ethereum"
   };
   
-  const methodLabel = $("#methodLabel");
+  var methodLabel = $("#methodLabel");
   if(methodLabel) {
     methodLabel.textContent = map[state.method] || "USDT (TRC20)";
   }
   
-  const methodView = $("#methodView");
+  var methodView = $("#methodView");
   if(methodView) {
     methodView.innerHTML = `
       <div class="muted">Saved address:</div>
@@ -673,86 +740,96 @@ function renderMethod(){
       <button id="saveAddr" class="btn">Save</button>
     `;
     
-    $("#saveAddr")?.addEventListener("click", async ()=>{
-      const address = $("#addr")?.value?.trim();
-      const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
-      await fetch("/api/withdraw/method",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({tg_id:tg, method:state.method, address})
-      });
-      notify("✅ Address saved");
-    });
+    var saveAddrBtn = $("#saveAddr");
+    if(saveAddrBtn) {
+      saveAddrBtn.onclick = async ()=>{
+        var addrEl = $("#addr");
+        var address = addrEl ? addrEl.value.trim() : "";
+        var tg = state.user && state.user.tg_id ? state.user.tg_id : Number(localStorage.getItem("tg"));
+        await fetch("/api/withdraw/method",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({tg_id:tg, method:state.method, address:address})
+        });
+        notify("✅ Address saved");
+      };
+    }
   }
 }
 renderMethod();
 
-$("#reqWithdraw")?.addEventListener("click", async ()=>{
-  const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
-  const amountInput = $("#amount");
-  const amount = Number(amountInput?.value || 0);
-  
-  if(amount<=0) return notify("Enter amount");
-  
-  const r = await fetch("/api/withdraw",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({tg_id:tg, amount, method: state.method})
-  }).then(r=>r.json());
-  
-  if(!r.ok) return notify("❌ "+(r.error||"Error"));
-  
-  notify("✅ Request sent");
-  refreshUser(); 
-  refreshRequests();
-});
+var reqWithdrawBtn = $("#reqWithdraw");
+if(reqWithdrawBtn) {
+  reqWithdrawBtn.addEventListener("click", async ()=>{
+    var tg = state.user && state.user.tg_id ? state.user.tg_id : Number(localStorage.getItem("tg"));
+    var amountInput = $("#amount");
+    var amount = amountInput ? Number(amountInput.value || 0) : 0;
+    
+    if(amount<=0) return notify("Enter amount");
+    
+    var r = await fetch("/api/withdraw",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({tg_id:tg, amount:amount, method: state.method})
+    }).then(r=>r.json());
+    
+    if(!r.ok) return notify("❌ "+(r.error||"Error"));
+    
+    notify("✅ Request sent");
+    refreshUser(); 
+    refreshRequests();
+  });
+}
 
-$("#whatsapp")?.addEventListener("click", ()=> {
-  window.open("https://wa.me/message/P6BBPSDL2CC4D1","_blank");
-});
+var whatsappBtn = $("#whatsapp");
+if(whatsappBtn) {
+  whatsappBtn.onclick = ()=> {
+    window.open("https://wa.me/message/P6BBPSDL2CC4D1","_blank");
+  };
+}
 
 function hydrateUser(user){
   if(!user) return;
   
-  const balance = Number(user.balance || 0);
-  const wins = Number(user.wins || 0);
-  const losses = Number(user.losses || 0);
+  var balance = Number(user.balance || 0);
+  var wins = Number(user.wins || 0);
+  var losses = Number(user.losses || 0);
   
-  const balanceEl = $("#balance");
+  var balanceEl = $("#balance");
   if(balanceEl) {
     balanceEl.textContent = "$" + balance.toFixed(2);
   }
   
-  const subLeftEl = $("#subLeft");
+  var subLeftEl = $("#subLeft");
   if(subLeftEl) {
     subLeftEl.textContent = user.sub_expires 
       ? new Date(user.sub_expires).toLocaleDateString() 
       : "—";
   }
   
-  const pnlDayEl = $("#pnlDay");
+  var pnlDayEl = $("#pnlDay");
   if(pnlDayEl) {
     pnlDayEl.textContent = "$" + wins.toFixed(2);
   }
   
-  const pnlMonthEl = $("#pnlMonth");
+  var pnlMonthEl = $("#pnlMonth");
   if(pnlMonthEl) {
     pnlMonthEl.textContent = "$" + (wins - losses).toFixed(2);
   }
 
-  const tickerEl = $("#ticker");
+  var tickerEl = $("#ticker");
   if(tickerEl){
     tickerEl.textContent = "+0.00";
     tickerEl.style.color = "#9df09d";
   }
 
-  const name = user.name || user.first_name || "";
-  const email = user.email || "";
-  const tgId = user.tg_id || user.id || "";
+  var name = user.name || user.first_name || "";
+  var email = user.email || "";
+  var tgId = user.tg_id || user.id || "";
   
-  const spTgId = $("#spTgId");
-  const spName = $("#spName");
-  const spEmail = $("#spEmail");
+  var spTgId = $("#spTgId");
+  var spName = $("#spName");
+  var spEmail = $("#spEmail");
   
   if(spTgId) spTgId.textContent = tgId || "—";
   if(spName) spName.textContent = name || "—";
@@ -761,14 +838,14 @@ function hydrateUser(user){
 
 // ✅ UPDATED: استخدام payload.data.user
 async function refreshUser(required = false){
-  const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+  var tg = state.user && state.user.tg_id ? state.user.tg_id : Number(localStorage.getItem("tg"));
   
   if(!tg){
     if(required) throw new Error("missing_tg");
     return false;
   }
   
-  let payload = null;
+  var payload = null;
   
   try{
     payload = await fetch(`/api/user/${tg}`).then(r=>r.json());
@@ -777,23 +854,23 @@ async function refreshUser(required = false){
     return false;
   }
   
-  if(payload?.ok && payload.data){
+  if(payload && payload.ok && payload.data && payload.data.user){
     state.user = payload.data.user;
     hydrateUser(payload.data.user);
     return true;
   }
   
-  if(required) throw new Error(payload?.error || "user_not_found");
+  if(required) throw new Error(payload && payload.error ? payload.error : "user_not_found");
   return false;
 }
 
 // ✅ UPDATED: استخدام r.data.list
 async function refreshOps(){
-  const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+  var tg = state.user && state.user.tg_id ? state.user.tg_id : Number(localStorage.getItem("tg"));
   if(!tg) return;
   
-  const r = await fetch(`/api/ops/${tg}`).then(r=>r.json());
-  const box = $("#ops"); 
+  var r = await fetch(`/api/ops/${tg}`).then(r=>r.json());
+  var box = $("#ops"); 
   
   if(!box) return;
   
@@ -801,10 +878,10 @@ async function refreshOps(){
   
   if(r.ok && r.data && r.data.list){
     r.data.list.forEach(o=>{
-      const div = document.createElement("div");
+      var div = document.createElement("div");
       div.className="op";
-      const amount = Number(o.amount);
-      const color = amount >= 0 ? "#9df09d" : "#ff8899";
+      var amount = Number(o.amount);
+      var color = amount >= 0 ? "#9df09d" : "#ff8899";
       div.innerHTML = `<span>${o.type||'op'}</span><b style="color:${color}">${amount >= 0 ? '+' : ''}$${amount.toFixed(2)}</b>`;
       box.appendChild(div);
     });
@@ -813,11 +890,11 @@ async function refreshOps(){
 
 // ✅ UPDATED: استخدام r.data.list
 async function refreshRequests(){
-  const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+  var tg = state.user && state.user.tg_id ? state.user.tg_id : Number(localStorage.getItem("tg"));
   if(!tg) return;
   
-  const r = await fetch(`/api/requests/${tg}`).then(r=>r.json());
-  const box = $("#reqList"); 
+  var r = await fetch(`/api/requests/${tg}`).then(r=>r.json());
+  var box = $("#reqList"); 
   
   if(!box) return;
   
@@ -825,17 +902,17 @@ async function refreshRequests(){
   
   if(r.ok && r.data && r.data.list){
     r.data.list.forEach(req=>{
-      const div = document.createElement("div");
+      var div = document.createElement("div");
       div.className="op";
       div.innerHTML = `<span>#${req.id} — ${req.method} — ${req.status}</span><b>$${Number(req.amount).toFixed(2)}</b>`;
       
       if(req.status==="pending"){
-        const b = document.createElement("button");
+        var b = document.createElement("button");
         b.className="btn"; 
         b.style.marginLeft="8px"; 
         b.textContent="Cancel";
         b.onclick = async ()=>{
-          const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+          var tg = state.user && state.user.tg_id ? state.user.tg_id : Number(localStorage.getItem("tg"));
           await fetch("/api/withdraw/cancel",{
             method:"POST", 
             headers:{"Content-Type":"application/json"}, 
@@ -853,15 +930,16 @@ async function refreshRequests(){
 
 // ✅ UPDATED: استخدام r.data بدلاً من الوصول المباشر
 async function loadStats(){
-  const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+  var tg = state.user && state.user.tg_id ? state.user.tg_id : Number(localStorage.getItem("tg"));
   if(!tg) return;
   
   try{
-    const r = await fetch(`/api/stats/${tg}`).then(r=>r.json());
+    var r = await fetch(`/api/stats/${tg}`).then(r=>r.json());
     
     if(r.ok && r.data){
-      const setVal = (id, val, isMoney=true) => {
-        const el = $(id);
+      var setVal = function(id, val, isMoney){
+        if(isMoney === undefined) isMoney = true;
+        var el = $(id);
         if(el) {
           el.textContent = isMoney 
             ? (val>=0?"+":"")+"$"+Math.abs(val).toFixed(2) 
@@ -871,23 +949,23 @@ async function loadStats(){
       };
       
       // ✅ استخدام r.data.daily بدلاً من r.daily
-      setVal("#statToday", r.data.daily?.net || 0);
-      setVal("#statMonth", r.data.monthly?.net || 0);
-      setVal("#statAll", r.data.allTime?.net || 0);
-      setVal("#statCount", r.data.allTime?.count || 0, false);
+      setVal("#statToday", r.data.daily && r.data.daily.net ? r.data.daily.net : 0);
+      setVal("#statMonth", r.data.monthly && r.data.monthly.net ? r.data.monthly.net : 0);
+      setVal("#statAll", r.data.allTime && r.data.allTime.net ? r.data.allTime.net : 0);
+      setVal("#statCount", r.data.allTime && r.data.allTime.count ? r.data.allTime.count : 0, false);
       
-      const box = $("#historyList");
+      var box = $("#historyList");
       if(box) {
         box.innerHTML = "";
         
         // ✅ استخدام r.data.history بدلاً من r.history
         if(r.data.history && r.data.history.length > 0){
           r.data.history.forEach(trade => {
-            const div = document.createElement("div");
+            var div = document.createElement("div");
             div.className = "op";
-            const pnl = Number(trade.pnl);
-            const color = pnl >= 0 ? "#9df09d" : "#ff8899";
-            const date = new Date(trade.closed_at).toLocaleDateString();
+            var pnl = Number(trade.pnl);
+            var color = pnl >= 0 ? "#9df09d" : "#ff8899";
+            var date = new Date(trade.closed_at).toLocaleDateString();
             
             div.innerHTML = `
               <div style="display:flex; justify-content:space-between; width:100%">
@@ -910,49 +988,48 @@ async function loadStats(){
   }
 }
 
-const names = ["أحمد","محمد","خالد","سارة","رامي","نور","ليلى","وسيم","حسن","طارق"];
+var names = ["أحمد","محمد","خالد","سارة","رامي","نور","ليلى","وسيم","حسن","طارق"];
 
 function startFeed(){
   if(state.feedTimer) clearInterval(state.feedTimer);
   
-  const feed = $("#feed");
+  var feed = $("#feed");
   if(!feed) return;
   
-  const push = (txt)=>{
-    const it = document.createElement("div");
+  var push = function(txt){
+    var it = document.createElement("div");
     it.className="item"; 
     it.textContent = txt;
     feed.prepend(it);
-    $("#sndNotify")?.play().catch(()=>{});
+    var sndNotify = $("#sndNotify");
+    if(sndNotify) {
+      sndNotify.play().catch(()=>{});
+    }
     while(feed.childElementCount>12) feed.lastChild.remove();
   };
   
-  const once = ()=>{
+  var once = function(){
     if(!isMarketOpen()){
       push(`📅 ${t('marketClosed')}`);
       return;
     }
     
-    const r = Math.random();
-    const name = names[Math.floor(Math.random()*names.length)];
+    var r = Math.random();
+    var name = names[Math.floor(Math.random()*names.length)];
     
     if(r < 0.25){
-      // Withdrawal (25%)
-      const v = 50+Math.floor(Math.random()*200);
+      var v = 50+Math.floor(Math.random()*200);
       push(`🪙 ${name} سحب ${v}$ بنجاح`);
     } else if(r < 0.55){
-      // Profit (30%)
-      const v = 20+Math.floor(Math.random()*120);
-      const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
+      var v = 20+Math.floor(Math.random()*120);
+      var m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
       push(`💰 ${name} ربح ${v}$ من صفقة ${m}`);
     } else if(r < 0.75){
-      // Loss (20%)
-      const v = 10+Math.floor(Math.random()*80);
-      const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
+      var v = 10+Math.floor(Math.random()*80);
+      var m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
       push(`🔻 ${name} خسر ${v}$ في صفقة ${m}`);
     } else {
-      // New Deposit (25%)
-      const v = 150+Math.floor(Math.random()*400);
+      var v = 150+Math.floor(Math.random()*400);
       push(`🎉 مستخدم جديد انضم وأودع ${v}$`);
     }
   };
@@ -963,12 +1040,12 @@ function startFeed(){
 
 // ✅ UPDATED: استخدام r.data.trades بدلاً من r.trades
 async function loadTrades(){
-  const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+  var tg = state.user && state.user.tg_id ? state.user.tg_id : Number(localStorage.getItem("tg"));
   if(!tg) return;
   
   try{
-    const r = await fetch(`/api/trades/${tg}`).then(r=>r.json());
-    const box = $("#tradesList");
+    var r = await fetch(`/api/trades/${tg}`).then(r=>r.json());
+    var box = $("#tradesList");
     
     if(!box) return;
     
@@ -977,21 +1054,21 @@ async function loadTrades(){
     // ✅ استخدام r.data.trades
     if(r.ok && r.data && r.data.trades && r.data.trades.length > 0){
       r.data.trades.forEach(trade=>{
-        const div = document.createElement("div");
+        var div = document.createElement("div");
         div.className="op";
         
-        const pnl = Number(trade.pnl || 0);
-        const target = Number(trade.target_pnl || 0);
-        const pnlColor = pnl >= 0 ? "#9df09d" : "#ff8899";
-        const pnlSign = pnl >= 0 ? "+" : "";
+        var pnl = Number(trade.pnl || 0);
+        var target = Number(trade.target_pnl || 0);
+        var pnlColor = pnl >= 0 ? "#9df09d" : "#ff8899";
+        var pnlSign = pnl >= 0 ? "+" : "";
         
-        const opened = new Date(trade.opened_at);
-        const duration = trade.duration_seconds || 3600;
-        const elapsed = Math.floor((Date.now() - opened.getTime()) / 1000);
-        const remaining = Math.max(0, duration - elapsed);
-        const hours = Math.floor(remaining / 3600);
-        const minutes = Math.floor((remaining % 3600) / 60);
-        const timeStr = `${hours}h ${minutes}m`;
+        var opened = new Date(trade.opened_at);
+        var duration = trade.duration_seconds || 3600;
+        var elapsed = Math.floor((Date.now() - opened.getTime()) / 1000);
+        var remaining = Math.max(0, duration - elapsed);
+        var hours = Math.floor(remaining / 3600);
+        var minutes = Math.floor((remaining % 3600) / 60);
+        var timeStr = `${hours}h ${minutes}m`;
         
         div.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:8px;">
@@ -1009,18 +1086,18 @@ async function loadTrades(){
       });
       
       // Add close trade handlers
-      $$(".btn-close-trade").forEach(btn=>{
+      $$.call(document, ".btn-close-trade").forEach(btn=>{
         btn.addEventListener("click", async ()=>{
-          const tradeId = btn.dataset.tradeId;
+          var tradeId = btn.dataset.tradeId;
           if(confirm("Close this trade now?")){
             try{
-              const closeRes = await fetch(`/api/trades/close/${tradeId}`, {
+              var closeRes = await fetch(`/api/trades/close/${tradeId}`, {
                 method:"POST"
               }).then(r=>r.json());
               
               // ✅ استخدام closeRes.data.pnl بدلاً من closeRes.pnl
-              if(closeRes.ok && closeRes.data){
-                const closedPnl = closeRes.data.pnl || 0;
+              if(closeRes.ok && closeRes.data && closeRes.data.pnl !== undefined){
+                var closedPnl = closeRes.data.pnl || 0;
                 notify(`✅ Trade closed: ${closedPnl >= 0 ? '+' : ''}$${closedPnl.toFixed(2)}`);
                 await refreshUser();
                 await loadTrades();
@@ -1035,17 +1112,17 @@ async function loadTrades(){
         });
       });
       
-      const tradeBadge = $("#tradeBadge");
+      var tradeBadge = $("#tradeBadge");
       if(tradeBadge){
         tradeBadge.textContent = `${r.data.trades.length} open trade${r.data.trades.length > 1 ? 's' : ''}`;
       }
     } else {
-      const emptyDiv = document.createElement("div");
+      var emptyDiv = document.createElement("div");
       emptyDiv.className="op";
       emptyDiv.innerHTML = `<span style="opacity:0.5">No open trades</span>`;
       box.appendChild(emptyDiv);
       
-      const tradeBadge = $("#tradeBadge");
+      var tradeBadge = $("#tradeBadge");
       if(tradeBadge){
         tradeBadge.textContent = t('noOpenTrade');
       }
@@ -1055,19 +1132,25 @@ async function loadTrades(){
   }
 }
 
-$("#saveSLTP")?.addEventListener("click", ()=>{
-  notify("✅ SL/TP saved");
-});
+var saveSLTPBtn = $("#saveSLTP");
+if(saveSLTPBtn) {
+  saveSLTPBtn.onclick = ()=>{
+    notify("✅ SL/TP saved");
+  };
+}
 
 function notify(msg){
-  const feed = $("#feed");
+  var feed = $("#feed");
   if(!feed) return;
   
-  const el = document.createElement("div");
+  var el = document.createElement("div");
   el.className="feed item";
   el.textContent = msg;
   feed.prepend(el);
-  $("#sndNotify")?.play().catch(()=>{});
+  var sndNotify = $("#sndNotify");
+  if(sndNotify) {
+    sndNotify.play().catch(()=>{});
+  }
   setTimeout(()=>{ el.remove();}, 6000);
 }
 
@@ -1077,7 +1160,7 @@ function notify(msg){
 
   if (localStorage.getItem("activated") === "yes") {
     document.body.classList.remove("is-gated");
-    const g = document.querySelector(".gate");
+    var g = document.querySelector(".gate");
     if(g){
         g.classList.add("hidden");
         g.style.pointerEvents = "none";
@@ -1087,10 +1170,10 @@ function notify(msg){
   await getToken();
   applyI18n();
 
-  const old = localStorage.getItem("tg");
+  var old = localStorage.getItem("tg");
   if(old){
     state.user = { tg_id: Number(old) };
-    const opened = await openApp(null, { auto: true });
+    var opened = await openApp(null, { auto: true });
     if(!opened) showGate();
   }else{
     showGate();
