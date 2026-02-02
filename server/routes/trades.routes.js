@@ -1,41 +1,24 @@
-const tg = window.Telegram.WebApp;
-const tg_id = tg.initDataUnsafe.user.id;
+import express from "express";
+import * as tradesController from "../controllers/trades.controller.js";
 
-async function loadTrades() {
-  try {
-    const res = await fetch(`/api/trades/${tg_id}`);
-    const data = await res.json();
+const router = express.Router();
 
-    if (!data || !data.length) return;
+// GET /api/trades/:tg_id - Get active trades
+router.get("/:tg_id", tradesController.getActiveTrades);
 
-    const container = document.getElementById("trades");
-    container.innerHTML = "";
+// GET /api/trades/history/:tg_id - Get trade history
+router.get("/history/:tg_id", tradesController.getTradeHistory);
 
-    data.forEach(trade => {
-      const pnl = Number(trade.pnl || 0);
+// POST /api/trades/modify-tp - Modify take profit
+router.post("/modify-tp", tradesController.modifyTakeProfit);
 
-      const div = document.createElement("div");
-      div.className = "trade-card";
+// POST /api/trades/modify-sl - Modify stop loss
+router.post("/modify-sl", tradesController.modifyStopLoss);
 
-      div.innerHTML = `
-        <div><b>${trade.symbol}</b> (${trade.direction})</div>
-        <div>Entry: ${trade.entry_price}</div>
-        <div>Now: ${trade.current_price}</div>
-        <div style="color:${pnl >= 0 ? "lime" : "red"}">
-          PNL: ${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}
-        </div>
-      `;
+// POST /api/trades/close/:trade_id - Close trade manually (NEW)
+router.post("/close/:trade_id", tradesController.closeTradeById);
 
-      container.appendChild(div);
-    });
-  } catch (e) {
-    console.error("Load trades error", e);
-  }
-}
+// POST /api/trades/close - Close trade manually (legacy)
+router.post("/close", tradesController.closeTrade);
 
-// ⏱️ تحديث كل 3 ثواني
-setInterval(loadTrades, 3000);
-
-// أول تحميل
-loadTrades();
-
+export default router;
