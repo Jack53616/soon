@@ -1,180 +1,263 @@
 import { query } from "../config/db.js";
 import bot from "../bot/bot.js";
 
-/* ==============================
-   PRICE SIMULATION (كما هو)
-============================== */
+/* =========================
+   PRICE SOURCES & CACHES
+========================= */
 
+// Gold
 let goldPriceCache = 2650;
 let lastGoldFetch = 0;
 
 async function getRealGoldPrice() {
-  const now = Date.now();
-  if (now - lastGoldFetch < 300000 && goldPriceCache > 0) {
+  try {
+    const now = Date.now();
+    if (now - lastGoldFetch < 300000 && goldPriceCache > 0) {
+      return goldPriceCache;
+    }
+
+    const basePrice = 2650;
+    const hour = new Date().getUTCHours();
+    const timeVariation = Math.sin((hour / 24) * Math.PI * 2) * 5;
+    const randomVariation = (Math.random() - 0.5) * 3;
+
+    goldPriceCache = basePrice + timeVariation + randomVariation;
+    lastGoldFetch = now;
     return goldPriceCache;
+  } catch {
+    return goldPriceCache || 2650;
   }
-
-  const basePrice = 2650;
-  const hour = new Date().getUTCHours();
-  const timeVariation = Math.sin(hour / 24 * Math.PI * 2) * 5;
-  const randomVariation = (Math.random() - 0.5) * 3;
-
-  goldPriceCache = basePrice + timeVariation + randomVariation;
-  lastGoldFetch = now;
-  return goldPriceCache;
 }
 
+// Crypto
 let cryptoCache = { BTCUSDT: 43000, ETHUSDT: 2300 };
 let lastCryptoFetch = 0;
 
 async function getCryptoPrices() {
-  const now = Date.now();
-  if (now - lastCryptoFetch < 10000) return cryptoCache;
-
   try {
+    const now = Date.now();
+    if (now - lastCryptoFetch < 10000) return cryptoCache;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
     const res = await fetch(
-      'https://api.binance.com/api/v3/ticker/price?symbols=["BTCUSDT","ETHUSDT"]'
+      'https://api.binance.com/api/v3/ticker/price?symbols=["BTCUSDT","ETHUSDT"]',
+      { signal: controller.signal }
     );
-    const data = await res.json();
-    cryptoCache = {
-      BTCUSDT: Number(data.find(x => x.symbol === "BTCUSDT")?.price || 43000),
-      ETHUSDT: Number(data.find(x => x.symbol === "ETHUSDT")?.price || 2300)
-    };
-    lastCryptoFetch = now;
-  } catch {}
-  return cryptoCache;
+
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const data = await res.json();
+      cryptoCache = {
+        BTCUSDT: Number(data.find(i => i.symbol === "BTCUSDT")?.price || 43000),
+        ETHUSDT: Number(data.find(i => i.symbol === "ETHUSDT")?.price || 2300)
+      };
+      lastCryptoFetch = now;
+    }
+    return cryptoCache;
+  } catch {
+    return cryptoCache;
+  }
 }
 
-async function generatePrice(symbol, lastPrice) {
-  if (symbol === "XAUUSD") {
-    if (Math.random() < 0.1) return await getRealGoldPrice();
-    const change = lastPrice * (Math.random() - 0.5) * 0.003;
-    return Number((lastPrice + change).toFixed(4));
-  }
+/* =========================
+   PRICE GENERATOR
+========================= */
 
-  if (symbol === "BTCUSDT" || symbol === "ETHUSDT") {
-    const prices = await getCryptoPrices();
-    return prices[symbol];
-  }
+const generatePrice = async (symbol, lastPrice) => {
+  try {
+    const lp = Number(lastPrice) || 2650;
 
-  const change = lastPrice * (Math.random() - 0.5) * 0.005;
-  return Number((lastPrice + change).toFixed(4));
-}
-
-/* ==============================
-   SMART PnL ENGINE (جديد)
-============================== */
-
-function calcSmartPnL({ elapsed, duration, targetPnl, amount, lastPnl }) {
-  const progress = Math.min(elapsed / duration, 1);
-
-  // مرحلة الضباب
-  if (progress < 0.25) {
-    const noise = (Math.random() - 0.5) * amount * 0.01;
-    return (lastPnl || 0) + noise;
-  }
-
-  // منتصف الصفقة
-  if (progress < 0.85) {
-    let volatility = 0.015;
-    if (targetPnl < 0 && progress < 0.35) volatility = 0.03;
-
-    const trend = targetPnl * progress * 0.6;
-    const noise = (Math.random() - 0.5) * amount * volatility;
-    return trend + noise;
-  }
-
-  // نهاية الصفقة
-  return targetPnl * progress;
-}
-
-/* ==============================
-   UPDATE TRADES
-============================== */
-
-const updateTrades = async () => {
-  const { rows: trades } = await query(
-    "SELECT * FROM trades WHERE status='open' ORDER BY opened_at DESC LIMIT 100"
-  );
-
-  for (const trade of trades) {
-    const lastPrice = Number(trade.current_price || trade.entry_price);
-    const currentPrice = await generatePrice(trade.symbol, lastPrice);
-
-    const elapsed = Math.floor((Date.now() - new Date(trade.opened_at)) / 1000);
-    const duration = Number(trade.duration_seconds) || 3600;
-
-    // 🔒 تصحيح اللوت للحسابات الصغيرة
-    let lotSize = Number(trade.lot_size);
-    if (lotSize >= 1) lotSize = 0.05;
-
-    let pnl = 0;
-
-    if (trade.target_pnl !== 0) {
-      pnl = calcSmartPnL({
-        elapsed,
-        duration,
-        targetPnl: Number(trade.target_pnl),
-        amount: trade.amount,
-        lastPnl: trade.pnl
-      });
-    } else {
-      if (trade.direction === "BUY") {
-        pnl = (currentPrice - trade.entry_price) * lotSize * 100;
-      } else {
-        pnl = (trade.entry_price - currentPrice) * lotSize * 100;
+    if (symbol === "XAUUSD") {
+      if (Math.random() < 0.1) {
+        return Number(await getRealGoldPrice());
       }
+      const change = lp * (Math.random() - 0.5) * 0.005;
+      return Number((lp + change).toFixed(4));
     }
 
-    pnl = Number(pnl.toFixed(2));
-
-    await query(
-      "UPDATE trades SET current_price=$1, pnl=$2 WHERE id=$3",
-      [currentPrice, pnl, trade.id]
-    );
-
-    if (elapsed >= duration) {
-      await closeTrade({ trade, currentPrice, pnl, closeReason: "duration", elapsed });
+    if (symbol === "XAGUSD") {
+      const change = lp * (Math.random() - 0.5) * 0.008;
+      return Number((lp + change).toFixed(4));
     }
+
+    if (symbol === "BTCUSDT" || symbol === "ETHUSDT") {
+      const prices = await getCryptoPrices();
+      return Number(prices[symbol] || lp);
+    }
+
+    const change = lp * (Math.random() - 0.5) * 0.01;
+    return Number((lp + change).toFixed(4));
+  } catch {
+    return Number(lastPrice) || 2650;
   }
 };
 
-/* ==============================
-   CLOSE TRADE (كما هو)
-============================== */
+/* =========================
+   TRADES ENGINE
+========================= */
+
+const updateTrades = async () => {
+  try {
+    const res = await query(
+      "SELECT * FROM trades WHERE status='open' ORDER BY opened_at DESC LIMIT 100"
+    );
+
+    if (!res.rows.length) return;
+
+    const updates = [];
+    const closures = [];
+
+    for (const trade of res.rows) {
+      try {
+        const lastPrice = Number(trade.current_price || trade.entry_price || 2650);
+        const currentPrice = await generatePrice(trade.symbol, lastPrice);
+
+        const entryPrice = Number(trade.entry_price);
+        const lotSize = Number(trade.lot_size);
+
+        const duration = Number(trade.duration_seconds) || 3600;
+        const elapsed = Math.floor((Date.now() - new Date(trade.opened_at)) / 1000);
+
+        const targetPnl = Number(trade.target_pnl || 0);
+
+        let pnl = 0;
+
+        // 🎯 SMART TARGET MODE
+        if (targetPnl !== 0) {
+          const progress = Math.min(elapsed / duration, 1);
+          const basePnl = targetPnl * progress;
+
+          const volatility =
+            Math.sin(progress * Math.PI) * Math.abs(targetPnl) * 0.3;
+          const noise = (Math.random() - 0.5) * 2 * volatility;
+
+          pnl = basePnl + noise;
+
+          if (progress >= 0.99) pnl = targetPnl;
+        } else {
+          // 📈 NORMAL MODE
+          if (trade.direction === "BUY") {
+            pnl = (currentPrice - entryPrice) * lotSize * 100;
+          } else {
+            pnl = (entryPrice - currentPrice) * lotSize * 100;
+          }
+        }
+
+        // 🛡️ PNL SAFETY FIX (IMPORTANT)
+        pnl = Number(pnl);
+        if (isNaN(pnl) || !isFinite(pnl)) pnl = 0;
+        pnl = Number(pnl.toFixed(2));
+
+        updates.push({
+          id: trade.id,
+          currentPrice,
+          pnl
+        });
+
+        // ❌ DO NOT FORCE CLOSE – SYSTEM DECIDES
+        let shouldClose = false;
+        let closeReason = null;
+
+        if (targetPnl > 0 && pnl >= targetPnl) {
+          shouldClose = true;
+          closeReason = "target";
+        } else if (targetPnl < 0 && pnl <= targetPnl) {
+          shouldClose = true;
+          closeReason = "target";
+        } else if (elapsed >= duration) {
+          shouldClose = true;
+          closeReason = "duration";
+        }
+
+        if (shouldClose) {
+          closures.push({ trade, currentPrice, pnl, closeReason, elapsed });
+        }
+      } catch (e) {
+        console.error(`Trade ${trade.id} error:`, e.message);
+      }
+    }
+
+    // 🔄 APPLY UPDATES
+    for (const u of updates) {
+      await query(
+        "UPDATE trades SET current_price=$1, pnl=$2 WHERE id=$3",
+        [u.currentPrice, u.pnl, u.id]
+      );
+    }
+
+    // 🔒 CLOSE TRADES
+    for (const c of closures) {
+      await closeTrade(c);
+    }
+
+  } catch (e) {
+    console.error("Trading engine fatal:", e.message);
+  }
+};
+
+/* =========================
+   CLOSE TRADE
+========================= */
 
 async function closeTrade({ trade, currentPrice, pnl, closeReason, elapsed }) {
-  await query(
-    "UPDATE trades SET status='closed', closed_at=NOW(), close_reason=$1 WHERE id=$2",
-    [closeReason, trade.id]
-  );
-
-  await query(
-    "UPDATE users SET balance = balance + $1 WHERE id=$2",
-    [pnl, trade.user_id]
-  );
-
-  await query(
-    "INSERT INTO ops (user_id,type,amount,note) VALUES ($1,'pnl',$2,$3)",
-    [trade.user_id, pnl, `Trade closed (${closeReason})`]
-  );
-
-  const { rows } = await query(
-    "SELECT tg_id,balance FROM users WHERE id=$1",
-    [trade.user_id]
-  );
-
-  if (rows[0]?.tg_id) {
-    await bot.sendMessage(
-      rows[0].tg_id,
-      `🔔 Trade Closed\n${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: $${Math.abs(pnl).toFixed(2)}`
+  try {
+    await query(
+      "UPDATE trades SET status='closed', closed_at=NOW(), close_reason=$1 WHERE id=$2",
+      [closeReason, trade.id]
     );
+
+    await query(
+      "UPDATE users SET balance = balance + $1 WHERE id=$2",
+      [pnl, trade.user_id]
+    );
+
+    if (pnl >= 0) {
+      await query(
+        "UPDATE users SET wins = COALESCE(wins,0) + $1 WHERE id=$2",
+        [pnl, trade.user_id]
+      );
+    } else {
+      await query(
+        "UPDATE users SET losses = COALESCE(losses,0) + $1 WHERE id=$2",
+        [Math.abs(pnl), trade.user_id]
+      );
+    }
+
+    await query(
+      "INSERT INTO ops (user_id,type,amount,note) VALUES ($1,'pnl',$2,$3)",
+      [trade.user_id, pnl, `Trade closed by ${closeReason}`]
+    );
+
+    const u = await query(
+      "SELECT tg_id,balance,wins,losses FROM users WHERE id=$1",
+      [trade.user_id]
+    );
+
+    if (u.rows.length) {
+      const user = u.rows[0];
+      const net = Number(user.wins || 0) - Number(user.losses || 0);
+
+      await bot.sendMessage(
+        user.tg_id,
+        `🔔 Trade Closed
+${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}
+💰 Balance: $${Number(user.balance).toFixed(2)}
+📊 Net: ${net >= 0 ? "+" : ""}$${net.toFixed(2)}`
+      );
+    }
+
+    console.log(`✅ Trade #${trade.id} closed (${closeReason})`);
+  } catch (e) {
+    console.error("Close trade error:", e.message);
   }
 }
 
-/* ==============================
-   START ENGINE
-============================== */
+/* =========================
+   ENGINE START
+========================= */
 
 export const startTradingEngine = () => {
   setInterval(updateTrades, 3000);
