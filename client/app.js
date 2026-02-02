@@ -1,4 +1,6 @@
 // QL Trading AI v2.3 — Frontend logic (Enhanced with Target PnL & Real Prices)
+// ✅ Updated to use standardized API responses with { ok, data, error }
+
 const TWA = window.Telegram?.WebApp;
 const INVISIBLE_CHARS = /[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g;
 const VALID_KEY_CHARS = /^[A-Za-z0-9._\-+=]+$/;
@@ -411,10 +413,16 @@ function detectTG(){
   }catch{ state.tg_id = null; }
 }
 
+// ✅ UPDATED: استخدام data wrapper
 async function getToken(){
   if(!state.tg_id) return;
-  const r = await fetch("/api/token",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({tg_id: state.tg_id})}).then(r=>r.json());
-  if(r.ok) state.token = r.token;
+  const r = await fetch("/api/token",{
+    method:"POST", 
+    headers:{"Content-Type":"application/json"}, 
+    body:JSON.stringify({tg_id: state.tg_id})
+  }).then(r=>r.json());
+  
+  if(r.ok && r.data) state.token = r.data.token;
 }
 
 const gateBtn = $("#g-activate");
@@ -441,17 +449,24 @@ gateBtn?.addEventListener("click", async ()=>{
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify(payload)
     }).then(r=>r.json());
+    
     if(!r?.ok){
       toast(r?.error || "Invalid key");
       return;
     }
-    state.user = r.user;
-    localStorage.setItem("tg", r.user.tg_id);
-    hydrateUser(r.user);
+    
+    // ✅ UPDATED: استخدام r.data بدلاً من الوصول المباشر
+    state.user = r.data.user;
+    localStorage.setItem("tg", r.data.user.tg_id);
+    hydrateUser(r.data.user);
     unlockGate();
     $("#g-key").value = "";
-    if(r.reused){ notify("🔓 Session restored"); }
-    const opened = await openApp(r.user);
+    
+    if(r.data.reused){ 
+      notify("🔓 Session restored"); 
+    }
+    
+    const opened = await openApp(r.data.user);
     localStorage.setItem("activated", "yes");
 
     document.body.classList.remove("is-gated");
@@ -474,7 +489,11 @@ gateBtn?.addEventListener("click", async ()=>{
   }
 });
 
-function toast(msg){ const el=$("#g-toast"); el.textContent=msg; setTimeout(()=> el.textContent="", 2500); }
+function toast(msg){ 
+  const el=$("#g-toast"); 
+  el.textContent=msg; 
+  setTimeout(()=> el.textContent="", 2500); 
+}
 
 function showGate(){
   if(state.feedTimer){ clearInterval(state.feedTimer); state.feedTimer = null; }
@@ -519,7 +538,6 @@ async function openApp(user = null, { auto = false } = {}){
   startFeed();
   refreshOps();
   refreshRequests();
-  refreshMarkets();
   loadTrades();
   startAutoRefresh();
   return true;
@@ -532,7 +550,6 @@ function startAutoRefresh(){
     await refreshUser();
     await loadTrades();
     await refreshOps();
-    // await refreshMarkets(); // Markets removed
   }, 3000);
 }
 
@@ -553,11 +570,19 @@ $$(".seg-btn").forEach(btn=>{
   });
 });
 
-$("#goWithdraw").onclick = ()=>{ document.querySelector('[data-tab="withdraw"]').click(); }
-$("#goStats").onclick  = ()=>{ document.querySelector('[data-tab="stats"]').click(); }
-$("#goSupport").onclick  = ()=>{ document.querySelector('[data-tab="support"]').click(); }
+$("#goWithdraw")?.addEventListener("click", ()=>{ 
+  document.querySelector('[data-tab="withdraw"]')?.click(); 
+});
 
-$("#btnLang").addEventListener("click", ()=>{
+$("#goStats")?.addEventListener("click", ()=>{ 
+  document.querySelector('[data-tab="stats"]')?.click(); 
+});
+
+$("#goSupport")?.addEventListener("click", ()=>{ 
+  document.querySelector('[data-tab="support"]')?.click(); 
+});
+
+$("#btnLang")?.addEventListener("click", ()=>{
   const langSheet = document.createElement("div");
   langSheet.className = "sheet show";
   langSheet.innerHTML = `
@@ -582,7 +607,7 @@ $("#btnLang").addEventListener("click", ()=>{
     });
   });
   
-  langSheet.querySelector(".s-cancel").addEventListener("click", ()=>{
+  langSheet.querySelector(".s-cancel")?.addEventListener("click", ()=>{
     langSheet.classList.remove("show");
     setTimeout(()=> langSheet.remove(), 300);
   });
@@ -615,14 +640,15 @@ spClose?.addEventListener("click", closeSettings);
 settingsBackdrop?.addEventListener("click", closeSettings);
 
 const sheet = $("#sheet");
-$("#pickMethod").addEventListener("click", ()=> sheet.classList.add("show"));
-$("#sCancel").addEventListener("click", ()=> sheet.classList.remove("show"));
+$("#pickMethod")?.addEventListener("click", ()=> sheet?.classList.add("show"));
+$("#sCancel")?.addEventListener("click", ()=> sheet?.classList.remove("show"));
+
 $$(".s-item").forEach(b=>{
   b.addEventListener("click", ()=>{
     state.method = b.dataset.method;
     $("#methodLabel").textContent = b.textContent;
     renderMethod();
-    sheet.classList.remove("show");
+    sheet?.classList.remove("show");
   });
 });
 
@@ -633,52 +659,86 @@ function renderMethod(){
     btc: "Bitcoin",
     eth: "Ethereum"
   };
-  $("#methodLabel").textContent = map[state.method] || "USDT (TRC20)";
-  $("#methodView").innerHTML = `
-    <div class="muted">Saved address:</div>
-    <input id="addr" class="input" placeholder="Your ${map[state.method]||'Wallet'} address..."/>
-    <button id="saveAddr" class="btn">Save</button>
-  `;
-  $("#saveAddr").onclick = async ()=>{
-    const address = $("#addr").value.trim();
-    const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
-    await fetch("/api/withdraw/method",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({tg_id:tg, method:state.method, address})
+  
+  const methodLabel = $("#methodLabel");
+  if(methodLabel) {
+    methodLabel.textContent = map[state.method] || "USDT (TRC20)";
+  }
+  
+  const methodView = $("#methodView");
+  if(methodView) {
+    methodView.innerHTML = `
+      <div class="muted">Saved address:</div>
+      <input id="addr" class="input" placeholder="Your ${map[state.method]||'Wallet'} address..."/>
+      <button id="saveAddr" class="btn">Save</button>
+    `;
+    
+    $("#saveAddr")?.addEventListener("click", async ()=>{
+      const address = $("#addr")?.value?.trim();
+      const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+      await fetch("/api/withdraw/method",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({tg_id:tg, method:state.method, address})
+      });
+      notify("✅ Address saved");
     });
-    notify("✅ Address saved");
   }
 }
 renderMethod();
 
-$("#reqWithdraw").addEventListener("click", async ()=>{
+$("#reqWithdraw")?.addEventListener("click", async ()=>{
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
-  const amount = Number($("#amount").value || 0);
+  const amountInput = $("#amount");
+  const amount = Number(amountInput?.value || 0);
+  
   if(amount<=0) return notify("Enter amount");
+  
   const r = await fetch("/api/withdraw",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({tg_id:tg, amount, method: state.method})
   }).then(r=>r.json());
+  
   if(!r.ok) return notify("❌ "+(r.error||"Error"));
+  
   notify("✅ Request sent");
-  refreshUser(); refreshRequests();
+  refreshUser(); 
+  refreshRequests();
 });
 
-$("#whatsapp").onclick = ()=> window.open("https://wa.me/message/P6BBPSDL2CC4D1","_blank");
+$("#whatsapp")?.addEventListener("click", ()=> {
+  window.open("https://wa.me/message/P6BBPSDL2CC4D1","_blank");
+});
 
 function hydrateUser(user){
   if(!user) return;
+  
   const balance = Number(user.balance || 0);
   const wins = Number(user.wins || 0);
   const losses = Number(user.losses || 0);
   
-  $("#balance").textContent = "$" + balance.toFixed(2);
-  $("#subLeft").textContent = user.sub_expires ? new Date(user.sub_expires).toLocaleDateString() : "—";
+  const balanceEl = $("#balance");
+  if(balanceEl) {
+    balanceEl.textContent = "$" + balance.toFixed(2);
+  }
   
-  $("#pnlDay").textContent = "$" + wins.toFixed(2);
-  $("#pnlMonth").textContent = "$" + (wins - losses).toFixed(2);
+  const subLeftEl = $("#subLeft");
+  if(subLeftEl) {
+    subLeftEl.textContent = user.sub_expires 
+      ? new Date(user.sub_expires).toLocaleDateString() 
+      : "—";
+  }
+  
+  const pnlDayEl = $("#pnlDay");
+  if(pnlDayEl) {
+    pnlDayEl.textContent = "$" + wins.toFixed(2);
+  }
+  
+  const pnlMonthEl = $("#pnlMonth");
+  if(pnlMonthEl) {
+    pnlMonthEl.textContent = "$" + (wins - losses).toFixed(2);
+  }
 
   const tickerEl = $("#ticker");
   if(tickerEl){
@@ -689,43 +749,58 @@ function hydrateUser(user){
   const name = user.name || user.first_name || "";
   const email = user.email || "";
   const tgId = user.tg_id || user.id || "";
+  
   const spTgId = $("#spTgId");
   const spName = $("#spName");
   const spEmail = $("#spEmail");
+  
   if(spTgId) spTgId.textContent = tgId || "—";
   if(spName) spName.textContent = name || "—";
   if(spEmail) spEmail.textContent = email || "—";
 }
 
+// ✅ UPDATED: استخدام payload.data.user
 async function refreshUser(required = false){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+  
   if(!tg){
     if(required) throw new Error("missing_tg");
     return false;
   }
+  
   let payload = null;
+  
   try{
     payload = await fetch(`/api/user/${tg}`).then(r=>r.json());
   }catch(err){
     if(required) throw err;
     return false;
   }
-  if(payload?.ok){
-    state.user = payload.user;
-    hydrateUser(payload.user);
+  
+  if(payload?.ok && payload.data){
+    state.user = payload.data.user;
+    hydrateUser(payload.data.user);
     return true;
   }
+  
   if(required) throw new Error(payload?.error || "user_not_found");
   return false;
 }
 
+// ✅ UPDATED: استخدام r.data.list
 async function refreshOps(){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   if(!tg) return;
+  
   const r = await fetch(`/api/ops/${tg}`).then(r=>r.json());
-  const box = $("#ops"); box.innerHTML = "";
-  if(r.ok){
-    r.list.forEach(o=>{
+  const box = $("#ops"); 
+  
+  if(!box) return;
+  
+  box.innerHTML = "";
+  
+  if(r.ok && r.data && r.data.list){
+    r.data.list.forEach(o=>{
       const div = document.createElement("div");
       div.className="op";
       const amount = Number(o.amount);
@@ -736,23 +811,38 @@ async function refreshOps(){
   }
 }
 
+// ✅ UPDATED: استخدام r.data.list
 async function refreshRequests(){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   if(!tg) return;
+  
   const r = await fetch(`/api/requests/${tg}`).then(r=>r.json());
-  const box = $("#reqList"); box.innerHTML = "";
-  if(r.ok){
-    r.list.forEach(req=>{
+  const box = $("#reqList"); 
+  
+  if(!box) return;
+  
+  box.innerHTML = "";
+  
+  if(r.ok && r.data && r.data.list){
+    r.data.list.forEach(req=>{
       const div = document.createElement("div");
       div.className="op";
       div.innerHTML = `<span>#${req.id} — ${req.method} — ${req.status}</span><b>$${Number(req.amount).toFixed(2)}</b>`;
+      
       if(req.status==="pending"){
         const b = document.createElement("button");
-        b.className="btn"; b.style.marginLeft="8px"; b.textContent="Cancel";
+        b.className="btn"; 
+        b.style.marginLeft="8px"; 
+        b.textContent="Cancel";
         b.onclick = async ()=>{
           const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
-          await fetch("/api/withdraw/cancel",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({tg_id:tg, id:req.id})});
-          refreshRequests(); refreshUser();
+          await fetch("/api/withdraw/cancel",{
+            method:"POST", 
+            headers:{"Content-Type":"application/json"}, 
+            body:JSON.stringify({tg_id:tg, id:req.id})
+          });
+          refreshRequests(); 
+          refreshUser();
         };
         div.appendChild(b);
       }
@@ -761,52 +851,58 @@ async function refreshRequests(){
   }
 }
 
+// ✅ UPDATED: استخدام r.data بدلاً من الوصول المباشر
 async function loadStats(){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   if(!tg) return;
   
   try{
     const r = await fetch(`/api/stats/${tg}`).then(r=>r.json());
-    if(r.ok){
-      // Update stats
+    
+    if(r.ok && r.data){
       const setVal = (id, val, isMoney=true) => {
         const el = $(id);
         if(el) {
-          el.textContent = isMoney ? (val>=0?"+":"")+"$"+Math.abs(val).toFixed(2) : val;
+          el.textContent = isMoney 
+            ? (val>=0?"+":"")+"$"+Math.abs(val).toFixed(2) 
+            : val;
           if(isMoney) el.style.color = val >= 0 ? "#9df09d" : "#ff8899";
         }
       };
       
-      setVal("#statToday", r.daily.net);
-      setVal("#statMonth", r.monthly.net);
-      setVal("#statAll", r.allTime.net);
-      setVal("#statCount", r.allTime.count, false);
+      // ✅ استخدام r.data.daily بدلاً من r.daily
+      setVal("#statToday", r.data.daily?.net || 0);
+      setVal("#statMonth", r.data.monthly?.net || 0);
+      setVal("#statAll", r.data.allTime?.net || 0);
+      setVal("#statCount", r.data.allTime?.count || 0, false);
       
-      // Update history list
       const box = $("#historyList");
-      box.innerHTML = "";
-      
-      if(r.history && r.history.length > 0){
-        r.history.forEach(trade => {
-          const div = document.createElement("div");
-          div.className = "op";
-          const pnl = Number(trade.pnl);
-          const color = pnl >= 0 ? "#9df09d" : "#ff8899";
-          const date = new Date(trade.closed_at).toLocaleDateString();
-          
-          div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; width:100%">
-              <div>
-                <span>${trade.symbol} ${trade.direction}</span>
-                <small>${date} • ${trade.close_reason}</small>
+      if(box) {
+        box.innerHTML = "";
+        
+        // ✅ استخدام r.data.history بدلاً من r.history
+        if(r.data.history && r.data.history.length > 0){
+          r.data.history.forEach(trade => {
+            const div = document.createElement("div");
+            div.className = "op";
+            const pnl = Number(trade.pnl);
+            const color = pnl >= 0 ? "#9df09d" : "#ff8899";
+            const date = new Date(trade.closed_at).toLocaleDateString();
+            
+            div.innerHTML = `
+              <div style="display:flex; justify-content:space-between; width:100%">
+                <div>
+                  <span>${trade.symbol} ${trade.direction}</span>
+                  <small>${date} • ${trade.close_reason}</small>
+                </div>
+                <b style="color:${color}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</b>
               </div>
-              <b style="color:${color}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</b>
-            </div>
-          `;
-          box.appendChild(div);
-        });
-      } else {
-        box.innerHTML = `<div class="op" style="justify-content:center; opacity:0.5">No history yet</div>`;
+            `;
+            box.appendChild(div);
+          });
+        } else {
+          box.innerHTML = `<div class="op" style="justify-content:center; opacity:0.5">No history yet</div>`;
+        }
       }
     }
   }catch(err){
@@ -815,12 +911,17 @@ async function loadStats(){
 }
 
 const names = ["أحمد","محمد","خالد","سارة","رامي","نور","ليلى","وسيم","حسن","طارق"];
+
 function startFeed(){
   if(state.feedTimer) clearInterval(state.feedTimer);
+  
   const feed = $("#feed");
+  if(!feed) return;
+  
   const push = (txt)=>{
     const it = document.createElement("div");
-    it.className="item"; it.textContent = txt;
+    it.className="item"; 
+    it.textContent = txt;
     feed.prepend(it);
     $("#sndNotify")?.play().catch(()=>{});
     while(feed.childElementCount>12) feed.lastChild.remove();
@@ -845,7 +946,7 @@ function startFeed(){
       const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
       push(`💰 ${name} ربح ${v}$ من صفقة ${m}`);
     } else if(r < 0.75){
-      // Loss (20%) - NEW
+      // Loss (20%)
       const v = 10+Math.floor(Math.random()*80);
       const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
       push(`🔻 ${name} خسر ${v}$ في صفقة ${m}`);
@@ -860,6 +961,7 @@ function startFeed(){
   state.feedTimer = setInterval(once, 180000);
 }
 
+// ✅ UPDATED: استخدام r.data.trades بدلاً من r.trades
 async function loadTrades(){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   if(!tg) return;
@@ -867,10 +969,14 @@ async function loadTrades(){
   try{
     const r = await fetch(`/api/trades/${tg}`).then(r=>r.json());
     const box = $("#tradesList");
+    
+    if(!box) return;
+    
     box.innerHTML = "";
     
-    if(r.ok && r.trades && r.trades.length > 0){
-      r.trades.forEach(trade=>{
+    // ✅ استخدام r.data.trades
+    if(r.ok && r.data && r.data.trades && r.data.trades.length > 0){
+      r.data.trades.forEach(trade=>{
         const div = document.createElement("div");
         div.className="op";
         
@@ -908,14 +1014,19 @@ async function loadTrades(){
           const tradeId = btn.dataset.tradeId;
           if(confirm("Close this trade now?")){
             try{
-              const r = await fetch(`/api/trades/close/${tradeId}`, {method:"POST"}).then(r=>r.json());
-              if(r.ok){
-                notify(`✅ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}`);
+              const closeRes = await fetch(`/api/trades/close/${tradeId}`, {
+                method:"POST"
+              }).then(r=>r.json());
+              
+              // ✅ استخدام closeRes.data.pnl بدلاً من closeRes.pnl
+              if(closeRes.ok && closeRes.data){
+                const closedPnl = closeRes.data.pnl || 0;
+                notify(`✅ Trade closed: ${closedPnl >= 0 ? '+' : ''}$${closedPnl.toFixed(2)}`);
                 await refreshUser();
                 await loadTrades();
                 await refreshOps();
               }else{
-                notify("❌ " + (r.error || "Failed to close trade"));
+                notify("❌ " + (closeRes.error || "Failed to close trade"));
               }
             }catch(err){
               notify("❌ Connection error");
@@ -926,7 +1037,7 @@ async function loadTrades(){
       
       const tradeBadge = $("#tradeBadge");
       if(tradeBadge){
-        tradeBadge.textContent = `${r.trades.length} open trade${r.trades.length > 1 ? 's' : ''}`;
+        tradeBadge.textContent = `${r.data.trades.length} open trade${r.data.trades.length > 1 ? 's' : ''}`;
       }
     } else {
       const emptyDiv = document.createElement("div");
@@ -944,19 +1055,23 @@ async function loadTrades(){
   }
 }
 
-$("#saveSLTP").onclick = ()=>{
+$("#saveSLTP")?.addEventListener("click", ()=>{
   notify("✅ SL/TP saved");
-};
+});
 
 function notify(msg){
+  const feed = $("#feed");
+  if(!feed) return;
+  
   const el = document.createElement("div");
   el.className="feed item";
   el.textContent = msg;
-  $("#feed").prepend(el);
+  feed.prepend(el);
   $("#sndNotify")?.play().catch(()=>{});
   setTimeout(()=>{ el.remove();}, 6000);
 }
 
+// ✅ App initialization
 (async function(){
   detectTG();
 
