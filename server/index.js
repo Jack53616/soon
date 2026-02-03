@@ -1,156 +1,221 @@
-// index.js
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { securityHeaders, apiLimiter } from "./config/security.js";
+import pool from "./config/db.js";
+
+// Routes
+import authRoutes from "./routes/auth.routes.js";
+import walletRoutes from "./routes/wallet.routes.js";
+import tradesRoutes from "./routes/trades.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import marketsRoutes from "./routes/markets.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
+import leaderboardRoutes from "./routes/leaderboard.routes.js";
+
+// Bot
+import bot from "./bot/bot.js";
+
+// Services
+import { startTradingEngine } from "./services/tradingEngine.js";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-// Admin Token
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'ql_admin_2025';
+// CRITICAL: Enable trust proxy for Render
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(securityHeaders);
 
-// Serve frontend static files (if exist)
-app.use(express.static(path.join(__dirname, "client")));
-app.use("/public", express.static(path.join(__dirname, "public")));
+// Serve static files
+app.use(express.static(path.join(__dirname, "../client")));
+app.use("/public", express.static(path.join(__dirname, "../public")));
 
-// =====================
-// Mock Admin Data
-// =====================
-let mockUsers = [
-  { id:1, name:'Jack', tg_id:'@jack', balance:100, sub_expires_at: new Date(Date.now()+7*24*60*60*1000).toISOString() },
-  { id:2, name:'Alice', tg_id:'@alice', balance:50, sub_expires_at: new Date(Date.now()+3*24*60*60*1000).toISOString() }
-];
-
-let mockWithdrawals = [
-  { id:1, user_id:1, amount:20, method:'USDT', status:'pending' }
-];
-
-let mockTrades = [
-  { id:1, user_id:1, symbol:'BTCUSDT', status:'open', pnl:null },
-  { id:2, user_id:2, symbol:'ETHUSDT', status:'closed', pnl:15 }
-];
-
-// =====================
-// Admin stats endpoint
-// =====================
-app.get("/api/admin/stats", (req, res) => {
-  const token = req.headers['x-admin-token'];
-  if(token !== ADMIN_TOKEN) return res.status(401).json({ ok:false, error:'Invalid token' });
-
-  res.json({
-    ok: true,
-    users: mockUsers.length,
-    deposits: mockUsers.reduce((a,u)=>a+u.balance,0),
-    withdrawals: mockWithdrawals.reduce((a,w)=>a+w.amount,0),
-    open_trades: mockTrades.filter(t=>t.status==='open').length,
-    recent: [
-      { id:1,type:'إيداع',amount:50,note:'test',created_at:new Date().toISOString() },
-      { id:2,type:'سحب',amount:20,note:'test',created_at:new Date().toISOString() }
-    ]
-  });
+// Health check (no rate limit)
+app.get("/health", (req, res) => {
+  res.json({ ok: true, status: "running", timestamp: new Date().toISOString() });
 });
 
-// =====================
-// Admin users endpoint
-// =====================
-app.get("/api/admin/users", (req, res) => {
-  const token = req.headers['x-admin-token'];
-  if(token !== ADMIN_TOKEN) return res.status(401).json({ ok:false });
-
-  const q = req.query.q || '';
-  const items = mockUsers.filter(u => u.name.includes(q) || u.id.toString() === q);
-  res.json({ ok:true, items });
+// Keep-alive endpoint for Render (prevents sleeping)
+app.get("/ping", (req, res) => {
+  res.json({ ok: true, pong: Date.now() });
 });
 
-app.post("/api/admin/users/:id/balance", (req, res) => {
-  const token = req.headers['x-admin-token'];
-  if(token !== ADMIN_TOKEN) return res.status(401).json({ ok:false });
+// API Routes (with rate limiting)
+app.use("/api", apiLimiter);
+app.use("/api", authRoutes);
+app.use("/api/wallet", walletRoutes);
+app.use("/api/trades", tradesRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/markets", marketsRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/leaderboard", leaderboardRoutes);
 
-  const id = Number(req.params.id);
-  const { delta } = req.body;
-  const user = mockUsers.find(u=>u.id===id);
-  if(!user) return res.json({ ok:false, error:'User not found' });
+// Get user statistics (Direct endpoint for frontend)
+app.get("/api/stats/:tg_id", async (req, res) => {
+  try {
+    const user = await pool.query("SELECT id FROM users WHERE tg_id = $1", [req.params.tg_id]);
+    if (user.rows.length === 0) return res.json({ ok: false, error: "User not found" });
+    
+    const userId = user.rows[0].id;
+    
+    // Get user manual stats
+    const userStats = await pool.query("SELECT wins, losses FROM users WHERE id = $1", [userId]);
+    const manualWins = Number(userStats.rows[0].wins || 0);
+    const manualLosses = Number(userStats.rows[0].losses || 0);
 
-  user.balance += delta;
-  res.json({ ok:true });
+    // Calculate daily PnL (today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const dailyStats = await pool.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses
+      FROM trades_history 
+      WHERE user_id = $1 AND closed_at >= $2
+    `, [userId, today.toISOString()]);
+    
+    // Calculate monthly PnL (this month)
+    const month = new Date();
+    month.setDate(1);
+    month.setHours(0, 0, 0, 0);
+    
+    const monthlyStats = await pool.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses
+      FROM trades_history 
+      WHERE user_id = $1 AND closed_at >= $2
+    `, [userId, month.toISOString()]);
+    
+    // Get all time stats (Real + Manual)
+    const allTimeStats = await pool.query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses,
+        COUNT(*) as total_trades
+      FROM trades_history 
+      WHERE user_id = $1
+    `, [userId]);
+
+    // Get recent history
+    const history = await pool.query(`
+      SELECT * FROM trades_history 
+      WHERE user_id = $1 
+      ORDER BY closed_at DESC 
+      LIMIT 20
+    `, [userId]);
+    
+    res.json({
+      ok: true,
+      daily: {
+        wins: Number(dailyStats.rows[0].wins),
+        losses: Number(dailyStats.rows[0].losses),
+        net: Number(dailyStats.rows[0].wins) - Number(dailyStats.rows[0].losses)
+      },
+      monthly: {
+        wins: Number(monthlyStats.rows[0].wins),
+        losses: Number(monthlyStats.rows[0].losses),
+        net: Number(monthlyStats.rows[0].wins) - Number(monthlyStats.rows[0].losses)
+      },
+      allTime: {
+        wins: Number(allTimeStats.rows[0].wins) + manualWins,
+        losses: Number(allTimeStats.rows[0].losses) + manualLosses,
+        // Net should be Total Wins - Total Losses
+        net: (Number(allTimeStats.rows[0].wins) + manualWins) - (Number(allTimeStats.rows[0].losses) + manualLosses),
+        count: Number(allTimeStats.rows[0].total_trades)
+      },
+      history: history.rows
+    });
+    
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
 });
 
-// =====================
-// Admin withdrawals endpoint
-// =====================
-app.get("/api/admin/withdrawals", (req, res) => {
-  const token = req.headers['x-admin-token'];
-  if(token !== ADMIN_TOKEN) return res.status(401).json({ ok:false });
-
-  res.json({ ok:true, items: mockWithdrawals });
+// Telegram Webhook
+app.post(`/webhook/${process.env.BOT_TOKEN}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
 });
 
-app.post("/api/admin/withdrawals/:id/approve", (req, res) => {
-  const token = req.headers['x-admin-token'];
-  if(token !== ADMIN_TOKEN) return res.status(401).json({ ok:false });
-
-  const id = Number(req.params.id);
-  const wd = mockWithdrawals.find(w=>w.id===id);
-  if(!wd) return res.json({ ok:false });
-
-  wd.status = 'approved';
-  res.json({ ok:true });
-});
-
-app.post("/api/admin/withdrawals/:id/reject", (req, res) => {
-  const token = req.headers['x-admin-token'];
-  if(token !== ADMIN_TOKEN) return res.status(401).json({ ok:false });
-
-  const id = Number(req.params.id);
-  const wd = mockWithdrawals.find(w=>w.id===id);
-  if(!wd) return res.json({ ok:false });
-
-  wd.status = 'rejected';
-  res.json({ ok:true });
-});
-
-// =====================
-// Admin trades endpoint
-// =====================
-app.get("/api/admin/trades", (req, res) => {
-  const token = req.headers['x-admin-token'];
-  if(token !== ADMIN_TOKEN) return res.status(401).json({ ok:false });
-
-  res.json({ ok:true, items: mockTrades });
-});
-
-app.post("/api/admin/trades/:id/close", (req, res) => {
-  const token = req.headers['x-admin-token'];
-  if(token !== ADMIN_TOKEN) return res.status(401).json({ ok:false });
-
-  const id = Number(req.params.id);
-  const trade = mockTrades.find(t=>t.id===id);
-  if(!trade) return res.json({ ok:false });
-
-  trade.status = 'closed';
-  trade.pnl = req.body.pnl || 0;
-  res.json({ ok:true });
-});
-
-// =====================
 // Serve frontend
-// =====================
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "client/index.html"));
+  res.sendFile(path.join(__dirname, "../client/index.html"));
 });
 
-// =====================
+// Error handler
+app.use((err, req, res, next) => {
+  console.error("Server error:", err);
+  res.status(500).json({ ok: false, error: "Internal server error" });
+});
+
 // Start server
-// =====================
-app.listen(PORT, () => {
-  console.log(`✅ QL Admin mock server running on port ${PORT}`);
+app.listen(PORT, async () => {
+  console.log(`🟢 QL Trading AI Server started on port ${PORT}`);
+  console.log(`📅 ${new Date().toISOString()}`);
+  
+  // Set webhook (disable polling to avoid conflicts)
+  if (process.env.WEBHOOK_URL && process.env.BOT_TOKEN) {
+    const webhookUrl = `${process.env.WEBHOOK_URL}/webhook/${process.env.BOT_TOKEN}`;
+    try {
+      // Delete any existing webhook first
+      await bot.deleteWebHook({ drop_pending_updates: true });
+      console.log('✅ Cleared old webhook');
+      
+      // Set new webhook
+      await bot.setWebHook(webhookUrl);
+      console.log(`✅ Telegram webhook set to: ${webhookUrl}`);
+    } catch (error) {
+      console.error("❌ Failed to set webhook:", error.message);
+    }
+  }
+
+  // Start trading engine
+  startTradingEngine();
+  console.log("🤖 Trading engine started with real Binance prices");
+  
+  // Start keep-alive service for Render
+  startKeepAlive();
+});
+
+// Keep-alive service to prevent Render from sleeping
+function startKeepAlive() {
+  if (process.env.NODE_ENV === 'production' && process.env.WEBHOOK_URL) {
+    setInterval(async () => {
+      try {
+        const response = await fetch(`${process.env.WEBHOOK_URL}/ping`);
+        if (response.ok) {
+          console.log('✅ Keep-alive ping successful');
+        }
+      } catch (error) {
+        console.log('⚠️ Keep-alive ping failed:', error.message);
+      }
+    }, 14 * 60 * 1000); // Ping every 14 minutes (Render free tier sleeps after 15 min)
+    
+    console.log('🔄 Keep-alive service started (14 min intervals)');
+  }
+}
+
+// Graceful shutdown
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received, shutting down gracefully...");
+  pool.end(() => {
+    console.log("Database pool closed");
+    process.exit(0);
+  });
 });
