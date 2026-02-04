@@ -23,32 +23,67 @@
 
 
   <!-- Subscription Gate -->
-  <div id="gate" class="gate">
-    <video class="bg" src="./bg.mp4" autoplay muted loop playsinline></video>
+  <div id="gate" class="gate gate-minimal">
     
-    <!-- Snow Effect -->
-    <div class="snowflakes" id="snowflakes"></div>
-    
-    <div class="glass card gate-card">
-      <div class="g-title" data-i18n="gateTitle">QL Trading — Access</div>
-      <div class="g-sub" data-i18n="gateSub">Enter your subscription key to unlock your wallet</div>
-      <input id="g-name" class="input" placeholder="Name / الاسم"/>
-      <input id="g-email" class="input" placeholder="Email / الايميل"/>
-      <input id="g-key" class="input" placeholder="Enter key / ادخل مفتاح الاشتراك"/>
-      <div class="row">
-        <button id="g-activate" class="btn" data-i18n="confirm">Confirm</button>
-        <a id="g-buy" class="btn ghost" href="https://t.me/qlsupport" target="_blank" data-i18n="buyKey">Buy a key</a>
+    <div class="gate-content">
+      <!-- Logo Section -->
+      <div class="gate-logo-section">
+        <div class="gate-logo-glow"></div>
+        <img src="./logo.png" alt="QL Trading" class="gate-logo-img" onerror="this.style.display='none'">
+        <h1 class="gate-brand">QL Trading</h1>
+        <p class="gate-tagline">منصة التداول الذكي | Smart Trading Platform</p>
       </div>
-      <div id="g-toast" class="toast"></div>
-    </div>
-    
-    <!-- Description Text -->
-    <div class="gate-description">
-      <h3>📈 منصة التداول الذكي | Smart Trading Platform</h3>
-      <p>
-        محفظة QL Trading مدعومة بالذكاء الاصطناعي لتداول الذهب والعملات. نوفر لك صفقات ذكية، تحليلات متقدمة، وسحب سريع للأرباح.<br>
-        AI-powered wallet for Gold & Forex trading. Smart trades, advanced analytics, and fast withdrawals.
-      </p>
+      
+      <!-- Login Card -->
+      <div class="glass card gate-card">
+        <div class="g-title">تسجيل الدخول | Login</div>
+        <div class="g-sub">أدخل مفتاح الاشتراك للوصول إلى محفظتك</div>
+        <input id="g-name" class="input" placeholder="الاسم / Name"/>
+        <input id="g-email" class="input" placeholder="البريد الإلكتروني / Email"/>
+        <input id="g-key" class="input" placeholder="مفتاح الاشتراك / Subscription Key"/>
+        <div class="row">
+          <button id="g-activate" class="btn">دخول | Login</button>
+          <a id="g-buy" class="btn ghost" href="https://t.me/qlsupport" target="_blank">شراء مفتاح | Buy Key</a>
+        </div>
+        <div id="g-toast" class="toast"></div>
+      </div>
+      
+      <!-- Features Section -->
+      <div class="gate-features">
+        <div class="gate-feature">
+          <div class="gate-feature-icon">⚡</div>
+          <div class="gate-feature-text">
+            <strong>تداول ذكي</strong>
+            <span>Smart Trading</span>
+          </div>
+        </div>
+        <div class="gate-feature">
+          <div class="gate-feature-icon">💸</div>
+          <div class="gate-feature-text">
+            <strong>سحب سريع</strong>
+            <span>Fast Withdrawal</span>
+          </div>
+        </div>
+        <div class="gate-feature">
+          <div class="gate-feature-icon">🛡️</div>
+          <div class="gate-feature-text">
+            <strong>آمن وموثوق</strong>
+            <span>Secure & Trusted</span>
+          </div>
+        </div>
+        <div class="gate-feature">
+          <div class="gate-feature-icon">🌐</div>
+          <div class="gate-feature-text">
+            <strong>دعم 24/7</strong>
+            <span>24/7 Support</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Footer -->
+      <div class="gate-footer">
+        <span>© 2024 QL Trading. All rights reserved.</span>
+      </div>
     </div>
   </div>
 

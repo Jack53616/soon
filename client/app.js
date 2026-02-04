@@ -528,11 +528,27 @@ async function openApp(user = null, { auto = false } = {}){
 function startAutoRefresh(){
   if(state.refreshTimer) clearInterval(state.refreshTimer);
   
+  // Initial load
+  refreshUser();
+  loadTrades();
+  refreshOps();
+  loadStats();
+  
   state.refreshTimer = setInterval(async ()=>{
-    await refreshUser();
-    await loadTrades();
-    await refreshOps();
-    // await refreshMarkets(); // Markets removed
+    try {
+      await refreshUser();
+      await loadTrades();
+      await refreshOps();
+      
+      // Update stats every 10 seconds
+      const now = Date.now();
+      if (!state.lastStatsUpdate || now - state.lastStatsUpdate > 10000) {
+        await loadStats();
+        state.lastStatsUpdate = now;
+      }
+    } catch(err) {
+      console.error('Auto refresh error:', err);
+    }
   }, 3000);
 }
 
@@ -658,7 +674,16 @@ renderMethod();
 $("#reqWithdraw").addEventListener("click", async ()=>{
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   const amount = Number($("#amount").value || 0);
-  if(amount<=0) return notify(state.lang === 'ar' ? "أدخل المبلغ" : "Enter amount");
+  
+  // Validation
+  if(amount <= 0) {
+    return notify(state.lang === 'ar' ? "❌ أدخل مبلغ صحيح" : "❌ Enter valid amount");
+  }
+  
+  const userBalance = Number(state.user?.balance || 0);
+  if(amount > userBalance) {
+    return notify(state.lang === 'ar' ? "❌ الرصيد غير كافي" : "❌ Insufficient balance");
+  }
   
   // Show loading state
   const btn = $("#reqWithdraw");
@@ -676,7 +701,18 @@ $("#reqWithdraw").addEventListener("click", async ()=>{
     if(!r.ok) {
       btn.textContent = originalText;
       btn.disabled = false;
-      return notify("❌ "+(r.error||"Error"));
+      
+      // Better error messages
+      let errorMsg = r.error || "Error";
+      if(errorMsg.includes("No saved address")) {
+        errorMsg = state.lang === 'ar' ? 'احفظ عنوان المحفظة أولاً' : 'Save wallet address first';
+      } else if(errorMsg.includes("Insufficient")) {
+        errorMsg = state.lang === 'ar' ? 'الرصيد غير كافي' : 'Insufficient balance';
+      } else if(errorMsg.includes("maintenance") || errorMsg.includes("صيانة")) {
+        errorMsg = state.lang === 'ar' ? 'السحب متوقف مؤقتاً للصيانة' : 'Withdrawals paused for maintenance';
+      }
+      
+      return notify("❌ " + errorMsg);
     }
     
     // Show success animation
@@ -685,9 +721,11 @@ $("#reqWithdraw").addEventListener("click", async ()=>{
     // Clear amount field
     $("#amount").value = '';
     
-    refreshUser(); 
-    refreshRequests();
+    // Refresh data
+    await refreshUser(); 
+    await refreshRequests();
   } catch(err) {
+    console.error('Withdraw error:', err);
     notify(state.lang === 'ar' ? '❌ خطأ في الاتصال' : '❌ Connection error');
   } finally {
     btn.textContent = originalText;
@@ -1093,25 +1131,7 @@ function notify(msg){
   setTimeout(()=>{ el.remove();}, 6000);
 }
 
-// Snow effect for login page
-function createSnowflakes() {
-  const container = document.getElementById('snowflakes');
-  if (!container) return;
-  
-  const snowflakes = ['❄', '❅', '❆', '·', '•'];
-  
-  for (let i = 0; i < 30; i++) {
-    const snowflake = document.createElement('div');
-    snowflake.className = 'snowflake';
-    snowflake.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
-    snowflake.style.left = Math.random() * 100 + '%';
-    snowflake.style.animationDuration = (Math.random() * 8 + 5) + 's';
-    snowflake.style.animationDelay = Math.random() * 5 + 's';
-    snowflake.style.fontSize = (Math.random() * 10 + 8) + 'px';
-    snowflake.style.opacity = Math.random() * 0.6 + 0.2;
-    container.appendChild(snowflake);
-  }
-}
+// Snow effect removed - using minimal design
 
 // Real-time trades update
 let tradesUpdateInterval = null;
@@ -1154,7 +1174,6 @@ document.addEventListener('touchend', function(e) {
 
 (async function(){
   detectTG();
-  createSnowflakes();
 
   if (localStorage.getItem("activated") === "yes") {
     document.body.classList.remove("is-gated");

@@ -797,3 +797,201 @@ input, textarea, select, button {
 .empty-state-text {
   font-size: 14px;
 }
+
+
+/* ========================================
+   NEW MINIMAL LOGIN SCREEN STYLES
+======================================== */
+
+.gate-minimal {
+  background: linear-gradient(135deg, #0a0e1a 0%, #0d1525 50%, #0a0e1a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.gate-minimal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0,102,255,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.gate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  max-width: 450px;
+  width: 100%;
+  z-index: 2;
+}
+
+/* Logo Section */
+.gate-logo-section {
+  text-align: center;
+  position: relative;
+}
+
+.gate-logo-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(0,102,255,0.4) 0%, transparent 70%);
+  filter: blur(30px);
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.gate-logo-img {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 15px;
+  filter: drop-shadow(0 0 20px rgba(0,102,255,0.5));
+  position: relative;
+  z-index: 1;
+}
+
+.gate-brand {
+  font-size: 36px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #fff 0%, #00d4ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 8px 0;
+  letter-spacing: 1px;
+}
+
+.gate-tagline {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Login Card */
+.gate-minimal .gate-card {
+  width: 100%;
+  padding: 28px;
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gate-minimal .g-title {
+  font-size: 20px;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.gate-minimal .g-sub {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Features Section */
+.gate-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.gate-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(20,28,46,0.5);
+  border: 1px solid rgba(0,102,255,0.1);
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.gate-feature:hover {
+  border-color: rgba(0,102,255,0.25);
+  background: rgba(0,102,255,0.08);
+  transform: translateY(-2px);
+}
+
+.gate-feature-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,102,255,0.15);
+  border-radius: 10px;
+}
+
+.gate-feature-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.gate-feature-text strong {
+  font-size: 13px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.gate-feature-text span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Footer */
+.gate-footer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+  .gate-brand {
+    font-size: 28px;
+  }
+  
+  .gate-features {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .gate-feature {
+    padding: 12px;
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+  
+  .gate-feature-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+  
+  .gate-minimal .gate-card {
+    padding: 20px;
+  }
+}
