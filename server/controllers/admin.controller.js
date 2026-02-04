@@ -453,3 +453,81 @@ export const updateSettings = async (req, res) => {
     res.status(500).json({ ok: false, error: error.message });
   }
 };
+
+// Clear all withdrawal requests for a user
+export const clearUserWithdrawals = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    // Get all pending withdrawals to return frozen balance
+    const pendingResult = await query(
+      "SELECT * FROM requests WHERE user_id = $1 AND status = 'pending'",
+      [user_id]
+    );
+
+    // Return frozen balance for pending requests
+    for (const req of pendingResult.rows) {
+      await query(
+        "UPDATE users SET balance = balance + $1, frozen_balance = frozen_balance - $1 WHERE id = $2",
+        [req.amount, user_id]
+      );
+    }
+
+    // Delete all withdrawal requests for this user
+    await query("DELETE FROM requests WHERE user_id = $1", [user_id]);
+
+    res.json({ ok: true, message: "User withdrawals cleared" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Clear all withdrawals system-wide
+export const clearAllWithdrawals = async (req, res) => {
+  try {
+    // Get all pending withdrawals
+    const pendingResult = await query("SELECT * FROM requests WHERE status = 'pending'");
+
+    // Return frozen balance for each pending request
+    for (const req of pendingResult.rows) {
+      await query(
+        "UPDATE users SET balance = balance + $1, frozen_balance = frozen_balance - $1 WHERE id = $2",
+        [req.amount, req.user_id]
+      );
+    }
+
+    // Delete all withdrawal requests
+    await query("DELETE FROM requests");
+
+    res.json({ ok: true, message: "All withdrawals cleared" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Reset user's total withdrawn
+export const resetUserWithdrawn = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    await query("UPDATE users SET total_withdrawn = 0 WHERE id = $1", [user_id]);
+
+    res.json({ ok: true, message: "User total withdrawn reset" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Clear user trades
+export const clearUserTrades = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    await query("DELETE FROM trades WHERE user_id = $1", [user_id]);
+    await query("DELETE FROM trades_history WHERE user_id = $1", [user_id]);
+
+    res.json({ ok: true, message: "User trades cleared" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};

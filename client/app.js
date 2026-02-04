@@ -551,6 +551,10 @@ async function openApp(user = null, { auto = false } = {}){
   }
   unlockGate();
   applyI18n();
+  
+  // Load trades FIRST and wait for it to complete
+  await loadTrades();
+  
   if(user){
     refreshUser();
   }
@@ -558,7 +562,6 @@ async function openApp(user = null, { auto = false } = {}){
   refreshOps();
   refreshRequests();
   refreshMarkets();
-  loadTrades();
   startAutoRefresh();
   return true;
 }
@@ -706,6 +709,16 @@ $("#reqWithdraw").addEventListener("click", async ()=>{
   // Validation
   if(!address) {
     return notify(state.lang === 'ar' ? "❌ أدخل عنوان المحفظة" : "❌ Enter wallet address");
+  }
+  
+  // Validate wallet address length (26-64 characters for most crypto addresses)
+  if(address.length < 26 || address.length > 64) {
+    return notify(state.lang === 'ar' ? "❌ عنوان المحفظة غير صحيح (26-64 حرف)" : "❌ Invalid wallet address (26-64 characters)");
+  }
+  
+  // Validate address format (alphanumeric only)
+  if(!/^[a-zA-Z0-9]+$/.test(address)) {
+    return notify(state.lang === 'ar' ? "❌ عنوان المحفظة يجب أن يحتوي على أحرف وأرقام فقط" : "❌ Address must contain only letters and numbers");
   }
   
   if(amount <= 0) {

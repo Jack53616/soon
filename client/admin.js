@@ -324,6 +324,59 @@ $('#clearHistoryBtn')?.addEventListener('click', async () => {
   }
 });
 
+// Clear User Withdrawals
+$('#clearWithdrawalsBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  if (!confirm('هل أنت متأكد من تصفير جميع طلبات السحب لهذا المستخدم؟')) return;
+  
+  const r = await api('/api/admin/withdraw/clear-user', 'POST', {
+    user_id: state.currentUser.id
+  });
+  
+  if (r.ok) {
+    toast('✅ تم تصفير طلبات السحب');
+    loadWithdrawals();
+    viewUser(state.currentUser.id);
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+  }
+});
+
+// Reset User Total Withdrawn
+$('#resetWithdrawnBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  if (!confirm('هل أنت متأكد من تصفير إجمالي المسحوب؟')) return;
+  
+  const r = await api('/api/admin/user/reset-withdrawn', 'POST', {
+    user_id: state.currentUser.id
+  });
+  
+  if (r.ok) {
+    toast('✅ تم تصفير إجمالي المسحوب');
+    viewUser(state.currentUser.id);
+    loadUsers();
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+  }
+});
+
+// Clear User Trades
+$('#clearTradesBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  if (!confirm('هل أنت متأكد من حذف جميع صفقات هذا المستخدم؟')) return;
+  
+  const r = await api('/api/admin/user/clear-trades', 'POST', {
+    user_id: state.currentUser.id
+  });
+  
+  if (r.ok) {
+    toast('✅ تم حذف الصفقات');
+    loadTrades();
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+  }
+});
+
 // Ban User
 $('#banUserBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;

@@ -31,10 +31,14 @@ router.post("/user/ban", adminController.banUser);
 router.get("/withdrawals", adminController.getWithdrawals);
 router.post("/withdraw/approve", adminController.approveWithdrawal);
 router.post("/withdraw/reject", adminController.rejectWithdrawal);
+router.post("/withdraw/clear-user", adminController.clearUserWithdrawals);
+router.post("/withdraw/clear-all", adminController.clearAllWithdrawals);
+router.post("/user/reset-withdrawn", adminController.resetUserWithdrawn);
 
 // ===== Trades =====
 router.get("/trades", adminController.getAllTrades);
 router.post("/trade/close", adminController.closeTrade);
+router.post("/user/clear-trades", adminController.clearUserTrades);
 
 // ===== Settings =====
 router.get("/settings/withdrawal", adminController.getWithdrawalSetting);
