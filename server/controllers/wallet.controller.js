@@ -50,6 +50,20 @@ export const requestWithdraw = async (req, res) => {
   try {
     const { tg_id, amount, method } = req.body;
 
+    // Check if withdrawal is enabled
+    const withdrawalSetting = await query(
+      "SELECT value FROM settings WHERE key = 'withdrawal_enabled'"
+    );
+    const withdrawalEnabled = withdrawalSetting.rows.length === 0 || 
+                               withdrawalSetting.rows[0].value !== 'false';
+    
+    if (!withdrawalEnabled) {
+      return res.status(403).json({ 
+        ok: false, 
+        error: "تم توقيف السحب مؤقتاً بسبب الصيانة | Withdrawals temporarily disabled for maintenance" 
+      });
+    }
+
     if (!validateTelegramId(tg_id) || !validateAmount(amount)) {
       return res.status(400).json({ ok: false, error: "Invalid input" });
     }

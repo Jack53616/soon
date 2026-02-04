@@ -261,8 +261,11 @@ bot.onText(/^\/help$/, (msg) => {
 \`/setdaily <tg_id> <amount>\` - Set daily profit target
 
 💸 *Withdrawals*
-\`/approve_withdraw <id>\` - Approve request
-\`/reject_withdraw <id> <reason>\` - Reject request
+`/approve_withdraw <id>` - Approve request
+`/reject_withdraw <id> <reason>` - Reject request
+`/stopwithdraw` - إيقاف السحب (صيانة)
+`/startwithdraw` - تشغيل السحب
+`/withdrawstatus` - حالة السحب
 
 📢 *Communication*
 \`/broadcast all <message>\` - Send to all users
@@ -541,6 +544,43 @@ bot.onText(/^\/notify\s+(\d+)\s+([\s\S]+)$/, async (msg, m) => {
   const tg = Number(m[1]); const text = m[2];
   try { await bot.sendMessage(tg, text); bot.sendMessage(msg.chat.id, "✅ Sent."); }
   catch (e) { bot.sendMessage(msg.chat.id, "❌ " + e.message); }
+});
+
+// ===== أوامر التحكم بالسحب =====
+// /stopwithdraw - إيقاف السحب
+bot.onText(/^\/stopwithdraw$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    await q(`INSERT INTO settings (key, value) VALUES ('withdrawal_enabled', 'false') 
+             ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
+    bot.sendMessage(msg.chat.id, `🛑 *تم إيقاف السحب*\n\n⚠️ جميع طلبات السحب الجديدة ستُرفض تلقائياً.\n📝 الرسالة للمستخدمين: "تم توقيف السحب مؤقتاً بسبب الصيانة"\n\n✅ لإعادة تفعيل السحب استخدم: /startwithdraw`, { parse_mode: "Markdown" });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
+// /startwithdraw - تشغيل السحب
+bot.onText(/^\/startwithdraw$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    await q(`INSERT INTO settings (key, value) VALUES ('withdrawal_enabled', 'true') 
+             ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
+    bot.sendMessage(msg.chat.id, `✅ *تم تفعيل السحب*\n\n💸 المستخدمون يمكنهم الآن طلب السحب بشكل طبيعي.`, { parse_mode: "Markdown" });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
+// /withdrawstatus - حالة السحب
+bot.onText(/^\/withdrawstatus$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    const result = await q(`SELECT value FROM settings WHERE key = 'withdrawal_enabled'`);
+    const enabled = result.rows.length === 0 || result.rows[0].value !== 'false';
+    bot.sendMessage(msg.chat.id, `📊 *حالة السحب*\n\nالسحب: ${enabled ? '✅ مفعّل' : '🛑 متوقف'}\n\n${enabled ? '🔴 لإيقاف السحب: /stopwithdraw' : '🟢 لتفعيل السحب: /startwithdraw'}`, { parse_mode: "Markdown" });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
 });
 
 export default bot;

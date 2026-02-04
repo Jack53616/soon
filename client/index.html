@@ -199,9 +199,11 @@
   <div id="settingsBackdrop" class="settings-backdrop hidden"></div>
 <div id="settingsPanel" class="settings-panel glass hidden">
   <div class="sp-header">
-    <div class="sp-title" data-i18n="settingsTitle">Account &amp; Settings</div>
+    <div class="sp-title" data-i18n="settingsTitle">Account & Settings</div>
     <button id="spClose" class="i-btn small" aria-label="Close">✕</button>
   </div>
+  
+  <!-- Profile Section -->
   <div class="sp-section">
     <div class="sp-label" data-i18n="profile">Profile</div>
     <div class="sp-row">
@@ -217,13 +219,39 @@
       <div class="sp-value" id="spEmail">—</div>
     </div>
   </div>
+  
+  <!-- Broker Section with XM Logo -->
   <div class="sp-section">
-    <div class="sp-label" data-i18n="broker">Broker</div>
+    <div class="sp-label" data-i18n="broker">Broker Partner</div>
     <div class="sp-broker">
-      <div class="sp-broker-name">XM Trading</div>
-      <div class="sp-broker-badge" data-i18n="xmLinked">Linked</div>
+      <img src="./xm-logo.png" alt="XM Trading" class="sp-broker-logo">
+      <div class="sp-broker-info">
+        <div class="sp-broker-name">XM Global</div>
+        <div class="sp-broker-badge" data-i18n="xmLinked">✓ Linked</div>
+      </div>
     </div>
-    <div class="sp-note" data-i18n="xmNote">Your QL Wallet is connected with XM trading infrastructure.</div>
+    <div class="sp-note" data-i18n="xmNote">Your QL Wallet is connected with XM trading infrastructure for seamless trading experience.</div>
+  </div>
+  
+  <!-- Account Status Section -->
+  <div class="sp-section">
+    <div class="sp-label">Account Status</div>
+    <div class="sp-row">
+      <div class="sp-key">Level</div>
+      <div class="sp-value" style="color: #ffd700;">VIP Gold 👑</div>
+    </div>
+    <div class="sp-row">
+      <div class="sp-key">Status</div>
+      <div class="sp-value" style="color: #00d68f;">✓ Active</div>
+    </div>
+  </div>
+  
+  <!-- App Info -->
+  <div class="sp-section" style="background: transparent; border: none; padding: 8px 0;">
+    <div style="text-align: center; font-size: 11px; color: var(--muted);">
+      QL Trading AI v2.4<br>
+      Powered by XM Trading Infrastructure
+    </div>
   </div>
 </div>
   <audio id="sndNotify" src="./notify.mp3" preload="auto"></audio>
