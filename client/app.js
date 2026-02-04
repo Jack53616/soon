@@ -401,6 +401,44 @@ const $$ = (q)=>document.querySelectorAll(q);
 
 setTimeout(()=> { $("#splash")?.classList.add("hidden"); }, 1800);
 
+// Check maintenance mode
+async function checkMaintenance() {
+  try {
+    const r = await fetch("/api/settings/maintenance").then(r => r.json());
+    if (r.ok && r.maintenance === true) {
+      showMaintenanceScreen();
+      return true;
+    }
+    hideMaintenanceScreen();
+    return false;
+  } catch (err) {
+    console.log("Maintenance check failed:", err);
+    return false;
+  }
+}
+
+function showMaintenanceScreen() {
+  const screen = $("#maintenanceScreen");
+  if (screen) {
+    screen.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+}
+
+function hideMaintenanceScreen() {
+  const screen = $("#maintenanceScreen");
+  if (screen) {
+    screen.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+}
+
+// Check maintenance on load
+checkMaintenance();
+
+// Periodic maintenance check
+setInterval(checkMaintenance, 30000);
+
 const cleanKeyInput = (value = "") => extractKeyCandidates(value)[0] || "";
 
 function detectTG(){
@@ -650,23 +688,12 @@ function renderMethod(){
     eth: "Ethereum"
   };
   $("#methodLabel").textContent = map[state.method] || "USDT (TRC20)";
-  const savedAddrText = state.lang === 'ar' ? 'العنوان المحفوظ:' : 'Saved address:';
-  const placeholderText = state.lang === 'ar' ? `عنوان ${map[state.method]||'المحفظة'} الخاص بك...` : `Your ${map[state.method]||'Wallet'} address...`;
-  const saveText = state.lang === 'ar' ? 'حفظ' : 'Save';
-  $("#methodView").innerHTML = `
-    <div class="muted">${savedAddrText}</div>
-    <input id="addr" class="input" placeholder="${placeholderText}"/>
-    <button id="saveAddr" class="btn">${saveText}</button>
-  `;
-  $("#saveAddr").onclick = async ()=>{
-    const address = $("#addr").value.trim();
-    const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
-    await fetch("/api/wallet/withdraw/method",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({tg_id:tg, method:state.method, address})
-    });
-    notify(state.lang === 'ar' ? "✅ تم حفظ العنوان" : "✅ Address saved");
+  
+  // Update placeholder based on method
+  const addrInput = $("#withdrawAddr");
+  if(addrInput) {
+    const placeholderText = state.lang === 'ar' ? `عنوان ${map[state.method]||'المحفظة'} الخاص بك...` : `Your ${map[state.method]||'Wallet'} address...`;
+    addrInput.placeholder = placeholderText;
   }
 }
 renderMethod();
@@ -674,8 +701,13 @@ renderMethod();
 $("#reqWithdraw").addEventListener("click", async ()=>{
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   const amount = Number($("#amount").value || 0);
+  const address = $("#withdrawAddr")?.value?.trim() || '';
   
   // Validation
+  if(!address) {
+    return notify(state.lang === 'ar' ? "❌ أدخل عنوان المحفظة" : "❌ Enter wallet address");
+  }
+  
   if(amount <= 0) {
     return notify(state.lang === 'ar' ? "❌ أدخل مبلغ صحيح" : "❌ Enter valid amount");
   }
@@ -695,7 +727,7 @@ $("#reqWithdraw").addEventListener("click", async ()=>{
     const r = await fetch("/api/wallet/withdraw",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({tg_id:tg, amount, method: state.method})
+      body:JSON.stringify({tg_id:tg, amount, method: state.method, address})
     }).then(r=>r.json());
     
     if(!r.ok) {
@@ -718,8 +750,9 @@ $("#reqWithdraw").addEventListener("click", async ()=>{
     // Show success animation
     showWithdrawSuccess(amount);
     
-    // Clear amount field
+    // Clear fields
     $("#amount").value = '';
+    if($("#withdrawAddr")) $("#withdrawAddr").value = '';
     
     // Refresh data
     await refreshUser(); 

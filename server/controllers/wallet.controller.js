@@ -48,7 +48,7 @@ export const getOps = async (req, res) => {
 
 export const requestWithdraw = async (req, res) => {
   try {
-    const { tg_id, amount, method } = req.body;
+    const { tg_id, amount, method, address: directAddress } = req.body;
 
     // Check if withdrawal is enabled
     const withdrawalSetting = await query(
@@ -79,17 +79,25 @@ export const requestWithdraw = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Insufficient balance" });
     }
 
-    // Get saved address
-    const methodResult = await query(
-      "SELECT address FROM withdraw_methods WHERE user_id = $1 AND method = $2",
-      [user.id, method]
-    );
+    // Use direct address from request or get saved address
+    let address = directAddress;
+    
+    if (!address) {
+      const methodResult = await query(
+        "SELECT address FROM withdraw_methods WHERE user_id = $1 AND method = $2",
+        [user.id, method]
+      );
 
-    if (methodResult.rows.length === 0) {
-      return res.status(400).json({ ok: false, error: "No saved address for this method" });
+      if (methodResult.rows.length === 0) {
+        return res.status(400).json({ ok: false, error: "No saved address for this method" });
+      }
+
+      address = methodResult.rows[0].address;
     }
-
-    const address = methodResult.rows[0].address;
+    
+    if (!address || address.trim() === '') {
+      return res.status(400).json({ ok: false, error: "Wallet address is required" });
+    }
 
     // Deduct balance and freeze it
     await query(

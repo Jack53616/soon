@@ -12,6 +12,31 @@
 </head>
 <body>
 
+<!-- Maintenance Screen -->
+<div id="maintenanceScreen" class="maintenance-screen hidden">
+  <div class="maintenance-content">
+    <div class="maintenance-icon">
+      <div class="gear-container">
+        <svg class="gear gear-large" viewBox="0 0 100 100">
+          <path d="M50 10 L55 25 L70 20 L65 35 L80 40 L70 50 L80 60 L65 65 L70 80 L55 75 L50 90 L45 75 L30 80 L35 65 L20 60 L30 50 L20 40 L35 35 L30 20 L45 25 Z"/>
+        </svg>
+        <svg class="gear gear-small" viewBox="0 0 100 100">
+          <path d="M50 10 L55 25 L70 20 L65 35 L80 40 L70 50 L80 60 L65 65 L70 80 L55 75 L50 90 L45 75 L30 80 L35 65 L20 60 L30 50 L20 40 L35 35 L30 20 L45 25 Z"/>
+        </svg>
+      </div>
+    </div>
+    <h1 class="maintenance-title">صيانة النظام</h1>
+    <p class="maintenance-subtitle">System Maintenance</p>
+    <p class="maintenance-desc">نعمل على تحسين تجربتك. سنعود قريباً!</p>
+    <p class="maintenance-desc-en">We're improving your experience. We'll be back soon!</p>
+    <div class="maintenance-loader">
+      <div class="loader-dot"></div>
+      <div class="loader-dot"></div>
+      <div class="loader-dot"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Welcome Splash Screen -->
 <div id="splash" class="splash">
   <div class="splash-content">
@@ -97,7 +122,21 @@
           </div>
           <div id="tradeBadge" class="muted" data-i18n="noOpenTrade">No open trade</div>
           <div class="chart">
-            <svg viewBox="0 0 100 28"><path id="chartPath" d="M0,18 C15,12 22,16 30,15 C40,14 52,10 60,12 C70,14 82,11 100,12"/></svg>
+            <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="chartGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#0066ff;stop-opacity:1" />
+                  <stop offset="50%" style="stop-color:#00d4ff;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#00d68f;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="chartFillGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:0.4" />
+                  <stop offset="100%" style="stop-color:#00d4ff;stop-opacity:0" />
+                </linearGradient>
+              </defs>
+              <path class="chart-fill" d="M0,25 C10,20 20,22 30,18 C40,14 50,16 60,12 C70,8 80,14 90,10 C95,8 100,12 100,12 L100,40 L0,40 Z"/>
+              <path id="chartPath" d="M0,25 C10,20 20,22 30,18 C40,14 50,16 60,12 C70,8 80,14 90,10 C95,8 100,12 100,12"/>
+            </svg>
           </div>
 
           <div class="quick">
@@ -114,14 +153,6 @@
         </div>
 
         <div class="home-lower">
-          <div class="card glass compact">
-            <div class="c-title">
-              <span data-i18n="recent">Recent activity</span>
-              <span class="badge" data-i18n="recentSub">Wallet history</span>
-            </div>
-            <div id="ops" class="ops"></div>
-          </div>
-
           <div class="card glass compact">
             <div class="c-title">
               <span data-i18n="live">Live feed</span>
@@ -180,12 +211,12 @@
         <div class="card glass">
           <div class="c-title" data-i18n="withdrawCrypto">Withdraw (Crypto only)</div>
           <button id="pickMethod" class="btn">Method: <b id="methodLabel">USDT (TRC20)</b></button>
-          <div id="methodView" class="method"></div>
-          <div class="row">
+          <div class="withdraw-form">
+            <input id="withdrawAddr" class="input" placeholder="Wallet Address / عنوان المحفظة"/>
             <input id="amount" type="number" class="input" placeholder="Amount / المبلغ"/>
             <button id="reqWithdraw" class="btn" data-i18n="request">Request</button>
           </div>
-          <small class="muted" data-i18n="savedAddr">* Saved address for selected method will be used.</small>
+          <small class="muted">* Enter your wallet address and amount to request withdrawal</small>
           <div class="card glass" style="margin-top:10px">
             <div class="c-title" data-i18n="deposit">Deposit</div>
             <button id="whatsapp" class="btn ghost">WhatsApp</button>

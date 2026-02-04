@@ -14,34 +14,39 @@ const verifyAdmin = (req, res, next) => {
 
 router.use(verifyAdmin);
 
-// GET /api/admin/dashboard - Get dashboard stats
+// ===== Dashboard =====
 router.get("/dashboard", adminController.getDashboard);
 
-// GET /api/admin/users - Get all users
+// ===== Users =====
 router.get("/users", adminController.getUsers);
-
-// GET /api/admin/withdrawals - Get all withdrawal requests
-router.get("/withdrawals", adminController.getWithdrawals);
-
-// GET /api/admin/trades - Get all trades
-router.get("/trades", adminController.getAllTrades);
-
-// POST /api/admin/user/balance - Add/remove balance
+router.get("/user/search", adminController.searchUser);
+router.get("/user/:id", adminController.getUser);
 router.post("/user/balance", adminController.modifyBalance);
-
-// POST /api/admin/user/ban - Ban/unban user
+router.post("/user/subscription", adminController.extendSubscription);
+router.post("/user/trade", adminController.addTrade);
+router.post("/user/clear-history", adminController.clearHistory);
 router.post("/user/ban", adminController.banUser);
 
-// POST /api/admin/withdrawal/approve - Approve withdrawal
-router.post("/withdrawal/approve", adminController.approveWithdrawal);
+// ===== Withdrawals =====
+router.get("/withdrawals", adminController.getWithdrawals);
+router.post("/withdraw/approve", adminController.approveWithdrawal);
+router.post("/withdraw/reject", adminController.rejectWithdrawal);
 
-// POST /api/admin/withdrawal/reject - Reject withdrawal
-router.post("/withdrawal/reject", adminController.rejectWithdrawal);
+// ===== Trades =====
+router.get("/trades", adminController.getAllTrades);
+router.post("/trade/close", adminController.closeTrade);
 
-// POST /api/admin/broadcast - Send broadcast message
-router.post("/broadcast", adminController.broadcast);
-
-// POST /api/admin/settings - Update system settings
+// ===== Settings =====
+router.get("/settings/withdrawal", adminController.getWithdrawalSetting);
+router.post("/settings/withdrawal/toggle", adminController.toggleWithdrawal);
+router.get("/settings/maintenance", adminController.getMaintenanceSetting);
+router.post("/settings/maintenance/toggle", adminController.toggleMaintenance);
 router.post("/settings", adminController.updateSettings);
+
+// ===== Keys =====
+router.post("/key/create", adminController.createKey);
+
+// ===== Broadcast =====
+router.post("/broadcast", adminController.broadcast);
 
 export default router;

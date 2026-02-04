@@ -258,29 +258,67 @@ body:not(.is-gated) #gate{
 .b-val{font-weight:900; font-size:38px; background: linear-gradient(135deg, #fff, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;}
 .pnl{font-weight:700; font-size:15px; color:#00d68f}
 
-.chart{margin:10px 0}
-.chart svg path{ fill:none; stroke:var(--accent-2); stroke-width:2; filter:drop-shadow(0 0 8px rgba(0,212,255,0.6))}
+.chart{margin:10px 0; position: relative; height: 60px; overflow: hidden;}
+.chart svg {
+  width: 100%;
+  height: 100%;
+}
+.chart svg path {
+  fill: none;
+  stroke: url(#chartGradient);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 12px rgba(0,212,255,0.5));
+  animation: chartPulse 3s ease-in-out infinite;
+}
+.chart svg .chart-fill {
+  fill: url(#chartFillGradient);
+  opacity: 0.3;
+}
+@keyframes chartPulse {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(0,212,255,0.4)); }
+  50% { filter: drop-shadow(0 0 16px rgba(0,212,255,0.7)); }
+}
 
 .quick{display:flex; gap:10px; margin-top:12px}
 .qa{
-  flex:1; padding:12px; border-radius:14px; background:rgba(10,14,26,0.7); 
-  border:1px solid rgba(0,102,255,0.15); color:#fff;
-  transition: all 0.2s ease;
+  flex:1; padding:14px; border-radius:14px; 
+  background: linear-gradient(145deg, rgba(20,28,46,0.8), rgba(10,14,26,0.9)); 
+  border:1px solid rgba(0,102,255,0.2); color:#fff;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
 }
 .qa:hover{
   border-color: var(--accent);
-  background:rgba(0,102,255,0.1);
+  background: linear-gradient(145deg, rgba(0,102,255,0.15), rgba(0,102,255,0.08));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,102,255,0.2);
 }
-.qa small{display:block; opacity:.85; margin-top:4px}
+.qa:active{
+  transform: scale(0.98);
+}
+.qa small{display:block; font-size: 12px; font-weight: 600; color: var(--muted);}
 
 .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px}
 .stat{
-  padding:14px; border-radius:14px;
-  background: rgba(20,28,46,0.5);
-  border: 1px solid rgba(0,102,255,0.1);
+  padding:16px 14px; border-radius:16px;
+  background: linear-gradient(145deg, rgba(20,28,46,0.6), rgba(10,14,26,0.8));
+  border: 1px solid rgba(0,102,255,0.12);
+  transition: all 0.3s ease;
+  text-align: center;
 }
-.stat div{color:var(--muted); font-size:12px; margin-bottom:4px}
-.stat b{font-size:17px; color:#fff}
+.stat:hover{
+  border-color: rgba(0,102,255,0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+.stat div{color:var(--muted); font-size:11px; margin-bottom:6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;}
+.stat b{font-size:18px; color:#fff; font-weight: 800; display: block;}
 
 .c-title{font-weight:700; margin-bottom:10px; font-size:15px}
 .ops{display:flex; flex-direction:column; gap:10px}
@@ -467,16 +505,10 @@ body:not(.is-gated) #gate{
 
 /* Home bottom layout */
 .home-lower{
-  display:grid;
-  grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);
+  display:flex;
+  flex-direction:column;
   gap:14px;
   margin-top:14px;
-}
-@media (max-width:768px){
-  .home-lower{
-    display:flex;
-    flex-direction:column;
-  }
 }
 .card.glass.compact{
   padding:16px;
@@ -1089,4 +1121,146 @@ input, textarea, select, button {
   .gate-minimal .gate-card {
     padding: 20px;
   }
+}
+
+
+/* ========================================
+   MAINTENANCE SCREEN STYLES
+======================================== */
+
+.maintenance-screen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #0a0e1a 0%, #0d1525 50%, #0a0e1a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.5s ease;
+}
+
+.maintenance-screen.hidden {
+  display: none;
+}
+
+.maintenance-content {
+  text-align: center;
+  padding: 40px;
+  animation: slideUp 0.8s ease;
+}
+
+.maintenance-icon {
+  margin-bottom: 30px;
+}
+
+.gear-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+}
+
+.gear {
+  position: absolute;
+  fill: url(#gearGradient);
+  filter: drop-shadow(0 0 20px rgba(0,102,255,0.5));
+}
+
+.gear-large {
+  width: 80px;
+  height: 80px;
+  top: 0;
+  left: 0;
+  fill: #0066ff;
+  animation: rotateGear 4s linear infinite;
+}
+
+.gear-small {
+  width: 50px;
+  height: 50px;
+  bottom: 0;
+  right: 0;
+  fill: #00d4ff;
+  animation: rotateGearReverse 3s linear infinite;
+}
+
+@keyframes rotateGear {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes rotateGearReverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.maintenance-title {
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff 0%, #00d4ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 10px 0;
+}
+
+.maintenance-subtitle {
+  font-size: 18px;
+  color: var(--muted);
+  margin: 0 0 20px 0;
+  font-weight: 600;
+}
+
+.maintenance-desc,
+.maintenance-desc-en {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 8px 0;
+  opacity: 0.8;
+}
+
+.maintenance-loader {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 30px;
+}
+
+.loader-dot {
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #0066ff, #00d4ff);
+  border-radius: 50%;
+  animation: loaderBounce 1.4s ease-in-out infinite;
+}
+
+.loader-dot:nth-child(1) { animation-delay: 0s; }
+.loader-dot:nth-child(2) { animation-delay: 0.2s; }
+.loader-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes loaderBounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Withdraw form styling */
+.withdraw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.withdraw-form .input {
+  margin-bottom: 0;
+}
+
+.withdraw-form .btn {
+  margin-top: 4px;
 }

@@ -590,4 +590,69 @@ bot.onText(/^\/withdrawstatus$/, async (msg) => {
   }
 });
 
+// ===== أوامر الصيانة =====
+// /maintenance - تفعيل وضع الصيانة
+bot.onText(/^\/maintenance$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'true') 
+             ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
+    bot.sendMessage(msg.chat.id, `🛠 *تم تفعيل وضع الصيانة*\n\n⚠️ المستخدمون سيرون شاشة الصيانة عند فتح التطبيق.\n\n✅ لإنهاء الصيانة: /endmaintenance`, { parse_mode: "Markdown" });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
+// /endmaintenance - إنهاء وضع الصيانة
+bot.onText(/^\/endmaintenance$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'false') 
+             ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
+    bot.sendMessage(msg.chat.id, `✅ *تم إنهاء وضع الصيانة*\n\n🚀 التطبيق يعمل بشكل طبيعي الآن.`, { parse_mode: "Markdown" });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
+// /maintenancestatus - حالة الصيانة
+bot.onText(/^\/maintenancestatus$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_mode'`);
+    const enabled = result.rows.length > 0 && result.rows[0].value === 'true';
+    bot.sendMessage(msg.chat.id, `📊 *حالة الصيانة*\n\nالصيانة: ${enabled ? '🛠 مفعّلة' : '✅ غير مفعّلة'}\n\n${enabled ? '✅ لإنهاء الصيانة: /endmaintenance' : '🛠 لتفعيل الصيانة: /maintenance'}`, { parse_mode: "Markdown" });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
+// /stopbot - إيقاف البوت بالكامل
+bot.onText(/^\/stopbot$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    await q(`INSERT INTO settings (key, value) VALUES ('bot_stopped', 'true') 
+             ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
+    await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'true') 
+             ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
+    bot.sendMessage(msg.chat.id, `🛑 *تم إيقاف البوت*\n\n⚠️ البوت متوقف عن العمل والمستخدمون سيرون شاشة الصيانة.\n\n✅ لتشغيل البوت: /startbot`, { parse_mode: "Markdown" });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
+// /startbot - تشغيل البوت
+bot.onText(/^\/startbot$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    await q(`INSERT INTO settings (key, value) VALUES ('bot_stopped', 'false') 
+             ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
+    await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'false') 
+             ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
+    bot.sendMessage(msg.chat.id, `✅ *تم تشغيل البوت*\n\n🚀 البوت يعمل بشكل طبيعي الآن.`, { parse_mode: "Markdown" });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
 export default bot;

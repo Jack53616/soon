@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>لوحة إدارة QL</title>
+  <title>لوحة إدارة QL Trading</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
@@ -12,66 +12,250 @@
 <body>
   <div class="bg"></div>
 
-  <header class="top glass">
-    <h1>لوحة إدارة QL</h1>
-    <div class="badge">🔒 Security</div>
-  </header>
-
-  <main class="wrap">
-    <!-- تسجيل الدخول -->
-    <section id="login" class="card glass">
-      <h2>تسجيل دخول الأدمن</h2>
-      <p class="muted">enter<b>Password</b>Xm</p>
-      <div class="row">
-        <input id="admTok" class="input" placeholder="مثال:Jack">
+  <!-- Login Screen -->
+  <section id="login" class="login-screen">
+    <div class="login-card glass">
+      <div class="login-header">
+        <h1>🔐 لوحة الإدارة</h1>
+        <p>Admin Panel</p>
+      </div>
+      <div class="login-form">
+        <input id="admTok" class="input" type="password" placeholder="كلمة المرور / Password"/>
         <button id="admBtn" class="btn">دخول</button>
       </div>
       <div id="msg" class="msg"></div>
-    </section>
+    </div>
+  </section>
 
-    <!-- اللوحة -->
-    <section id="panel" class="hidden">
-      <nav class="tabs glass">
-        <button class="t on" data-tab="dash">🏠 لوحة التحكم</button>
-        <button class="t" data-tab="users">👥 المستخدمون</button>
-        <button class="t" data-tab="wd">💸 السحوبات</button>
-        <button class="t" data-tab="tr">📊 الصفقات</button>
-      </nav>
+  <!-- Main Panel -->
+  <section id="panel" class="hidden">
+    <header class="top-bar glass">
+      <h1>🎛️ لوحة إدارة QL Trading</h1>
+      <div class="header-actions">
+        <span id="adminStatus" class="status-badge">🟢 متصل</span>
+        <button id="logoutBtn" class="btn-small">خروج</button>
+      </div>
+    </header>
 
-      <!-- داشبورد -->
-      <section id="tab-dash" class="tab show">
-        <div class="grid">
-          <div class="kpi glass"><b id="k-users">0</b><span>مستخدمون</span></div>
-          <div class="kpi glass"><b id="k-dep">$0</b><span>إجمالي الإيداعات</span></div>
-          <div class="kpi glass"><b id="k-wd">$0</b><span>إجمالي السحوبات</span></div>
-          <div class="kpi glass"><b id="k-open">0</b><span>صفقات مفتوحة</span></div>
+    <nav class="tabs glass">
+      <button class="tab-btn active" data-tab="dash">🏠 لوحة التحكم</button>
+      <button class="tab-btn" data-tab="users">👥 المستخدمون</button>
+      <button class="tab-btn" data-tab="wd">💸 السحوبات</button>
+      <button class="tab-btn" data-tab="tr">📊 الصفقات</button>
+      <button class="tab-btn" data-tab="settings">⚙️ الإعدادات</button>
+    </nav>
+
+    <main class="content">
+      <!-- Dashboard Tab -->
+      <section id="tab-dash" class="tab-content active">
+        <div class="kpi-grid">
+          <div class="kpi-card glass">
+            <div class="kpi-icon">👥</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-users">0</span>
+              <span class="kpi-label">مستخدمون</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-dep">$0</span>
+              <span class="kpi-label">إجمالي الإيداعات</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">💸</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-wd">$0</span>
+              <span class="kpi-label">إجمالي السحوبات</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-open">0</span>
+              <span class="kpi-label">صفقات مفتوحة</span>
+            </div>
+          </div>
         </div>
+
         <div class="card glass">
-          <div class="c-title">آخر النشاط</div>
-          <div id="recent" class="table"></div>
+          <div class="card-header">
+            <h3>📋 آخر النشاط</h3>
+          </div>
+          <div id="recent" class="table-container"></div>
         </div>
       </section>
 
-      <!-- المستخدمون -->
-      <section id="tab-users" class="tab">
-        <div class="row">
-          <input id="q" class="input" placeholder="بحث بالاسم أو ID">
-          <button id="qbtn" class="btn">بحث</button>
+      <!-- Users Tab -->
+      <section id="tab-users" class="tab-content">
+        <div class="card glass">
+          <div class="card-header">
+            <h3>🔍 البحث عن مستخدم</h3>
+          </div>
+          <div class="search-box">
+            <input id="searchInput" class="input" placeholder="ابحث بالاسم أو Telegram ID"/>
+            <button id="searchBtn" class="btn">بحث</button>
+          </div>
         </div>
-        <div id="users" class="table"></div>
+
+        <!-- User Details Card (Hidden by default) -->
+        <div id="userDetails" class="card glass hidden">
+          <div class="card-header">
+            <h3>👤 تفاصيل المستخدم</h3>
+            <button id="closeUserDetails" class="btn-small">✕</button>
+          </div>
+          <div class="user-info">
+            <div class="user-row">
+              <span class="label">ID:</span>
+              <span id="ud-id" class="value">-</span>
+            </div>
+            <div class="user-row">
+              <span class="label">Telegram ID:</span>
+              <span id="ud-tgid" class="value">-</span>
+            </div>
+            <div class="user-row">
+              <span class="label">الاسم:</span>
+              <span id="ud-name" class="value">-</span>
+            </div>
+            <div class="user-row">
+              <span class="label">البريد:</span>
+              <span id="ud-email" class="value">-</span>
+            </div>
+            <div class="user-row">
+              <span class="label">الرصيد:</span>
+              <span id="ud-balance" class="value highlight">$0</span>
+            </div>
+            <div class="user-row">
+              <span class="label">الاشتراك:</span>
+              <span id="ud-sub" class="value">-</span>
+            </div>
+          </div>
+          
+          <div class="action-section">
+            <h4>💰 إدارة الرصيد</h4>
+            <div class="action-row">
+              <input id="balanceAmount" type="number" class="input small" placeholder="المبلغ"/>
+              <button id="addBalanceBtn" class="btn success">+ إضافة</button>
+              <button id="removeBalanceBtn" class="btn danger">- خصم</button>
+              <button id="zeroBalanceBtn" class="btn warning">تصفير</button>
+            </div>
+          </div>
+
+          <div class="action-section">
+            <h4>📅 تمديد الاشتراك</h4>
+            <div class="action-row">
+              <input id="subDays" type="number" class="input small" placeholder="عدد الأيام"/>
+              <button id="extendSubBtn" class="btn">تمديد</button>
+            </div>
+          </div>
+
+          <div class="action-section">
+            <h4>📈 إضافة صفقة</h4>
+            <div class="action-row">
+              <input id="tradePnl" type="number" class="input small" placeholder="الربح/الخسارة"/>
+              <input id="tradeHours" type="number" class="input small" placeholder="المدة (ساعات)"/>
+              <button id="addTradeBtn" class="btn">إضافة صفقة</button>
+            </div>
+          </div>
+
+          <div class="action-section">
+            <h4>🗑️ إجراءات أخرى</h4>
+            <div class="action-row">
+              <button id="clearHistoryBtn" class="btn warning">تصفير السجل</button>
+              <button id="banUserBtn" class="btn danger">حظر المستخدم</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass">
+          <div class="card-header">
+            <h3>👥 قائمة المستخدمين</h3>
+          </div>
+          <div id="users" class="table-container"></div>
+        </div>
       </section>
 
-      <!-- السحوبات -->
-      <section id="tab-wd" class="tab">
-        <div id="wds" class="table"></div>
+      <!-- Withdrawals Tab -->
+      <section id="tab-wd" class="tab-content">
+        <div class="card glass">
+          <div class="card-header">
+            <h3>💸 طلبات السحب</h3>
+            <div class="filter-btns">
+              <button class="filter-btn active" data-filter="pending">قيد الانتظار</button>
+              <button class="filter-btn" data-filter="approved">مقبولة</button>
+              <button class="filter-btn" data-filter="rejected">مرفوضة</button>
+              <button class="filter-btn" data-filter="all">الكل</button>
+            </div>
+          </div>
+          <div id="wds" class="table-container"></div>
+        </div>
       </section>
 
-      <!-- الصفقات -->
-      <section id="tab-tr" class="tab">
-        <div id="trs" class="table"></div>
+      <!-- Trades Tab -->
+      <section id="tab-tr" class="tab-content">
+        <div class="card glass">
+          <div class="card-header">
+            <h3>📊 الصفقات</h3>
+            <div class="filter-btns">
+              <button class="filter-btn active" data-filter="open">مفتوحة</button>
+              <button class="filter-btn" data-filter="closed">مغلقة</button>
+              <button class="filter-btn" data-filter="all">الكل</button>
+            </div>
+          </div>
+          <div id="trs" class="table-container"></div>
+        </div>
       </section>
-    </section>
-  </main>
+
+      <!-- Settings Tab -->
+      <section id="tab-settings" class="tab-content">
+        <div class="settings-grid">
+          <div class="card glass">
+            <div class="card-header">
+              <h3>💸 إعدادات السحب</h3>
+            </div>
+            <div class="setting-item">
+              <span class="setting-label">حالة السحب:</span>
+              <span id="withdrawStatus" class="status-badge">-</span>
+              <button id="toggleWithdraw" class="btn-small">تبديل</button>
+            </div>
+          </div>
+
+          <div class="card glass">
+            <div class="card-header">
+              <h3>🛠️ وضع الصيانة</h3>
+            </div>
+            <div class="setting-item">
+              <span class="setting-label">حالة الصيانة:</span>
+              <span id="maintenanceStatus" class="status-badge">-</span>
+              <button id="toggleMaintenance" class="btn-small">تبديل</button>
+            </div>
+          </div>
+
+          <div class="card glass">
+            <div class="card-header">
+              <h3>🔑 إنشاء مفتاح اشتراك</h3>
+            </div>
+            <div class="action-row">
+              <input id="newKeyCode" class="input" placeholder="كود المفتاح"/>
+              <input id="newKeyDays" type="number" class="input small" placeholder="الأيام" value="30"/>
+              <button id="createKeyBtn" class="btn">إنشاء</button>
+            </div>
+          </div>
+
+          <div class="card glass">
+            <div class="card-header">
+              <h3>📢 إرسال رسالة جماعية</h3>
+            </div>
+            <div class="broadcast-form">
+              <textarea id="broadcastMsg" class="input textarea" placeholder="نص الرسالة..."></textarea>
+              <button id="broadcastBtn" class="btn">إرسال للجميع</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </section>
 
   <div id="toast" class="toast"></div>
   <script type="module" src="/admin.js"></script>

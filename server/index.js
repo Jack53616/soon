@@ -48,6 +48,17 @@ app.get("/health", (req, res) => {
   res.json({ ok: true, status: "running", timestamp: new Date().toISOString() });
 });
 
+// Maintenance status check
+app.get("/api/settings/maintenance", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT value FROM settings WHERE key = 'maintenance_mode'");
+    const maintenance = result.rows.length > 0 && result.rows[0].value === 'true';
+    res.json({ ok: true, maintenance });
+  } catch (error) {
+    res.json({ ok: true, maintenance: false });
+  }
+});
+
 // Keep-alive endpoint for Render (prevents sleeping)
 app.get("/ping", (req, res) => {
   res.json({ ok: true, pong: Date.now() });
