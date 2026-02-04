@@ -210,11 +210,15 @@ body:not(.is-gated) #gate{
 
 .toast{margin-top:10px; min-height:20px; color:#ff8899; font-size:13px}
 
-.safe{ padding:16px; padding-top:95px; max-width:900px; margin:0 auto;}
+.safe{ padding:16px; padding-top:140px; max-width:900px; margin:0 auto;}
 .top{
-  position:fixed; top:0; left:0; right:0; padding:12px 16px; 
-  background:linear-gradient(180deg,rgba(10,14,26,0.95),rgba(10,14,26,0.8) 60%,transparent);
-  border-bottom:1px solid rgba(0,102,255,0.1); backdrop-filter: blur(12px); z-index:3;
+  position:fixed; top:0; left:0; right:0; padding:12px 16px; padding-bottom:16px;
+  background: linear-gradient(180deg, rgba(10,14,26,0.98) 0%, rgba(10,14,26,0.95) 70%, rgba(10,14,26,0.85) 100%);
+  border-bottom:1px solid rgba(0,102,255,0.15); 
+  backdrop-filter: blur(16px); 
+  -webkit-backdrop-filter: blur(16px);
+  z-index:100;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.3);
 }
 .t-row{display:flex; align-items:center; justify-content:space-between}
 .brand{margin:8px 0 6px; font-size:22px; letter-spacing:.5px; font-weight:800; background: linear-gradient(135deg, #fff, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;}
@@ -228,21 +232,44 @@ body:not(.is-gated) #gate{
   background:rgba(0,102,255,0.15);
 }
 
-.seg{display:flex; gap:6px; padding:8px; border-radius:14px; margin-top:10px; background:rgba(10,14,26,0.6)}
+.seg{
+  display:flex; 
+  gap:6px; 
+  padding:8px; 
+  border-radius:14px; 
+  margin-top:12px; 
+  background: rgba(10,14,26,0.7);
+  border: 1px solid rgba(0,102,255,0.1);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.seg::-webkit-scrollbar { display: none; }
 .seg-btn{
-  flex:1; padding:11px 8px; border-radius:12px; background:rgba(20,28,46,0.6); 
-  border:1px solid rgba(0,102,255,0.1); color:var(--muted); font-weight:600; font-size:13px; cursor:pointer;
-  transition: all 0.2s ease;
+  flex:1; 
+  min-width: fit-content;
+  padding:10px 12px; 
+  border-radius:10px; 
+  background:rgba(20,28,46,0.5); 
+  border:1px solid rgba(0,102,255,0.08); 
+  color:var(--muted); 
+  font-weight:600; 
+  font-size:12px; 
+  cursor:pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
 }
 .seg-btn:hover{
-  background:rgba(0,102,255,0.1);
+  background:rgba(0,102,255,0.12);
   color: #fff;
+  border-color: rgba(0,102,255,0.2);
 }
 .seg-btn.active{ 
-  background:linear-gradient(135deg, #0066ff, #0052cc); 
+  background: linear-gradient(135deg, #0066ff, #0052cc); 
   color:#fff; 
-  box-shadow:0 8px 25px rgba(0,102,255,0.4);
+  box-shadow: 0 4px 15px rgba(0,102,255,0.35);
   border-color: transparent;
+  transform: scale(1.02);
 }
 
 .tab{display:none; animation:fadeIn .25s ease}
@@ -258,27 +285,47 @@ body:not(.is-gated) #gate{
 .b-val{font-weight:900; font-size:38px; background: linear-gradient(135deg, #fff, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;}
 .pnl{font-weight:700; font-size:15px; color:#00d68f}
 
-.chart{margin:10px 0; position: relative; height: 60px; overflow: hidden;}
+.chart{margin:10px 0; position: relative; height: 70px; overflow: hidden; border-radius: 12px;}
 .chart svg {
   width: 100%;
   height: 100%;
 }
-.chart svg path {
+.chart svg #chartPath {
   fill: none;
-  stroke: url(#chartGradient);
-  stroke-width: 2.5;
+  stroke: url(#chartGradientNeutral);
+  stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 12px rgba(0,212,255,0.5));
-  animation: chartPulse 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(0,212,255,0.6));
+  animation: chartPulse 2.5s ease-in-out infinite;
+  transition: stroke 0.5s ease, filter 0.5s ease;
 }
 .chart svg .chart-fill {
-  fill: url(#chartFillGradient);
-  opacity: 0.3;
+  fill: url(#chartFillNeutral);
+  opacity: 0.4;
+  transition: fill 0.5s ease, opacity 0.5s ease;
+}
+/* Profit state */
+.chart.profit svg #chartPath {
+  stroke: url(#chartGradientProfit);
+  filter: drop-shadow(0 0 12px rgba(0,214,143,0.7));
+}
+.chart.profit svg .chart-fill {
+  fill: url(#chartFillProfit);
+  opacity: 0.5;
+}
+/* Loss state */
+.chart.loss svg #chartPath {
+  stroke: url(#chartGradientLoss);
+  filter: drop-shadow(0 0 12px rgba(255,59,99,0.7));
+}
+.chart.loss svg .chart-fill {
+  fill: url(#chartFillLoss);
+  opacity: 0.5;
 }
 @keyframes chartPulse {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(0,212,255,0.4)); }
-  50% { filter: drop-shadow(0 0 16px rgba(0,212,255,0.7)); }
+  0%, 100% { filter: drop-shadow(0 0 8px currentColor); opacity: 0.9; }
+  50% { filter: drop-shadow(0 0 18px currentColor); opacity: 1; }
 }
 
 .quick{display:flex; gap:10px; margin-top:12px}

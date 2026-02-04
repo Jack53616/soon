@@ -121,21 +121,42 @@
             <div id="ticker" class="pnl">+0.00</div>
           </div>
           <div id="tradeBadge" class="muted" data-i18n="noOpenTrade">No open trade</div>
-          <div class="chart">
+          <div class="chart" id="balanceChart">
             <svg viewBox="0 0 100 40" preserveAspectRatio="none">
               <defs>
-                <linearGradient id="chartGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" style="stop-color:#0066ff;stop-opacity:1" />
-                  <stop offset="50%" style="stop-color:#00d4ff;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#00d68f;stop-opacity:1" />
+                <!-- Gradient for profit (green) -->
+                <linearGradient id="chartGradientProfit" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#00d68f;stop-opacity:0.8" />
+                  <stop offset="50%" style="stop-color:#00ffaa;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#00d68f;stop-opacity:0.9" />
                 </linearGradient>
-                <linearGradient id="chartFillGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <linearGradient id="chartFillProfit" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:#00d68f;stop-opacity:0.5" />
+                  <stop offset="100%" style="stop-color:#00d68f;stop-opacity:0" />
+                </linearGradient>
+                <!-- Gradient for loss (red) -->
+                <linearGradient id="chartGradientLoss" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#ff3b63;stop-opacity:0.8" />
+                  <stop offset="50%" style="stop-color:#ff6b8a;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#ff3b63;stop-opacity:0.9" />
+                </linearGradient>
+                <linearGradient id="chartFillLoss" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:#ff3b63;stop-opacity:0.5" />
+                  <stop offset="100%" style="stop-color:#ff3b63;stop-opacity:0" />
+                </linearGradient>
+                <!-- Gradient for neutral (blue) -->
+                <linearGradient id="chartGradientNeutral" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" style="stop-color:#0066ff;stop-opacity:0.8" />
+                  <stop offset="50%" style="stop-color:#00d4ff;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#0066ff;stop-opacity:0.9" />
+                </linearGradient>
+                <linearGradient id="chartFillNeutral" x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:0.4" />
                   <stop offset="100%" style="stop-color:#00d4ff;stop-opacity:0" />
                 </linearGradient>
               </defs>
-              <path class="chart-fill" d="M0,25 C10,20 20,22 30,18 C40,14 50,16 60,12 C70,8 80,14 90,10 C95,8 100,12 100,12 L100,40 L0,40 Z"/>
-              <path id="chartPath" d="M0,25 C10,20 20,22 30,18 C40,14 50,16 60,12 C70,8 80,14 90,10 C95,8 100,12 100,12"/>
+              <path class="chart-fill" id="chartFillPath" d="M0,30 Q15,28 25,25 T50,20 T75,15 T100,12 L100,40 L0,40 Z"/>
+              <path id="chartPath" d="M0,30 Q15,28 25,25 T50,20 T75,15 T100,12"/>
             </svg>
           </div>
 

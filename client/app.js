@@ -812,12 +812,6 @@ function hydrateUser(user){
   $("#pnlDay").textContent = "$" + wins.toFixed(2);
   $("#pnlMonth").textContent = "$" + (wins - losses).toFixed(2);
 
-  const tickerEl = $("#ticker");
-  if(tickerEl){
-    tickerEl.textContent = "+0.00";
-    tickerEl.style.color = "#9df09d";
-  }
-
   const name = user.name || user.first_name || "";
   const email = user.email || "";
   const tgId = user.tg_id || user.id || "";
@@ -827,6 +821,31 @@ function hydrateUser(user){
   if(spTgId) spTgId.textContent = tgId || "—";
   if(spName) spName.textContent = name || "—";
   if(spEmail) spEmail.textContent = email || "—";
+}
+
+// Update PnL ticker and chart based on open trades
+function updatePnLDisplay(totalPnl) {
+  const tickerEl = $("#ticker");
+  const chartEl = $("#balanceChart");
+  
+  if(tickerEl) {
+    const sign = totalPnl >= 0 ? "+" : "";
+    tickerEl.textContent = sign + totalPnl.toFixed(2);
+    tickerEl.style.color = totalPnl >= 0 ? "#00d68f" : "#ff3b63";
+  }
+  
+  if(chartEl) {
+    // Remove all state classes
+    chartEl.classList.remove('profit', 'loss');
+    
+    // Add appropriate class based on PnL
+    if(totalPnl > 0) {
+      chartEl.classList.add('profit');
+    } else if(totalPnl < 0) {
+      chartEl.classList.add('loss');
+    }
+    // If totalPnl === 0, it stays neutral (no class)
+  }
 }
 
 async function refreshUser(required = false){
@@ -1071,14 +1090,19 @@ async function loadTrades(){
     const box = $("#tradesList");
     box.innerHTML = "";
     
+    // Calculate total PnL from all open trades
+    let totalPnl = 0;
+    
     if(r.ok && r.trades && r.trades.length > 0){
       r.trades.forEach(trade=>{
         const div = document.createElement("div");
         div.className="op";
         
         const pnl = Number(trade.pnl || 0);
+        totalPnl += pnl; // Add to total
+        
         const target = Number(trade.target_pnl || 0);
-        const pnlColor = pnl >= 0 ? "#9df09d" : "#ff8899";
+        const pnlColor = pnl >= 0 ? "#00d68f" : "#ff3b63";
         const pnlSign = pnl >= 0 ? "+" : "";
         
         const opened = new Date(trade.opened_at);
@@ -1134,6 +1158,10 @@ async function loadTrades(){
         const tradesText = state.lang === 'ar' ? `${r.trades.length} صفقة مفتوحة` : `${r.trades.length} open trade${r.trades.length > 1 ? 's' : ''}`;
         tradeBadge.textContent = tradesText;
       }
+      
+      // Update PnL display and chart color
+      updatePnLDisplay(totalPnl);
+      
     } else {
       const emptyDiv = document.createElement("div");
       emptyDiv.className="op";
@@ -1145,9 +1173,13 @@ async function loadTrades(){
       if(tradeBadge){
         tradeBadge.textContent = t('noOpenTrade');
       }
+      
+      // No open trades, reset PnL display
+      updatePnLDisplay(0);
     }
   }catch(err){
     console.error("Failed to load trades:", err);
+    updatePnLDisplay(0);
   }
 }
 
