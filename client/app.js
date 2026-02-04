@@ -634,10 +634,13 @@ function renderMethod(){
     eth: "Ethereum"
   };
   $("#methodLabel").textContent = map[state.method] || "USDT (TRC20)";
+  const savedAddrText = state.lang === 'ar' ? 'العنوان المحفوظ:' : 'Saved address:';
+  const placeholderText = state.lang === 'ar' ? `عنوان ${map[state.method]||'المحفظة'} الخاص بك...` : `Your ${map[state.method]||'Wallet'} address...`;
+  const saveText = state.lang === 'ar' ? 'حفظ' : 'Save';
   $("#methodView").innerHTML = `
-    <div class="muted">Saved address:</div>
-    <input id="addr" class="input" placeholder="Your ${map[state.method]||'Wallet'} address..."/>
-    <button id="saveAddr" class="btn">Save</button>
+    <div class="muted">${savedAddrText}</div>
+    <input id="addr" class="input" placeholder="${placeholderText}"/>
+    <button id="saveAddr" class="btn">${saveText}</button>
   `;
   $("#saveAddr").onclick = async ()=>{
     const address = $("#addr").value.trim();
@@ -647,7 +650,7 @@ function renderMethod(){
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({tg_id:tg, method:state.method, address})
     });
-    notify("✅ Address saved");
+    notify(state.lang === 'ar' ? "✅ تم حفظ العنوان" : "✅ Address saved");
   }
 }
 renderMethod();
@@ -655,14 +658,14 @@ renderMethod();
 $("#reqWithdraw").addEventListener("click", async ()=>{
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   const amount = Number($("#amount").value || 0);
-  if(amount<=0) return notify("Enter amount");
+  if(amount<=0) return notify(state.lang === 'ar' ? "أدخل المبلغ" : "Enter amount");
   const r = await fetch("/api/withdraw",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({tg_id:tg, amount, method: state.method})
   }).then(r=>r.json());
   if(!r.ok) return notify("❌ "+(r.error||"Error"));
-  notify("✅ Request sent");
+  notify(state.lang === 'ar' ? "✅ تم إرسال الطلب" : "✅ Request sent");
   refreshUser(); refreshRequests();
 });
 
@@ -806,7 +809,8 @@ async function loadStats(){
           box.appendChild(div);
         });
       } else {
-        box.innerHTML = `<div class="op" style="justify-content:center; opacity:0.5">No history yet</div>`;
+        const noHistoryText = state.lang === 'ar' ? 'لا يوجد سجل بعد' : 'No history yet';
+        box.innerHTML = `<div class="op" style="justify-content:center; opacity:0.5">${noHistoryText}</div>`;
       }
     }
   }catch(err){
@@ -906,19 +910,22 @@ async function loadTrades(){
       $$(".btn-close-trade").forEach(btn=>{
         btn.addEventListener("click", async ()=>{
           const tradeId = btn.dataset.tradeId;
-          if(confirm("Close this trade now?")){
+          const confirmMsg = state.lang === 'ar' ? 'هل تريد إغلاق هذه الصفقة الآن؟' : 'Close this trade now?';
+          if(confirm(confirmMsg)){
             try{
               const r = await fetch(`/api/trades/close/${tradeId}`, {method:"POST"}).then(r=>r.json());
               if(r.ok){
-                notify(`✅ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}`);
+                const closedMsg = state.lang === 'ar' ? `✅ تم إغلاق الصفقة: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}` : `✅ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}`;
+                notify(closedMsg);
                 await refreshUser();
                 await loadTrades();
                 await refreshOps();
               }else{
-                notify("❌ " + (r.error || "Failed to close trade"));
+                const errMsg = state.lang === 'ar' ? '❌ فشل إغلاق الصفقة' : '❌ Failed to close trade';
+                notify(r.error || errMsg);
               }
             }catch(err){
-              notify("❌ Connection error");
+              notify(state.lang === 'ar' ? '❌ خطأ في الاتصال' : '❌ Connection error');
             }
           }
         });
@@ -926,12 +933,14 @@ async function loadTrades(){
       
       const tradeBadge = $("#tradeBadge");
       if(tradeBadge){
-        tradeBadge.textContent = `${r.trades.length} open trade${r.trades.length > 1 ? 's' : ''}`;
+        const tradesText = state.lang === 'ar' ? `${r.trades.length} صفقة مفتوحة` : `${r.trades.length} open trade${r.trades.length > 1 ? 's' : ''}`;
+        tradeBadge.textContent = tradesText;
       }
     } else {
       const emptyDiv = document.createElement("div");
       emptyDiv.className="op";
-      emptyDiv.innerHTML = `<span style="opacity:0.5">No open trades</span>`;
+      const noTradesText = state.lang === 'ar' ? 'لا توجد صفقات مفتوحة' : 'No open trades';
+      emptyDiv.innerHTML = `<span style="opacity:0.5">${noTradesText}</span>`;
       box.appendChild(emptyDiv);
       
       const tradeBadge = $("#tradeBadge");
@@ -945,7 +954,7 @@ async function loadTrades(){
 }
 
 $("#saveSLTP").onclick = ()=>{
-  notify("✅ SL/TP saved");
+  notify(state.lang === 'ar' ? "✅ تم حفظ وقف الخسارة/جني الربح" : "✅ SL/TP saved");
 };
 
 function notify(msg){

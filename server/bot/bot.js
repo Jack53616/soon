@@ -261,11 +261,11 @@ bot.onText(/^\/help$/, (msg) => {
 \`/setdaily <tg_id> <amount>\` - Set daily profit target
 
 💸 *Withdrawals*
-`/approve_withdraw <id>` - Approve request
-`/reject_withdraw <id> <reason>` - Reject request
-`/stopwithdraw` - إيقاف السحب (صيانة)
-`/startwithdraw` - تشغيل السحب
-`/withdrawstatus` - حالة السحب
+\`/approve_withdraw <id>\` - Approve request
+\`/reject_withdraw <id> <reason>\` - Reject request
+\`/stopwithdraw\` - إيقاف السحب (صيانة)
+\`/startwithdraw\` - تشغيل السحب
+\`/withdrawstatus\` - حالة السحب
 
 📢 *Communication*
 \`/broadcast all <message>\` - Send to all users
@@ -426,13 +426,20 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
 
 ⚠️ *Note:* The target PnL is hidden from the user in the app.`);
 
-  bot.sendMessage(tg, `🚀 *New Smart Trade Activated*
+  bot.sendMessage(tg, `🚀 *تم تفعيل صفقة ذكية جديدة*
 
+🔸 *الرمز:* XAUUSD (الذهب)
+⏱ *المدة:* ${hours} ساعة
+📊 *الحالة:* نشطة ومراقبة
+
+💡 _تابع محفظتك للتحديثات المباشرة._
+
+---
+
+🚀 *New Smart Trade Activated*
 🔸 *Symbol:* XAUUSD (Gold)
 ⏱ *Duration:* ${hours} Hours
-📊 *Status:* Active & Monitored
-
-💡 _Check your wallet for live updates._`).catch(()=>{});
+📊 *Status:* Active & Monitored`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 // تعيين إحصائيات مخصصة (إضافة رصيد وهمي للإحصائيات)
