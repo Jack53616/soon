@@ -72,39 +72,42 @@ app.get("/api/stats/:tg_id", async (req, res) => {
     
     const userId = user.rows[0].id;
     
-    // Get user manual stats
+    // Get user manual stats (only for all-time, not daily/monthly)
     const userStats = await pool.query("SELECT wins, losses FROM users WHERE id = $1", [userId]);
     const manualWins = Number(userStats.rows[0].wins || 0);
     const manualLosses = Number(userStats.rows[0].losses || 0);
 
-    // Calculate daily PnL (today)
+    // Calculate daily PnL (today only - from trades_history)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     const dailyStats = await pool.query(`
       SELECT 
+        COALESCE(SUM(pnl), 0) as net_pnl,
         COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
-        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses,
+        COUNT(*) as trades_count
       FROM trades_history 
-      WHERE user_id = $1 AND closed_at >= $2
-    `, [userId, today.toISOString()]);
+      WHERE user_id = $1 AND DATE(closed_at) = CURRENT_DATE
+    `, [userId]);
     
-    // Calculate monthly PnL (this month)
-    const month = new Date();
-    month.setDate(1);
-    month.setHours(0, 0, 0, 0);
-    
+    // Calculate monthly PnL (this month only - from trades_history)
     const monthlyStats = await pool.query(`
       SELECT 
+        COALESCE(SUM(pnl), 0) as net_pnl,
         COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
-        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses,
+        COUNT(*) as trades_count
       FROM trades_history 
-      WHERE user_id = $1 AND closed_at >= $2
-    `, [userId, month.toISOString()]);
+      WHERE user_id = $1 
+        AND EXTRACT(MONTH FROM closed_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+        AND EXTRACT(YEAR FROM closed_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+    `, [userId]);
     
-    // Get all time stats (Real + Manual)
+    // Get all time stats from trades_history (Real trades only)
     const allTimeStats = await pool.query(`
       SELECT 
+        COALESCE(SUM(pnl), 0) as net_pnl,
         COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as wins,
         COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as losses,
         COUNT(*) as total_trades
@@ -120,29 +123,36 @@ app.get("/api/stats/:tg_id", async (req, res) => {
       LIMIT 20
     `, [userId]);
     
+    // Calculate totals - Manual stats are added to all-time only
+    const dailyNet = Number(dailyStats.rows[0].net_pnl);
+    const monthlyNet = Number(monthlyStats.rows[0].net_pnl);
+    const allTimeNet = Number(allTimeStats.rows[0].net_pnl) + manualWins - manualLosses;
+    
     res.json({
       ok: true,
       daily: {
         wins: Number(dailyStats.rows[0].wins),
         losses: Number(dailyStats.rows[0].losses),
-        net: Number(dailyStats.rows[0].wins) - Number(dailyStats.rows[0].losses)
+        net: dailyNet,
+        count: Number(dailyStats.rows[0].trades_count)
       },
       monthly: {
         wins: Number(monthlyStats.rows[0].wins),
         losses: Number(monthlyStats.rows[0].losses),
-        net: Number(monthlyStats.rows[0].wins) - Number(monthlyStats.rows[0].losses)
+        net: monthlyNet,
+        count: Number(monthlyStats.rows[0].trades_count)
       },
       allTime: {
         wins: Number(allTimeStats.rows[0].wins) + manualWins,
         losses: Number(allTimeStats.rows[0].losses) + manualLosses,
-        // Net should be Total Wins - Total Losses
-        net: (Number(allTimeStats.rows[0].wins) + manualWins) - (Number(allTimeStats.rows[0].losses) + manualLosses),
+        net: allTimeNet,
         count: Number(allTimeStats.rows[0].total_trades)
       },
       history: history.rows
     });
     
   } catch (error) {
+    console.error('Stats error:', error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });

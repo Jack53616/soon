@@ -659,15 +659,73 @@ $("#reqWithdraw").addEventListener("click", async ()=>{
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   const amount = Number($("#amount").value || 0);
   if(amount<=0) return notify(state.lang === 'ar' ? "أدخل المبلغ" : "Enter amount");
-  const r = await fetch("/api/withdraw",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({tg_id:tg, amount, method: state.method})
-  }).then(r=>r.json());
-  if(!r.ok) return notify("❌ "+(r.error||"Error"));
-  notify(state.lang === 'ar' ? "✅ تم إرسال الطلب" : "✅ Request sent");
-  refreshUser(); refreshRequests();
+  
+  // Show loading state
+  const btn = $("#reqWithdraw");
+  const originalText = btn.textContent;
+  btn.textContent = state.lang === 'ar' ? 'جاري الإرسال...' : 'Sending...';
+  btn.disabled = true;
+  
+  try {
+    const r = await fetch("/api/withdraw",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({tg_id:tg, amount, method: state.method})
+    }).then(r=>r.json());
+    
+    if(!r.ok) {
+      btn.textContent = originalText;
+      btn.disabled = false;
+      return notify("❌ "+(r.error||"Error"));
+    }
+    
+    // Show success animation
+    showWithdrawSuccess(amount);
+    
+    // Clear amount field
+    $("#amount").value = '';
+    
+    refreshUser(); 
+    refreshRequests();
+  } catch(err) {
+    notify(state.lang === 'ar' ? '❌ خطأ في الاتصال' : '❌ Connection error');
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 });
+
+// Withdraw success animation
+function showWithdrawSuccess(amount) {
+  const overlay = document.createElement('div');
+  overlay.className = 'withdraw-success-overlay';
+  overlay.innerHTML = `
+    <div class="withdraw-success-content">
+      <div class="withdraw-success-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="withdraw-success-title">${state.lang === 'ar' ? 'تم إرسال الطلب بنجاح!' : 'Request Sent!'}</div>
+      <div class="withdraw-success-subtitle">${state.lang === 'ar' ? 'طلبك قيد المراجعة' : 'Your request is under review'}</div>
+      <div class="withdraw-success-amount">$${amount.toFixed(2)}</div>
+    </div>
+  `;
+  
+  document.body.appendChild(overlay);
+  
+  // Auto close after 2.5 seconds
+  setTimeout(() => {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 300);
+  }, 2500);
+  
+  // Click to close
+  overlay.onclick = () => {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 300);
+  };
+}
 
 $("#whatsapp").onclick = ()=> window.open("https://wa.me/message/P6BBPSDL2CC4D1","_blank");
 
@@ -744,24 +802,93 @@ async function refreshRequests(){
   if(!tg) return;
   const r = await fetch(`/api/requests/${tg}`).then(r=>r.json());
   const box = $("#reqList"); box.innerHTML = "";
-  if(r.ok){
+  
+  // Update stats counters
+  let pending = 0, approved = 0, rejected = 0;
+  
+  if(r.ok && r.list.length > 0){
     r.list.forEach(req=>{
+      // Count stats
+      if(req.status === 'pending') pending++;
+      else if(req.status === 'approved') approved++;
+      else rejected++;
+      
       const div = document.createElement("div");
-      div.className="op";
-      div.innerHTML = `<span>#${req.id} — ${req.method} — ${req.status}</span><b>$${Number(req.amount).toFixed(2)}</b>`;
-      if(req.status==="pending"){
-        const b = document.createElement("button");
-        b.className="btn"; b.style.marginLeft="8px"; b.textContent="Cancel";
-        b.onclick = async ()=>{
-          const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
-          await fetch("/api/withdraw/cancel",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({tg_id:tg, id:req.id})});
-          refreshRequests(); refreshUser();
-        };
-        div.appendChild(b);
-      }
+      div.className="withdrawal-item";
+      
+      const statusText = {
+        pending: state.lang === 'ar' ? 'قيد المراجعة' : 'Pending',
+        approved: state.lang === 'ar' ? 'تم الدفع' : 'Paid',
+        rejected: state.lang === 'ar' ? 'مرفوض' : 'Rejected',
+        cancelled: state.lang === 'ar' ? 'ملغي' : 'Cancelled'
+      };
+      
+      const methodNames = {
+        usdt_trc20: 'USDT (TRC20)',
+        usdt_erc20: 'USDT (ERC20)',
+        btc: 'Bitcoin',
+        eth: 'Ethereum'
+      };
+      
+      const date = new Date(req.created_at).toLocaleDateString('ar-EG', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      
+      div.innerHTML = `
+        <div class="w-header">
+          <span class="w-amount">$${Number(req.amount).toFixed(2)}</span>
+          <span class="w-status ${req.status}">${statusText[req.status] || req.status}</span>
+        </div>
+        <div class="w-details">
+          <span>#${req.id} • ${methodNames[req.method] || req.method}</span>
+          <span>${date}</span>
+        </div>
+        ${req.status === 'pending' ? `
+          <div class="w-actions">
+            <button class="btn-cancel" data-id="${req.id}">
+              ${state.lang === 'ar' ? '❌ إلغاء الطلب' : '❌ Cancel Request'}
+            </button>
+          </div>
+        ` : ''}
+      `;
+      
       box.appendChild(div);
     });
+    
+    // Add cancel button handlers
+    box.querySelectorAll('.btn-cancel').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.id;
+        const confirmMsg = state.lang === 'ar' ? 'هل تريد إلغاء هذا الطلب؟' : 'Cancel this request?';
+        if(confirm(confirmMsg)){
+          await fetch("/api/withdraw/cancel",{
+            method:"POST", 
+            headers:{"Content-Type":"application/json"}, 
+            body:JSON.stringify({tg_id:tg, id: Number(id)})
+          });
+          notify(state.lang === 'ar' ? '✅ تم إلغاء الطلب' : '✅ Request cancelled');
+          refreshRequests(); 
+          refreshUser();
+        }
+      };
+    });
+  } else {
+    const emptyText = state.lang === 'ar' ? 'لا توجد طلبات سحب' : 'No withdrawal requests';
+    box.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">💳</div>
+        <div class="empty-state-text">${emptyText}</div>
+      </div>
+    `;
   }
+  
+  // Update counters
+  const pendingEl = $("#pendingCount");
+  const approvedEl = $("#approvedCount");
+  const rejectedEl = $("#rejectedCount");
+  if(pendingEl) pendingEl.textContent = pending;
+  if(approvedEl) approvedEl.textContent = approved;
+  if(rejectedEl) rejectedEl.textContent = rejected;
 }
 
 async function loadStats(){
@@ -966,8 +1093,68 @@ function notify(msg){
   setTimeout(()=>{ el.remove();}, 6000);
 }
 
+// Snow effect for login page
+function createSnowflakes() {
+  const container = document.getElementById('snowflakes');
+  if (!container) return;
+  
+  const snowflakes = ['❄', '❅', '❆', '·', '•'];
+  
+  for (let i = 0; i < 30; i++) {
+    const snowflake = document.createElement('div');
+    snowflake.className = 'snowflake';
+    snowflake.textContent = snowflakes[Math.floor(Math.random() * snowflakes.length)];
+    snowflake.style.left = Math.random() * 100 + '%';
+    snowflake.style.animationDuration = (Math.random() * 8 + 5) + 's';
+    snowflake.style.animationDelay = Math.random() * 5 + 's';
+    snowflake.style.fontSize = (Math.random() * 10 + 8) + 'px';
+    snowflake.style.opacity = Math.random() * 0.6 + 0.2;
+    container.appendChild(snowflake);
+  }
+}
+
+// Real-time trades update
+let tradesUpdateInterval = null;
+
+function startRealtimeUpdates() {
+  // Update trades every 3 seconds
+  if (tradesUpdateInterval) clearInterval(tradesUpdateInterval);
+  tradesUpdateInterval = setInterval(async () => {
+    const activeTab = document.querySelector('.tab.show');
+    if (activeTab && activeTab.id === 'tab-trades') {
+      await loadTrades();
+    }
+    // Also refresh user balance periodically
+    await refreshUser();
+  }, 3000);
+}
+
+function stopRealtimeUpdates() {
+  if (tradesUpdateInterval) {
+    clearInterval(tradesUpdateInterval);
+    tradesUpdateInterval = null;
+  }
+}
+
+// Prevent zoom on double tap
+document.addEventListener('touchstart', function(e) {
+  if (e.touches.length > 1) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function(e) {
+  const now = Date.now();
+  if (now - lastTouchEnd <= 300) {
+    e.preventDefault();
+  }
+  lastTouchEnd = now;
+}, { passive: false });
+
 (async function(){
   detectTG();
+  createSnowflakes();
 
   if (localStorage.getItem("activated") === "yes") {
     document.body.classList.remove("is-gated");
@@ -976,6 +1163,8 @@ function notify(msg){
         g.classList.add("hidden");
         g.style.pointerEvents = "none";
     }
+    // Start real-time updates when logged in
+    startRealtimeUpdates();
   }
 
   await getToken();
@@ -985,7 +1174,11 @@ function notify(msg){
   if(old){
     state.user = { tg_id: Number(old) };
     const opened = await openApp(null, { auto: true });
-    if(!opened) showGate();
+    if(!opened) {
+      showGate();
+    } else {
+      startRealtimeUpdates();
+    }
   }else{
     showGate();
   }

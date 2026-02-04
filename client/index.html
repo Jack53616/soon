@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
   <title>QL Trading AI</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,6 +25,10 @@
   <!-- Subscription Gate -->
   <div id="gate" class="gate">
     <video class="bg" src="./bg.mp4" autoplay muted loop playsinline></video>
+    
+    <!-- Snow Effect -->
+    <div class="snowflakes" id="snowflakes"></div>
+    
     <div class="glass card gate-card">
       <div class="g-title" data-i18n="gateTitle">QL Trading — Access</div>
       <div class="g-sub" data-i18n="gateSub">Enter your subscription key to unlock your wallet</div>
@@ -36,6 +40,15 @@
         <a id="g-buy" class="btn ghost" href="https://t.me/qlsupport" target="_blank" data-i18n="buyKey">Buy a key</a>
       </div>
       <div id="g-toast" class="toast"></div>
+    </div>
+    
+    <!-- Description Text -->
+    <div class="gate-description">
+      <h3>📈 منصة التداول الذكي | Smart Trading Platform</h3>
+      <p>
+        محفظة QL Trading مدعومة بالذكاء الاصطناعي لتداول الذهب والعملات. نوفر لك صفقات ذكية، تحليلات متقدمة، وسحب سريع للأرباح.<br>
+        AI-powered wallet for Gold & Forex trading. Smart trades, advanced analytics, and fast withdrawals.
+      </p>
     </div>
   </div>
 
@@ -54,7 +67,7 @@
         <button class="seg-btn" data-tab="stats" data-i18n="tabStats">Statistics</button>
         <button class="seg-btn" data-tab="trades" data-i18n="tabTrades">Trades</button>
         <button class="seg-btn" data-tab="withdraw" data-i18n="tabWithdraw">Withdraw</button>
-        <button class="seg-btn" data-tab="requests" data-i18n="tabRequests">Requests</button>
+        <button class="seg-btn" data-tab="requests" data-i18n="tabRequests">سجل</button>
         <button class="seg-btn" data-tab="support" data-i18n="tabSupport">Support</button>
       </nav>
     </header>
@@ -166,11 +179,25 @@
         </div>
       </section>
 
-      <!-- Requests -->
+      <!-- Withdrawal History / سجل السحب -->
       <section id="tab-requests" class="tab">
         <div class="card glass">
-          <div class="c-title" data-i18n="yourRequests">Your requests</div>
-          <div id="reqList" class="ops"></div>
+          <div class="c-title">📜 سجل السحب | Withdrawal History</div>
+          <div class="withdrawal-stats">
+            <div class="stat-item">
+              <span class="stat-label">قيد المراجعة</span>
+              <span class="stat-value" id="pendingCount">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">تم الدفع</span>
+              <span class="stat-value success" id="approvedCount">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">ملغي/مرفوض</span>
+              <span class="stat-value danger" id="rejectedCount">0</span>
+            </div>
+          </div>
+          <div id="reqList" class="ops withdrawal-list"></div>
         </div>
       </section>
 
