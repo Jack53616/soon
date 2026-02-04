@@ -661,7 +661,7 @@ function renderMethod(){
   $("#saveAddr").onclick = async ()=>{
     const address = $("#addr").value.trim();
     const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
-    await fetch("/api/withdraw/method",{
+    await fetch("/api/wallet/withdraw/method",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({tg_id:tg, method:state.method, address})
@@ -692,7 +692,7 @@ $("#reqWithdraw").addEventListener("click", async ()=>{
   btn.disabled = true;
   
   try {
-    const r = await fetch("/api/withdraw",{
+    const r = await fetch("/api/wallet/withdraw",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({tg_id:tg, amount, method: state.method})
@@ -821,7 +821,7 @@ async function refreshUser(required = false){
 async function refreshOps(){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   if(!tg) return;
-  const r = await fetch(`/api/ops/${tg}`).then(r=>r.json());
+  const r = await fetch(`/api/wallet/ops/${tg}`).then(r=>r.json());
   const box = $("#ops"); box.innerHTML = "";
   if(r.ok){
     r.list.forEach(o=>{
@@ -838,7 +838,7 @@ async function refreshOps(){
 async function refreshRequests(){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   if(!tg) return;
-  const r = await fetch(`/api/requests/${tg}`).then(r=>r.json());
+  const r = await fetch(`/api/wallet/requests/${tg}`).then(r=>r.json());
   const box = $("#reqList"); box.innerHTML = "";
   
   // Update stats counters
@@ -899,7 +899,7 @@ async function refreshRequests(){
         const id = btn.dataset.id;
         const confirmMsg = state.lang === 'ar' ? 'هل تريد إلغاء هذا الطلب؟' : 'Cancel this request?';
         if(confirm(confirmMsg)){
-          await fetch("/api/withdraw/cancel",{
+          await fetch("/api/wallet/withdraw/cancel",{
             method:"POST", 
             headers:{"Content-Type":"application/json"}, 
             body:JSON.stringify({tg_id:tg, id: Number(id)})

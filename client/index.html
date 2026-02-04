@@ -12,78 +12,57 @@
 </head>
 <body>
 
-<!-- Splash / Text Only at Bottom -->
-<div id="splash" class="splash" style="display: flex; justify-content: center; align-items: flex-end; height: 100vh; background-color: #000; padding-bottom: 50px;">
-  <div class="logo-wrap" style="text-align: center;">
-    <div class="logo-text" style="color: #fff; font-size: 48px; font-weight: bold; font-family: Arial, sans-serif;">
-      QL Trading AI
+<!-- Welcome Splash Screen -->
+<div id="splash" class="splash">
+  <div class="splash-content">
+    <!-- Logo with Glow -->
+    <div class="splash-logo-container">
+      <div class="splash-glow"></div>
+      <img src="./logo.png" alt="QL" class="splash-logo" onerror="this.style.display='none'">
+    </div>
+    
+    <!-- Brand Name -->
+    <h1 class="splash-brand">QL Trading</h1>
+    <p class="splash-tagline">Smart AI Trading Platform</p>
+    
+    <!-- Features Icons -->
+    <div class="splash-features">
+      <div class="splash-feature">
+        <span class="splash-icon">⚡</span>
+        <span>تداول ذكي</span>
+      </div>
+      <div class="splash-feature">
+        <span class="splash-icon">💰</span>
+        <span>سحب سريع</span>
+      </div>
+      <div class="splash-feature">
+        <span class="splash-icon">🛡️</span>
+        <span>آمن 100%</span>
+      </div>
+    </div>
+    
+    <!-- Loading -->
+    <div class="splash-loader">
+      <div class="splash-loader-bar"></div>
     </div>
   </div>
 </div>
 
 
   <!-- Subscription Gate -->
-  <div id="gate" class="gate gate-minimal">
-    
-    <div class="gate-content">
-      <!-- Logo Section -->
-      <div class="gate-logo-section">
-        <div class="gate-logo-glow"></div>
-        <img src="./logo.png" alt="QL Trading" class="gate-logo-img" onerror="this.style.display='none'">
-        <h1 class="gate-brand">QL Trading</h1>
-        <p class="gate-tagline">منصة التداول الذكي | Smart Trading Platform</p>
+  <div id="gate" class="gate">
+    <video class="bg" src="./bg.mp4" autoplay muted loop playsinline></video>
+    <div class="glass card gate-card">
+      <div class="g-title" data-i18n="gateTitle">QL Trading — Access</div>
+      <div class="g-sub" data-i18n="gateSub">Enter your subscription key to unlock your wallet</div>
+      <input id="g-name" class="input" placeholder="Name / الاسم"/>
+      <input id="g-email" class="input" placeholder="Email / الايميل"/>
+      <input id="g-key" class="input" placeholder="Enter key / ادخل مفتاح الاشتراك"/>
+      <div class="row">
+        <button id="g-activate" class="btn" data-i18n="confirm">Confirm</button>
+        <a id="g-buy" class="btn ghost" href="https://t.me/qlsupport" target="_blank" data-i18n="buyKey">Buy a key</a>
       </div>
-      
-      <!-- Login Card -->
-      <div class="glass card gate-card">
-        <div class="g-title">تسجيل الدخول | Login</div>
-        <div class="g-sub">أدخل مفتاح الاشتراك للوصول إلى محفظتك</div>
-        <input id="g-name" class="input" placeholder="الاسم / Name"/>
-        <input id="g-email" class="input" placeholder="البريد الإلكتروني / Email"/>
-        <input id="g-key" class="input" placeholder="مفتاح الاشتراك / Subscription Key"/>
-        <div class="row">
-          <button id="g-activate" class="btn">دخول | Login</button>
-          <a id="g-buy" class="btn ghost" href="https://t.me/qlsupport" target="_blank">شراء مفتاح | Buy Key</a>
-        </div>
-        <div id="g-toast" class="toast"></div>
-      </div>
-      
-      <!-- Features Section -->
-      <div class="gate-features">
-        <div class="gate-feature">
-          <div class="gate-feature-icon">⚡</div>
-          <div class="gate-feature-text">
-            <strong>تداول ذكي</strong>
-            <span>Smart Trading</span>
-          </div>
-        </div>
-        <div class="gate-feature">
-          <div class="gate-feature-icon">💸</div>
-          <div class="gate-feature-text">
-            <strong>سحب سريع</strong>
-            <span>Fast Withdrawal</span>
-          </div>
-        </div>
-        <div class="gate-feature">
-          <div class="gate-feature-icon">🛡️</div>
-          <div class="gate-feature-text">
-            <strong>آمن وموثوق</strong>
-            <span>Secure & Trusted</span>
-          </div>
-        </div>
-        <div class="gate-feature">
-          <div class="gate-feature-icon">🌐</div>
-          <div class="gate-feature-text">
-            <strong>دعم 24/7</strong>
-            <span>24/7 Support</span>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Footer -->
-      <div class="gate-footer">
-        <span>© 2024 QL Trading. All rights reserved.</span>
-      </div>
+      <div id="g-toast" class="toast"></div>
     </div>
   </div>
 
