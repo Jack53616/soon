@@ -1,4 +1,5 @@
--- QL Trading AI v2.3 - Complete Database Schema (Enhanced with Target PnL)
+-- QL Trading AI v3.0 - Complete Database Schema
+-- Includes: Referral System, Ban Enhancement, Mass Trades
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -16,7 +17,12 @@ CREATE TABLE IF NOT EXISTS users (
   lang TEXT DEFAULT 'en',
   sub_expires TIMESTAMPTZ,
   is_banned BOOLEAN DEFAULT FALSE,
+  ban_reason TEXT,
+  banned_at TIMESTAMPTZ,
   trading_locked BOOLEAN DEFAULT FALSE,
+  referral_code TEXT UNIQUE,
+  referral_earnings NUMERIC(18,2) DEFAULT 0,
+  referred_by BIGINT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -44,30 +50,30 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS ops (
   id SERIAL PRIMARY KEY,
   user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  type TEXT,           -- deposit / withdraw / pnl / open / close / admin / info
+  type TEXT,           -- deposit / withdraw / pnl / open / close / admin / info / referral
   amount NUMERIC(18,2) DEFAULT 0,
   note TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Active trades (ENHANCED with duration_seconds and target_pnl)
+-- Active trades (with duration_seconds and target_pnl)
 CREATE TABLE IF NOT EXISTS trades (
   id SERIAL PRIMARY KEY,
   user_id INT REFERENCES users(id) ON DELETE CASCADE,
   symbol TEXT DEFAULT 'XAUUSD',
-  direction TEXT DEFAULT 'BUY',  -- BUY / SELL
+  direction TEXT DEFAULT 'BUY',
   entry_price NUMERIC(18,4) DEFAULT 0,
   current_price NUMERIC(18,4) DEFAULT 0,
   lot_size NUMERIC(10,2) DEFAULT 0.01,
   stop_loss NUMERIC(18,4),
   take_profit NUMERIC(18,4),
   pnl NUMERIC(18,2) DEFAULT 0,
-  target_pnl NUMERIC(18,2) DEFAULT 0,  -- NEW: Target profit/loss
-  duration_seconds INT DEFAULT 3600,   -- Trade duration (default 1 hour)
-  status TEXT DEFAULT 'open',          -- open / closed / cancelled
+  target_pnl NUMERIC(18,2) DEFAULT 0,
+  duration_seconds INT DEFAULT 3600,
+  status TEXT DEFAULT 'open',
   opened_at TIMESTAMPTZ DEFAULT NOW(),
   closed_at TIMESTAMPTZ,
-  close_reason TEXT                    -- manual / tp / sl / admin / duration / target
+  close_reason TEXT
 );
 
 -- Trade history
@@ -91,10 +97,10 @@ CREATE TABLE IF NOT EXISTS trades_history (
 CREATE TABLE IF NOT EXISTS requests (
   id SERIAL PRIMARY KEY,
   user_id INT REFERENCES users(id) ON DELETE CASCADE,
-  method TEXT,                     -- usdt_trc20 / usdt_erc20 / btc / eth
+  method TEXT,
   address TEXT,
   amount NUMERIC(18,2) NOT NULL,
-  status TEXT DEFAULT 'pending',   -- pending / approved / rejected / cancelled
+  status TEXT DEFAULT 'pending',
   admin_note TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -125,10 +131,10 @@ CREATE TABLE IF NOT EXISTS daily_targets (
   id SERIAL PRIMARY KEY,
   user_id INT REFERENCES users(id) ON DELETE CASCADE,
   symbol TEXT DEFAULT 'XAUUSD',
-  target NUMERIC(18,2) NOT NULL,   -- +10 for profit, -10 for loss
+  target NUMERIC(18,2) NOT NULL,
   current NUMERIC(18,2) DEFAULT 0,
-  duration_sec INT DEFAULT 1800,   -- total duration to reach target
-  step_interval INT DEFAULT 5,     -- update every 5 seconds
+  duration_sec INT DEFAULT 1800,
+  step_interval INT DEFAULT 5,
   started_at TIMESTAMPTZ DEFAULT NOW(),
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -139,7 +145,7 @@ CREATE TABLE IF NOT EXISTS system_messages (
   id SERIAL PRIMARY KEY,
   title TEXT,
   message TEXT NOT NULL,
-  target_user_id INT REFERENCES users(id) ON DELETE CASCADE,  -- NULL = broadcast to all
+  target_user_id INT REFERENCES users(id) ON DELETE CASCADE,
   is_read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -152,14 +158,69 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Referrals tracking table
+CREATE TABLE IF NOT EXISTS referrals (
+  id SERIAL PRIMARY KEY,
+  referrer_tg_id BIGINT NOT NULL,
+  referred_tg_id BIGINT NOT NULL,
+  referred_name TEXT,
+  bonus_amount NUMERIC(18,2) DEFAULT 0,
+  deposit_amount NUMERIC(18,2) DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  credited_at TIMESTAMPTZ,
+  UNIQUE(referred_tg_id)
+);
+
+-- Mass trades
+CREATE TABLE IF NOT EXISTS mass_trades (
+  id SERIAL PRIMARY KEY,
+  status TEXT DEFAULT 'open',
+  symbol TEXT DEFAULT 'XAUUSD',
+  direction TEXT DEFAULT 'BUY',
+  percentage NUMERIC(10,4) DEFAULT 0,
+  note TEXT,
+  participants_count INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  closed_at TIMESTAMPTZ
+);
+
+-- Individual overrides for mass trades
+CREATE TABLE IF NOT EXISTS mass_trade_overrides (
+  id SERIAL PRIMARY KEY,
+  mass_trade_id INT REFERENCES mass_trades(id) ON DELETE CASCADE,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  custom_percentage NUMERIC(10,4),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(mass_trade_id, user_id)
+);
+
+-- Mass trade participants log
+CREATE TABLE IF NOT EXISTS mass_trade_participants (
+  id SERIAL PRIMARY KEY,
+  mass_trade_id INT REFERENCES mass_trades(id) ON DELETE CASCADE,
+  user_id INT REFERENCES users(id) ON DELETE CASCADE,
+  balance_before NUMERIC(18,2),
+  balance_after NUMERIC(18,2),
+  pnl_amount NUMERIC(18,2),
+  percentage_applied NUMERIC(10,4),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(mass_trade_id, user_id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_tg_id ON users(tg_id);
+CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);
 CREATE INDEX IF NOT EXISTS idx_trades_user_status ON trades(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_trades_history_user ON trades_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_requests_user_status ON requests(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_ops_user ON ops(user_id);
 CREATE INDEX IF NOT EXISTS idx_daily_targets_active ON daily_targets(user_id, active);
 CREATE INDEX IF NOT EXISTS idx_system_messages_user ON system_messages(target_user_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_tg_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referred ON referrals(referred_tg_id);
+CREATE INDEX IF NOT EXISTS idx_mass_trades_status ON mass_trades(status);
+CREATE INDEX IF NOT EXISTS idx_mass_trade_participants ON mass_trade_participants(mass_trade_id);
 
 -- Insert default settings
 INSERT INTO settings (key, value) VALUES 
@@ -168,23 +229,3 @@ INSERT INTO settings (key, value) VALUES
   ('min_withdrawal', '10'),
   ('max_withdrawal', '10000')
 ON CONFLICT (key) DO NOTHING;
-
--- Migration: Add columns if they don't exist
-DO $$ 
-BEGIN
-  -- Add duration_seconds
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'trades' AND column_name = 'duration_seconds'
-  ) THEN
-    ALTER TABLE trades ADD COLUMN duration_seconds INT DEFAULT 3600;
-  END IF;
-  
-  -- Add target_pnl
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'trades' AND column_name = 'target_pnl'
-  ) THEN
-    ALTER TABLE trades ADD COLUMN target_pnl NUMERIC(18,2) DEFAULT 0;
-  END IF;
-END $$;
