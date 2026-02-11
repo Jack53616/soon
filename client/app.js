@@ -611,6 +611,9 @@ $$(".seg-btn").forEach(btn=>{
     if(tab === "stats"){
       loadStats();
     }
+    if(tab === "invite"){
+      loadReferralInfo();
+    }
   });
 });
 
@@ -1276,6 +1279,91 @@ document.addEventListener('touchend', function(e) {
   }
   lastTouchEnd = now;
 }, { passive: false });
+
+// ===== REFERRAL SYSTEM =====
+async function loadReferralInfo() {
+  const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+  if (!tg) return;
+  try {
+    const r = await fetch(`/api/referral/${tg}`).then(r => r.json());
+    if (r.ok) {
+      const botUsername = window.__BOT_USERNAME || 'QL_Trading_Bot';
+      const refLink = `https://t.me/${botUsername}?start=ref_${r.referral_code}`;
+      const refLinkEl = $("#referralLink");
+      if (refLinkEl) refLinkEl.textContent = refLink;
+      
+      const refEarnings = $("#refEarnings");
+      if (refEarnings) refEarnings.textContent = `$${Number(r.referral_earnings || 0).toFixed(0)}`;
+      
+      const refCount = $("#refCount");
+      if (refCount) refCount.textContent = r.referrals?.length || 0;
+      
+      // Render referrals list
+      const listEl = $("#referralsList");
+      if (listEl && r.referrals && r.referrals.length > 0) {
+        listEl.innerHTML = r.referrals.map(ref => {
+          const statusIcon = ref.status === 'credited' ? '✅' : '⏳';
+          const statusText = ref.status === 'credited' ? `+$${ref.bonus_amount}` : 'بانتظار الإيداع';
+          const name = ref.referred_name || `User ${String(ref.referred_tg_id).slice(-4)}`;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div>
+              <div style="font-size:13px;color:#eee;">👤 ${name}</div>
+              <div style="font-size:11px;color:#666;">${new Date(ref.created_at).toLocaleDateString('ar')}</div>
+            </div>
+            <div style="font-size:12px;color:${ref.status === 'credited' ? '#00d68f' : '#f0ad4e'};font-weight:600;">${statusIcon} ${statusText}</div>
+          </div>`;
+        }).join('');
+      } else if (listEl) {
+        listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">لا توجد دعوات بعد. شارك رابطك لتبدأ!</div>';
+      }
+      
+      // Store link for copy/share
+      window.__refLink = refLink;
+    }
+  } catch (e) {
+    console.error('Referral load error:', e);
+  }
+}
+
+// Copy referral link
+$("#copyRefLinkBtn")?.addEventListener("click", () => {
+  const link = window.__refLink || $("#referralLink")?.textContent;
+  if (link && link !== 'Loading...') {
+    navigator.clipboard?.writeText(link).then(() => {
+      const btn = $("#copyRefLinkBtn");
+      const orig = btn.textContent;
+      btn.textContent = '✅ تم النسخ! | Copied!';
+      btn.style.background = '#00b377';
+      setTimeout(() => { btn.textContent = orig; btn.style.background = 'linear-gradient(135deg,#00d68f,#00b377)'; }, 2000);
+    }).catch(() => {
+      // Fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = link;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const btn = $("#copyRefLinkBtn");
+      btn.textContent = '✅ تم النسخ!';
+      setTimeout(() => { btn.textContent = '📋 نسخ الرابط | Copy Link'; }, 2000);
+    });
+  }
+});
+
+// Share referral link
+$("#shareRefLinkBtn")?.addEventListener("click", () => {
+  const link = window.__refLink || $("#referralLink")?.textContent;
+  if (link && link !== 'Loading...') {
+    const shareText = `💰 انضم لمنصة QL Trading AI وابدأ التداول الذكي!\n\n🚀 سجل الآن عبر رابطي:\n${link}`;
+    if (TWA?.openTelegramLink) {
+      TWA.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('💰 انضم لمنصة QL Trading AI وابدأ التداول الذكي!')}`);
+    } else if (navigator.share) {
+      navigator.share({ title: 'QL Trading AI', text: shareText }).catch(() => {});
+    } else {
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('💰 انضم لمنصة QL Trading AI')}`, '_blank');
+    }
+  }
+});
 
 (async function(){
   detectTG();

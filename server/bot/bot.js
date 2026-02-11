@@ -201,6 +201,44 @@ function generateReferralCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
+// ===== Process referral bonus (bot-side) =====
+async function processReferralBonusBot(tgId, depositAmount) {
+  try {
+    const referralResult = await q(
+      "SELECT * FROM referrals WHERE referred_tg_id = $1 AND status = 'pending'",
+      [tgId]
+    );
+    if (referralResult.rows.length === 0) return;
+    const referral = referralResult.rows[0];
+
+    let bonusAmount = 0;
+    if (depositAmount >= 1000) bonusAmount = 100;
+    else if (depositAmount >= 500) bonusAmount = 50;
+    if (bonusAmount <= 0) return;
+
+    await q(
+      "UPDATE referrals SET bonus_amount = $1, deposit_amount = $2, status = 'credited', credited_at = NOW() WHERE id = $3",
+      [bonusAmount, depositAmount, referral.id]
+    );
+
+    const referrerResult = await q("SELECT * FROM users WHERE tg_id = $1", [referral.referrer_tg_id]);
+    if (referrerResult.rows.length > 0) {
+      const referrer = referrerResult.rows[0];
+      await q("UPDATE users SET balance = balance + $1, referral_earnings = COALESCE(referral_earnings, 0) + $1 WHERE id = $2",
+        [bonusAmount, referrer.id]);
+      await q(
+        "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'referral', $2, $3)",
+        [referrer.id, bonusAmount, `Referral bonus: user ${tgId} deposited $${depositAmount}`]
+      );
+      try {
+        await bot.sendMessage(Number(referral.referrer_tg_id), `🎉 *مكافأة الدعوة!*\n\n💰 حصلت على *$${bonusAmount}* كمكافأة دعوة!\n👤 صديقك قام بإيداع $${depositAmount}\n\n💵 تم إضافة المبلغ لرصيدك تلقائياً.`, { parse_mode: "Markdown" });
+      } catch (err) { /* ignore */ }
+    }
+  } catch (error) {
+    console.error("Bot referral bonus error:", error.message);
+  }
+}
+
 // ===== /start with referral support =====
 bot.onText(/^\/start(.*)$/, async (msg, match) => {
   const chatId = msg.chat.id;
@@ -378,6 +416,10 @@ bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [amount, u.id]);
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'manual admin op')`, [u.id, amount]);
+  
+  // Process referral bonus for positive deposits
+  if (amount > 0) await processReferralBonusBot(tg, amount);
+  
   bot.sendMessage(msg.chat.id, `✅ Balance updated for tg:${tg} by ${amount}`);
   bot.sendMessage(tg, `💳 تم الإيداع في حسابك: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`).catch(()=>{});
 });
@@ -426,6 +468,9 @@ bot.onText(/^\/setmoney\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   
   await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [amount, u.id]);
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'account migration')`, [u.id, amount]);
+  
+  // Process referral bonus for this deposit
+  await processReferralBonusBot(tg, amount);
   
   bot.sendMessage(msg.chat.id, `✅ Account migration deposit done for tg:${tg} by ${amount}`);
   
@@ -542,9 +587,18 @@ bot.onText(/^\/close_trade\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (pnl >= 0) await q(`UPDATE users SET balance = balance + $1, wins = wins + $1 WHERE id=$2`, [pnl, tr.user_id]);
   else await q(`UPDATE users SET losses = losses + $1 WHERE id=$2`, [Math.abs(pnl), tr.user_id]);
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'pnl',$2,'close trade')`, [tr.user_id, pnl]);
-  const tg = await q(`SELECT tg_id FROM users WHERE id=$1`, [tr.user_id]).then(r => r.rows[0]?.tg_id);
+  
+  // Save to trades_history
+  const duration = Math.floor((Date.now() - new Date(tr.opened_at).getTime()) / 1000);
+  await q(
+    `INSERT INTO trades_history (user_id, trade_id, symbol, direction, entry_price, exit_price, lot_size, pnl, duration_seconds, opened_at, closed_at, close_reason)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), 'admin_bot')`,
+    [tr.user_id, tradeId, tr.symbol || 'XAUUSD', tr.direction || 'BUY', tr.entry_price || 0, tr.current_price || 0, tr.lot_size || 0.05, pnl, duration, tr.opened_at]
+  );
+  
+  const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [tr.user_id]).then(r => r.rows[0]);
   bot.sendMessage(msg.chat.id, `✅ Closed trade #${tradeId} PnL ${pnl}`);
-  if (tg) bot.sendMessage(Number(tg), `✅ تم إغلاق الصفقة. النتيجة: ${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}`).catch(()=>{});
+  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `🔔 *Trade Closed*\n${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}\n💰 Balance: $${Number(tg.balance).toFixed(2)}`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 // setdaily
@@ -624,7 +678,7 @@ bot.onText(/^\/refstats$/, async (msg) => {
   }
 });
 
-// السحب: approve / reject
+// السحب: approve / reject (with frozen_balance handling)
 bot.onText(/^\/approve_withdraw\s+(\d+)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const id = Number(m[1]);
@@ -632,9 +686,11 @@ bot.onText(/^\/approve_withdraw\s+(\d+)$/, async (msg, m) => {
   if (!r0) return bot.sendMessage(msg.chat.id, "Request not found");
   if (r0.status !== "pending") return bot.sendMessage(msg.chat.id, "Not pending");
   await q(`UPDATE requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
-  const tg = await q(`SELECT tg_id FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]?.tg_id);
-  bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} approved`);
-  if (tg) bot.sendMessage(Number(tg), `💸 تمت الموافقة على طلب السحب #${id} بقيمة $${Number(r0.amount).toFixed(2)}.`).catch(()=>{});
+  // Release frozen balance
+  await q(`UPDATE users SET frozen_balance = GREATEST(0, COALESCE(frozen_balance, 0) - $1) WHERE id=$2`, [r0.amount, r0.user_id]);
+  const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]);
+  bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} approved ($${Number(r0.amount).toFixed(2)})`);
+  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `💸 *تمت الموافقة على طلب السحب*\n\n📋 رقم الطلب: #${id}\n💰 المبلغ: $${Number(r0.amount).toFixed(2)}\n\n✅ سيتم تحويل المبلغ قريباً.`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
@@ -644,10 +700,11 @@ bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
   if (!r0) return bot.sendMessage(msg.chat.id, "Request not found");
   if (r0.status !== "pending") return bot.sendMessage(msg.chat.id, "Not pending");
   await q(`UPDATE requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-  await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [r0.amount, r0.user_id]);
-  const tg = await q(`SELECT tg_id FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]?.tg_id);
-  bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} rejected`);
-  if (tg) bot.sendMessage(Number(tg), `❌ تم رفض طلب السحب #${id}. السبب: ${reason}`).catch(()=>{});
+  // Return frozen balance to available balance
+  await q(`UPDATE users SET balance = balance + $1, frozen_balance = GREATEST(0, COALESCE(frozen_balance, 0) - $1) WHERE id=$2`, [r0.amount, r0.user_id]);
+  const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]);
+  bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} rejected - $${Number(r0.amount).toFixed(2)} returned to balance`);
+  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `❌ *تم رفض طلب السحب*\n\n📋 رقم الطلب: #${id}\n💰 المبلغ: $${Number(r0.amount).toFixed(2)}\n📝 السبب: ${reason}\n\n💵 تم إرجاع المبلغ لرصيدك.`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 // broadcast / notify

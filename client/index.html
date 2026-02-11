@@ -140,6 +140,7 @@
         <button class="seg-btn" data-tab="trades" data-i18n="tabTrades">Trades</button>
         <button class="seg-btn" data-tab="withdraw" data-i18n="tabWithdraw">Withdraw</button>
         <button class="seg-btn" data-tab="requests" data-i18n="tabRequests">سجل</button>
+        <button class="seg-btn" data-tab="invite" data-i18n="tabInvite">دعوة</button>
         <button class="seg-btn" data-tab="support" data-i18n="tabSupport">Support</button>
       </nav>
     </header>
@@ -297,6 +298,48 @@
             </div>
           </div>
           <div id="reqList" class="ops withdrawal-list"></div>
+        </div>
+      </section>
+
+      <!-- Invite / Referral -->
+      <section id="tab-invite" class="tab">
+        <div class="card glass">
+          <div class="c-title">🔗 اعملو دعوة | Invite Friends</div>
+          <p class="muted" style="margin-bottom:12px;">شارك رابطك واكسب مكافآت عند إيداع أصدقائك!</p>
+          <div id="referralLinkBox" style="background:rgba(0,214,143,0.1);border:1px solid rgba(0,214,143,0.3);border-radius:12px;padding:14px;margin-bottom:14px;">
+            <div style="font-size:11px;color:#888;margin-bottom:6px;">رابط الدعوة الخاص بك:</div>
+            <div id="referralLink" style="font-size:13px;color:#00d68f;word-break:break-all;font-family:monospace;">Loading...</div>
+          </div>
+          <button id="copyRefLinkBtn" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#00d68f,#00b377);color:#fff;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:14px;">📋 نسخ الرابط | Copy Link</button>
+          <button id="shareRefLinkBtn" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#0088cc,#006699);color:#fff;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:16px;">📤 مشاركة | Share</button>
+        </div>
+        <div class="card glass" style="margin-top:12px;">
+          <div class="c-title">🏆 المكافآت | Rewards</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+            <div style="background:rgba(0,214,143,0.08);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:#00d68f;" id="refEarnings">$0</div>
+              <div style="font-size:11px;color:#888;">إجمالي الأرباح</div>
+            </div>
+            <div style="background:rgba(0,214,143,0.08);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:#00d68f;" id="refCount">0</div>
+              <div style="font-size:11px;color:#888;">عدد الدعوات</div>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:12px;">
+            <div style="font-size:12px;color:#aaa;margin-bottom:8px;">📊 نظام المكافآت:</div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="font-size:12px;color:#ccc;">إيداع $500+</span>
+              <span style="font-size:12px;color:#00d68f;font-weight:600;">+$50 لك</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;">
+              <span style="font-size:12px;color:#ccc;">إيداع $1,000+</span>
+              <span style="font-size:12px;color:#00d68f;font-weight:600;">+$100 لك</span>
+            </div>
+          </div>
+        </div>
+        <div class="card glass" style="margin-top:12px;">
+          <div class="c-title">👥 دعواتك | Your Referrals</div>
+          <div id="referralsList" style="font-size:13px;color:#aaa;">لا توجد دعوات بعد</div>
         </div>
       </section>
 

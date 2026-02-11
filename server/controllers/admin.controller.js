@@ -826,6 +826,14 @@ export const closeMassTrade = async (req, res) => {
         [mass_trade_id, user.id, balanceBefore, balanceAfter, pnlAmount, appliedPercentage]
       );
 
+      // Save to trades_history for user stats tracking
+      const massTradeData = tradeResult.rows[0]; // already fetched above
+      await query(
+        `INSERT INTO trades_history (user_id, symbol, direction, entry_price, exit_price, lot_size, pnl, duration_seconds, opened_at, closed_at, close_reason)
+         VALUES ($1, $2, $3, 0, 0, 0, $4, 0, $5, NOW(), 'mass_trade')`,
+        [user.id, massTradeData.symbol || 'XAUUSD', massTradeData.direction || 'BUY', pnlAmount, massTradeData.created_at]
+      );
+
       // Send Telegram notification
       if (user.tg_id) {
         try {
