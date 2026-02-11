@@ -22,4 +22,7 @@ router.post("/withdraw/cancel", walletController.cancelWithdraw);
 // GET /api/requests/:tg_id - Get withdrawal requests
 router.get("/requests/:tg_id", walletController.getRequests);
 
+// POST /api/deposit - Process deposit (with referral bonus)
+router.post("/deposit", walletController.processDeposit);
+
 export default router;

@@ -30,7 +30,7 @@
   <!-- Main Panel -->
   <section id="panel" class="hidden">
     <header class="top-bar glass">
-      <h1>🎛️ لوحة إدارة QL Trading</h1>
+      <h1>🎛️ لوحة إدارة QL Trading v3.0</h1>
       <div class="header-actions">
         <span id="adminStatus" class="status-badge">🟢 متصل</span>
         <button id="logoutBtn" class="btn-small">خروج</button>
@@ -42,6 +42,8 @@
       <button class="tab-btn" data-tab="users">👥 المستخدمون</button>
       <button class="tab-btn" data-tab="wd">💸 السحوبات</button>
       <button class="tab-btn" data-tab="tr">📊 الصفقات</button>
+      <button class="tab-btn" data-tab="mass">🎯 صفقات جماعية</button>
+      <button class="tab-btn" data-tab="referrals">🔗 الدعوات</button>
       <button class="tab-btn" data-tab="settings">⚙️ الإعدادات</button>
     </nav>
 
@@ -130,6 +132,10 @@
               <span class="label">الاشتراك:</span>
               <span id="ud-sub" class="value">-</span>
             </div>
+            <div class="user-row">
+              <span class="label">الحالة:</span>
+              <span id="ud-status" class="value">-</span>
+            </div>
           </div>
           
           <div class="action-section">
@@ -160,12 +166,18 @@
           </div>
 
           <div class="action-section">
+            <h4>🚫 حظر المستخدم</h4>
+            <div class="action-row">
+              <input id="banReason" class="input" placeholder="سبب الحظر..."/>
+              <button id="banUserBtn" class="btn danger">حظر</button>
+              <button id="unbanUserBtn" class="btn success hidden">رفع الحظر</button>
+            </div>
+          </div>
+
+          <div class="action-section">
             <h4>🗑️ إجراءات أخرى</h4>
             <div class="action-row">
               <button id="clearHistoryBtn" class="btn warning">تصفير السجل</button>
-              <button id="banUserBtn" class="btn danger">حظر المستخدم</button>
-            </div>
-            <div class="action-row" style="margin-top:10px;">
               <button id="clearWithdrawalsBtn" class="btn warning">تصفير طلبات السحب</button>
               <button id="resetWithdrawnBtn" class="btn warning">تصفير إجمالي المسحوب</button>
               <button id="clearTradesBtn" class="btn warning">حذف الصفقات</button>
@@ -212,6 +224,117 @@
         </div>
       </section>
 
+      <!-- Mass Trades Tab -->
+      <section id="tab-mass" class="tab-content">
+        <div class="card glass">
+          <div class="card-header">
+            <h3>🎯 فتح صفقة جماعية جديدة</h3>
+          </div>
+          <div class="action-section">
+            <div class="action-row">
+              <select id="massSymbol" class="input small">
+                <option value="XAUUSD">XAUUSD (ذهب)</option>
+                <option value="BTCUSDT">BTCUSDT</option>
+                <option value="ETHUSDT">ETHUSDT</option>
+              </select>
+              <select id="massDirection" class="input small">
+                <option value="BUY">BUY (شراء)</option>
+                <option value="SELL">SELL (بيع)</option>
+              </select>
+              <input id="massNote" class="input" placeholder="ملاحظة (اختياري)"/>
+              <button id="openMassTradeBtn" class="btn success">فتح صفقة جماعية</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass">
+          <div class="card-header">
+            <h3>📋 الصفقات الجماعية</h3>
+          </div>
+          <div id="massTrades" class="table-container"></div>
+        </div>
+
+        <!-- Mass Trade Close Modal -->
+        <div id="massCloseModal" class="card glass hidden" style="border: 2px solid var(--accent);">
+          <div class="card-header">
+            <h3>🔒 إغلاق صفقة جماعية #<span id="massCloseId">-</span></h3>
+            <button id="closeMassModal" class="btn-small">✕</button>
+          </div>
+          <div class="action-section">
+            <h4>📊 النسبة العامة للجميع</h4>
+            <div class="action-row">
+              <input id="massPercentage" type="number" step="0.01" class="input small" placeholder="النسبة % (مثال: 5 أو -3)"/>
+              <button id="closeMassTradeBtn" class="btn danger">إغلاق وتطبيق على الجميع</button>
+            </div>
+            <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">
+              أدخل نسبة موجبة للربح (مثال: 5 = +5%) أو سالبة للخسارة (مثال: -3 = -3%). سيتم تطبيقها على رصيد كل مستخدم.
+            </p>
+          </div>
+          <div class="action-section">
+            <h4>⚙️ تحكم متقدم - نسبة مخصصة لمستخدم معين</h4>
+            <div class="action-row">
+              <input id="overrideUserId" type="number" class="input small" placeholder="User ID"/>
+              <input id="overridePercentage" type="number" step="0.01" class="input small" placeholder="النسبة المخصصة %"/>
+              <button id="setOverrideBtn" class="btn">تعيين نسبة مخصصة</button>
+            </div>
+            <div id="overridesList" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Referrals Tab -->
+      <section id="tab-referrals" class="tab-content">
+        <div class="kpi-grid">
+          <div class="kpi-card glass">
+            <div class="kpi-icon">🔗</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-refs-total">0</span>
+              <span class="kpi-label">إجمالي الدعوات</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-refs-credited">0</span>
+              <span class="kpi-label">دعوات مكتملة</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-refs-paid">$0</span>
+              <span class="kpi-label">إجمالي المكافآت</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-refs-pending">0</span>
+              <span class="kpi-label">دعوات معلقة</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass">
+          <div class="card-header">
+            <h3>🏆 أفضل المُحيلين</h3>
+          </div>
+          <div id="topReferrers" class="table-container"></div>
+        </div>
+
+        <div class="card glass">
+          <div class="card-header">
+            <h3>📋 نظام المكافآت</h3>
+          </div>
+          <div style="padding: 16px; color: var(--muted);">
+            <p style="margin-bottom: 12px;">🔸 كل مستخدم لديه رابط دعوة فريد</p>
+            <p style="margin-bottom: 12px;">🔸 عندما يسجل شخص عبر الرابط ويودع <strong style="color: var(--success);">$500+</strong> يحصل المُحيل على <strong style="color: var(--success);">$50</strong></p>
+            <p style="margin-bottom: 12px;">🔸 عندما يسجل شخص عبر الرابط ويودع <strong style="color: var(--success);">$1000+</strong> يحصل المُحيل على <strong style="color: var(--success);">$100</strong></p>
+            <p>🔸 المكافأة تُضاف تلقائياً لرصيد المُحيل</p>
+          </div>
+        </div>
+      </section>
+
       <!-- Settings Tab -->
       <section id="tab-settings" class="tab-content">
         <div class="settings-grid">
@@ -253,8 +376,18 @@
               <h3>📢 إرسال رسالة جماعية</h3>
             </div>
             <div class="broadcast-form">
+              <input id="broadcastTitle" class="input" placeholder="عنوان الرسالة (اختياري)"/>
               <textarea id="broadcastMsg" class="input textarea" placeholder="نص الرسالة..."></textarea>
-              <button id="broadcastBtn" class="btn">إرسال للجميع</button>
+              <button id="broadcastBtn" class="btn">إرسال للجميع عبر Telegram</button>
+            </div>
+          </div>
+
+          <div class="card glass">
+            <div class="card-header">
+              <h3>🗑️ إجراءات عامة</h3>
+            </div>
+            <div class="action-row">
+              <button id="clearAllWithdrawalsBtn" class="btn danger">تصفير جميع طلبات السحب</button>
             </div>
           </div>
         </div>

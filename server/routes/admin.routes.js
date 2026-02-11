@@ -26,6 +26,7 @@ router.post("/user/subscription", adminController.extendSubscription);
 router.post("/user/trade", adminController.addTrade);
 router.post("/user/clear-history", adminController.clearHistory);
 router.post("/user/ban", adminController.banUser);
+router.post("/user/unban", adminController.unbanUser);
 
 // ===== Withdrawals =====
 router.get("/withdrawals", adminController.getWithdrawals);
@@ -52,5 +53,16 @@ router.post("/key/create", adminController.createKey);
 
 // ===== Broadcast =====
 router.post("/broadcast", adminController.broadcast);
+
+// ===== Referral System =====
+router.get("/referrals/stats", adminController.getReferralStats);
+router.get("/referrals/user/:user_id", adminController.getUserReferrals);
+
+// ===== Mass Trades =====
+router.get("/mass-trades", adminController.getMassTrades);
+router.get("/mass-trade/:id", adminController.getMassTradeDetails);
+router.post("/mass-trade/open", adminController.openMassTrade);
+router.post("/mass-trade/close", adminController.closeMassTrade);
+router.post("/mass-trade/override", adminController.setMassTradeOverride);
 
 export default router;

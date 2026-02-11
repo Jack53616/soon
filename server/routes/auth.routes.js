@@ -16,4 +16,7 @@ router.get("/user/:tg_id", authController.getUserInfo);
 // POST /api/check-subscription - Check if subscription is valid
 router.post("/check-subscription", authController.checkSubscription);
 
+// GET /api/referral/:tg_id - Get referral info for user
+router.get("/referral/:tg_id", authController.getReferralInfo);
+
 export default router;

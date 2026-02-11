@@ -480,6 +480,10 @@ gateBtn?.addEventListener("click", async ()=>{
       body:JSON.stringify(payload)
     }).then(r=>r.json());
     if(!r?.ok){
+      if(r?.error === 'banned'){
+        showBanScreen(r?.ban_reason || 'مخالفة شروط الاستخدام');
+        return;
+      }
       toast(r?.error || "Invalid key");
       return;
     }
@@ -874,6 +878,13 @@ async function refreshUser(required = false){
     if(required) throw err;
     return false;
   }
+  
+  // Check if user is banned
+  if(payload?.error === 'banned' || payload?.banned === true){
+    showBanScreen(payload.ban_reason || 'مخالفة شروط الاستخدام');
+    return false;
+  }
+  
   if(payload?.ok){
     state.user = payload.user;
     hydrateUser(payload.user);
@@ -881,6 +892,22 @@ async function refreshUser(required = false){
   }
   if(required) throw new Error(payload?.error || "user_not_found");
   return false;
+}
+
+function showBanScreen(reason){
+  const banScreen = $("#banScreen");
+  const banReasonText = $("#banReasonText");
+  if(banScreen){
+    banScreen.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+  if(banReasonText && reason){
+    banReasonText.textContent = reason;
+  }
+  // Hide everything else
+  $("#app")?.classList.add("hidden");
+  $(".gate")?.classList.add("hidden");
+  $("#splash")?.classList.add("hidden");
 }
 
 async function refreshOps(){

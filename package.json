@@ -1,7 +1,7 @@
 {
   "name": "ql-trading-ai-complete",
-  "version": "2.2.0",
-  "description": "QL Trading AI v2.2 - Secured & Optimized",
+  "version": "3.0.0",
+  "description": "QL Trading AI v3.0 - Referral System, Mass Trades, Enhanced Ban & Broadcast",
   "main": "server/index.js",
   "type": "module",
   "scripts": {

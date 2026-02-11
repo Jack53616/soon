@@ -1,5 +1,6 @@
 import { query } from "../config/db.js";
 import { validateTelegramId, validateAmount } from "../config/security.js";
+import { processReferralBonus } from "./auth.controller.js";
 
 export const getWallet = async (req, res) => {
   try {
@@ -206,6 +207,47 @@ export const getRequests = async (req, res) => {
     );
 
     res.json({ ok: true, list: result.rows });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Deposit handler - processes referral bonus when user deposits
+export const processDeposit = async (req, res) => {
+  try {
+    const { tg_id, amount } = req.body;
+
+    if (!validateTelegramId(tg_id) || !validateAmount(amount)) {
+      return res.status(400).json({ ok: false, error: "Invalid input" });
+    }
+
+    const userResult = await query("SELECT * FROM users WHERE tg_id = $1", [tg_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const user = userResult.rows[0];
+
+    // Update balance
+    await query(
+      "UPDATE users SET balance = balance + $1, total_deposited = total_deposited + $1 WHERE id = $2",
+      [amount, user.id]
+    );
+
+    // Log operation
+    await query(
+      "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'deposit', $2, 'Deposit')",
+      [user.id, amount]
+    );
+
+    // Process referral bonus if applicable
+    try {
+      await processReferralBonus(tg_id, amount);
+    } catch (err) {
+      console.error("Referral bonus processing error:", err.message);
+    }
+
+    res.json({ ok: true, message: "Deposit processed" });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }
