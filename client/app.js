@@ -218,7 +218,25 @@ const i18n = {
     selectLanguage: "Select Language",
     close: "Close",
     marketClosed: "Market Closed (Weekend)",
-    closeTradeBtn: "Close Trade"
+    closeTradeBtn: "Close Trade",
+    tabInvite: "Invite",
+    inviteTitle: "Invite Friends",
+    inviteSub: "Share your link and earn rewards when your friends deposit!",
+    yourInviteLink: "Your invite link:",
+    copyLink: "Copy Link",
+    share: "Share",
+    rewards: "Rewards",
+    totalEarnings: "Total Earnings",
+    totalInvites: "Total Invites",
+    rewardSystem: "Reward System",
+    deposit500: "Deposit $500+",
+    deposit1000: "Deposit $1,000+",
+    youGet50: "+$50 for you",
+    youGet100: "+$100 for you",
+    yourReferrals: "Your Referrals",
+    noReferralsYet: "No referrals yet. Share your link to get started!",
+    waitingDeposit: "Waiting for deposit",
+    copied: "Copied!"
   },
   ar: {
     gateTitle: "QL Trading — دخول",
@@ -270,7 +288,25 @@ const i18n = {
     selectLanguage: "اختر اللغة",
     close: "إغلاق",
     marketClosed: "السوق مغلق (عطلة نهاية الأسبوع)",
-    closeTradeBtn: "إغلاق الصفقة"
+    closeTradeBtn: "إغلاق الصفقة",
+    tabInvite: "دعوة",
+    inviteTitle: "ادعُ أصدقاءك",
+    inviteSub: "شارك رابطك واكسب مكافآت عند إيداع أصدقائك!",
+    yourInviteLink: "رابط الدعوة الخاص بك:",
+    copyLink: "نسخ الرابط",
+    share: "مشاركة",
+    rewards: "المكافآت",
+    totalEarnings: "إجمالي الأرباح",
+    totalInvites: "عدد الدعوات",
+    rewardSystem: "نظام المكافآت",
+    deposit500: "إيداع $500+",
+    deposit1000: "إيداع $1,000+",
+    youGet50: "+$50 لك",
+    youGet100: "+$100 لك",
+    yourReferrals: "دعواتك",
+    noReferralsYet: "لا توجد دعوات بعد. شارك رابطك لتبدأ!",
+    waitingDeposit: "بانتظار الإيداع",
+    copied: "تم النسخ!"
   },
   tr: {
     gateTitle: "QL Trading — Giriş",
@@ -322,7 +358,25 @@ const i18n = {
     selectLanguage: "Dil Seçin",
     close: "Kapat",
     marketClosed: "Piyasa Kapalı (Hafta Sonu)",
-    closeTradeBtn: "İşlemi Kapat"
+    closeTradeBtn: "İşlemi Kapat",
+    tabInvite: "Davet",
+    inviteTitle: "Arkadaşlarını Davet Et",
+    inviteSub: "Bağlantını paylaş ve arkadaşların yatırım yaptığında ödül kazan!",
+    yourInviteLink: "Davet bağlantınız:",
+    copyLink: "Bağlantıyı Kopyala",
+    share: "Paylaş",
+    rewards: "Ödüller",
+    totalEarnings: "Toplam Kazanç",
+    totalInvites: "Toplam Davet",
+    rewardSystem: "Ödül Sistemi",
+    deposit500: "$500+ Yatırım",
+    deposit1000: "$1,000+ Yatırım",
+    youGet50: "Sana +$50",
+    youGet100: "Sana +$100",
+    yourReferrals: "Davetlerin",
+    noReferralsYet: "Henüz davet yok. Bağlantını paylaşarak başla!",
+    waitingDeposit: "Yatırım bekleniyor",
+    copied: "Kopyalandı!"
   },
   de: {
     gateTitle: "QL Trading — Zugang",
@@ -374,7 +428,25 @@ const i18n = {
     selectLanguage: "Sprache wählen",
     close: "Schließen",
     marketClosed: "Markt geschlossen (Wochenende)",
-    closeTradeBtn: "Trade schließen"
+    closeTradeBtn: "Trade schließen",
+    tabInvite: "Einladen",
+    inviteTitle: "Freunde einladen",
+    inviteSub: "Teile deinen Link und verdiene Belohnungen, wenn deine Freunde einzahlen!",
+    yourInviteLink: "Dein Einladungslink:",
+    copyLink: "Link kopieren",
+    share: "Teilen",
+    rewards: "Belohnungen",
+    totalEarnings: "Gesamteinnahmen",
+    totalInvites: "Gesamteinladungen",
+    rewardSystem: "Belohnungssystem",
+    deposit500: "$500+ Einzahlung",
+    deposit1000: "$1.000+ Einzahlung",
+    youGet50: "+$50 für dich",
+    youGet100: "+$100 für dich",
+    yourReferrals: "Deine Einladungen",
+    noReferralsYet: "Noch keine Einladungen. Teile deinen Link, um loszulegen!",
+    waitingDeposit: "Warten auf Einzahlung",
+    copied: "Kopiert!"
   }
 };
 
@@ -1142,9 +1214,8 @@ async function loadTrades(){
         div.className="op";
         
         const pnl = Number(trade.pnl || 0);
-        totalPnl += pnl; // Add to total
+        totalPnl += pnl;
         
-        const target = Number(trade.target_pnl || 0);
         const pnlColor = pnl >= 0 ? "#00d68f" : "#ff3b63";
         const pnlSign = pnl >= 0 ? "+" : "";
         
@@ -1154,27 +1225,52 @@ async function loadTrades(){
         const remaining = Math.max(0, duration - elapsed);
         const hours = Math.floor(remaining / 3600);
         const minutes = Math.floor((remaining % 3600) / 60);
-        const timeStr = `${hours}h ${minutes}m`;
+        const seconds = remaining % 60;
+        const timeStr = remaining > 0 ? `${hours}h ${minutes}m ${seconds}s` : (state.lang === 'ar' ? 'جاري الإغلاق...' : 'Closing...');
+        
+        const isMassTrade = trade.trade_type === 'mass';
+        const tradeLabel = isMassTrade ? (state.lang === 'ar' ? '🤖 صفقة البوت' : '🤖 Bot Trade') : '';
+        const progressPercent = Math.min(100, Math.round((elapsed / duration) * 100));
+        
+        // Progress bar color based on PnL
+        const progressColor = pnl >= 0 ? '#00d68f' : '#ff3b63';
         
         div.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:8px;">
-            <div style="flex:1;">
-              <div>${trade.symbol} ${trade.direction} (${trade.lot_size})</div>
-              <small style="opacity:0.6">⏱ ${timeStr}</small>
+          <div style="width:100%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+              <div style="flex:1;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span>${trade.symbol} ${trade.direction} (${trade.lot_size})</span>
+                  ${tradeLabel ? `<span style="font-size:10px; background:rgba(0,102,255,0.2); color:#3d8bff; padding:2px 6px; border-radius:10px;">${tradeLabel}</span>` : ''}
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                  <small style="opacity:0.6">⏱ ${timeStr}</small>
+                  <small style="opacity:0.5;">💰 $${Number(trade.current_price || 0).toFixed(2)}</small>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="text-align:right;">
+                  <b style="color:${pnlColor}; font-size:16px;">${pnlSign}$${Math.abs(pnl).toFixed(2)}</b>
+                </div>
+                ${!isMassTrade ? `<button class="btn-close-trade" data-trade-id="${trade.id}" data-trade-type="regular" style="padding:4px 8px; font-size:12px; background:#ff4444; color:white; border:none; border-radius:4px; cursor:pointer;">✕</button>` : ''}
+              </div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <b style="color:${pnlColor}">${pnlSign}$${pnl.toFixed(2)}</b>
-              <button class="btn-close-trade" data-trade-id="${trade.id}" style="padding:4px 8px; font-size:12px; background:#ff4444; color:white; border:none; border-radius:4px; cursor:pointer;">✕</button>
+            <!-- Progress bar -->
+            <div style="width:100%; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
+              <div style="width:${progressPercent}%; height:100%; background:${progressColor}; border-radius:2px; transition:width 1s linear;"></div>
             </div>
           </div>
         `;
         box.appendChild(div);
       });
       
-      // Add close trade handlers
+      // Add close trade handlers (only for regular trades, not mass trades)
       $$(".btn-close-trade").forEach(btn=>{
         btn.addEventListener("click", async ()=>{
           const tradeId = btn.dataset.tradeId;
+          const tradeType = btn.dataset.tradeType;
+          if (tradeType === 'mass') return; // Mass trades cannot be closed manually
+          
           const confirmMsg = state.lang === 'ar' ? 'هل تريد إغلاق هذه الصفقة الآن؟' : 'Close this trade now?';
           if(confirm(confirmMsg)){
             try{
@@ -1301,20 +1397,21 @@ async function loadReferralInfo() {
       // Render referrals list
       const listEl = $("#referralsList");
       if (listEl && r.referrals && r.referrals.length > 0) {
+        const locale = state.lang === 'ar' ? 'ar' : (state.lang === 'tr' ? 'tr' : (state.lang === 'de' ? 'de' : 'en'));
         listEl.innerHTML = r.referrals.map(ref => {
           const statusIcon = ref.status === 'credited' ? '✅' : '⏳';
-          const statusText = ref.status === 'credited' ? `+$${ref.bonus_amount}` : 'بانتظار الإيداع';
+          const statusText = ref.status === 'credited' ? `+$${ref.bonus_amount}` : t('waitingDeposit');
           const name = ref.referred_name || `User ${String(ref.referred_tg_id).slice(-4)}`;
           return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
             <div>
               <div style="font-size:13px;color:#eee;">👤 ${name}</div>
-              <div style="font-size:11px;color:#666;">${new Date(ref.created_at).toLocaleDateString('ar')}</div>
+              <div style="font-size:11px;color:#666;">${new Date(ref.created_at).toLocaleDateString(locale)}</div>
             </div>
             <div style="font-size:12px;color:${ref.status === 'credited' ? '#00d68f' : '#f0ad4e'};font-weight:600;">${statusIcon} ${statusText}</div>
           </div>`;
         }).join('');
       } else if (listEl) {
-        listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">لا توجد دعوات بعد. شارك رابطك لتبدأ!</div>';
+        listEl.innerHTML = `<div style="text-align:center;padding:20px;color:#666;">${t('noReferralsYet')}</div>`;
       }
       
       // Store link for copy/share
@@ -1331,10 +1428,10 @@ $("#copyRefLinkBtn")?.addEventListener("click", () => {
   if (link && link !== 'Loading...') {
     navigator.clipboard?.writeText(link).then(() => {
       const btn = $("#copyRefLinkBtn");
-      const orig = btn.textContent;
-      btn.textContent = '✅ تم النسخ! | Copied!';
+      const orig = btn.innerHTML;
+      btn.innerHTML = `✅ ${t('copied')}`;
       btn.style.background = '#00b377';
-      setTimeout(() => { btn.textContent = orig; btn.style.background = 'linear-gradient(135deg,#00d68f,#00b377)'; }, 2000);
+      setTimeout(() => { btn.innerHTML = orig; btn.style.background = 'linear-gradient(135deg,#00d68f,#00b377)'; }, 2000);
     }).catch(() => {
       // Fallback for older browsers
       const ta = document.createElement('textarea');
@@ -1344,8 +1441,8 @@ $("#copyRefLinkBtn")?.addEventListener("click", () => {
       document.execCommand('copy');
       document.body.removeChild(ta);
       const btn = $("#copyRefLinkBtn");
-      btn.textContent = '✅ تم النسخ!';
-      setTimeout(() => { btn.textContent = '📋 نسخ الرابط | Copy Link'; }, 2000);
+      btn.innerHTML = `✅ ${t('copied')}`;
+      setTimeout(() => { btn.innerHTML = `📋 <span>${t('copyLink')}</span>`; }, 2000);
     });
   }
 });
@@ -1354,13 +1451,20 @@ $("#copyRefLinkBtn")?.addEventListener("click", () => {
 $("#shareRefLinkBtn")?.addEventListener("click", () => {
   const link = window.__refLink || $("#referralLink")?.textContent;
   if (link && link !== 'Loading...') {
-    const shareText = `💰 انضم لمنصة QL Trading AI وابدأ التداول الذكي!\n\n🚀 سجل الآن عبر رابطي:\n${link}`;
+    const shareTexts = {
+      ar: '💰 انضم لمنصة QL Trading AI وابدأ التداول الذكي!',
+      en: '💰 Join QL Trading AI and start smart trading!',
+      tr: '💰 QL Trading AI\'ye katıl ve akıllı ticarete başla!',
+      de: '💰 Tritt QL Trading AI bei und starte smartes Trading!'
+    };
+    const shareMsg = shareTexts[state.lang] || shareTexts.en;
+    const shareText = `${shareMsg}\n\n🚀 ${link}`;
     if (TWA?.openTelegramLink) {
-      TWA.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('💰 انضم لمنصة QL Trading AI وابدأ التداول الذكي!')}`);
+      TWA.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareMsg)}`);
     } else if (navigator.share) {
       navigator.share({ title: 'QL Trading AI', text: shareText }).catch(() => {});
     } else {
-      window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('💰 انضم لمنصة QL Trading AI')}`, '_blank');
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareMsg)}`, '_blank');
     }
   }
 });

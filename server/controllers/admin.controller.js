@@ -144,7 +144,7 @@ export const extendSubscription = async (req, res) => {
   }
 };
 
-// Add trade for user - FIXED: sends Telegram notification
+// Add trade for user
 export const addTrade = async (req, res) => {
   try {
     const { user_id, target_pnl, duration_hours } = req.body;
@@ -164,7 +164,6 @@ export const addTrade = async (req, res) => {
       VALUES ($1, 'XAUUSD', $2, $3, $3, 0.05, $4, $5, 'open')
     `, [user_id, direction, entryPrice, target_pnl, durationSeconds]);
 
-    // FIXED: Send Telegram notification to user
     if (user.tg_id) {
       try {
         await bot.sendMessage(Number(user.tg_id), `🚀 *تم تفعيل صفقة ذكية جديدة*
@@ -207,7 +206,7 @@ export const clearHistory = async (req, res) => {
   }
 };
 
-// Ban user - ENHANCED with reason and notification
+// Ban user
 export const banUser = async (req, res) => {
   try {
     const { user_id, banned, reason } = req.body;
@@ -220,22 +219,12 @@ export const banUser = async (req, res) => {
       await query("UPDATE users SET is_banned = FALSE, ban_reason = NULL, banned_at = NULL WHERE id = $1", [user_id]);
     }
 
-    // Send notification to user
     const userResult = await query("SELECT tg_id FROM users WHERE id = $1", [user_id]);
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       const tgId = Number(userResult.rows[0].tg_id);
       try {
         if (isBanned) {
-          await bot.sendMessage(tgId, `🚫 *تم حظر حسابك*
-
-━━━━━━━━━━━━━━━━━━━━
-📋 *السبب:* ${banReason}
-
-📩 للتواصل مع الدعم:
-━━━━━━━━━━━━━━━━━━━━
-
-🔗 *Your account has been suspended*
-Reason: ${banReason}`, {
+          await bot.sendMessage(tgId, `🚫 *تم حظر حسابك*\n\n━━━━━━━━━━━━━━━━━━━━\n📋 *السبب:* ${banReason}\n\n📩 للتواصل مع الدعم:\n━━━━━━━━━━━━━━━━━━━━\n\n🔗 *Your account has been suspended*\nReason: ${banReason}`, {
             parse_mode: "Markdown",
             reply_markup: {
               inline_keyboard: [
@@ -244,12 +233,7 @@ Reason: ${banReason}`, {
             }
           });
         } else {
-          await bot.sendMessage(tgId, `✅ *تم رفع الحظر عن حسابك*
-
-يمكنك الآن استخدام المنصة بشكل طبيعي.
-
-✅ *Your account has been reactivated*
-You can now use the platform normally.`, { parse_mode: "Markdown" });
+          await bot.sendMessage(tgId, `✅ *تم رفع الحظر عن حسابك*\n\nيمكنك الآن استخدام المنصة بشكل طبيعي.\n\n✅ *Your account has been reactivated*\nYou can now use the platform normally.`, { parse_mode: "Markdown" });
         }
       } catch (err) {
         console.log(`Failed to send ban notification to ${tgId}`);
@@ -269,16 +253,10 @@ export const unbanUser = async (req, res) => {
 
     await query("UPDATE users SET is_banned = FALSE, ban_reason = NULL, banned_at = NULL WHERE id = $1", [user_id]);
 
-    // Send notification
     const userResult = await query("SELECT tg_id FROM users WHERE id = $1", [user_id]);
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       try {
-        await bot.sendMessage(Number(userResult.rows[0].tg_id), `✅ *تم رفع الحظر عن حسابك*
-
-يمكنك الآن استخدام المنصة بشكل طبيعي.
-
-✅ *Your account has been reactivated*
-You can now use the platform normally.`, { parse_mode: "Markdown" });
+        await bot.sendMessage(Number(userResult.rows[0].tg_id), `✅ *تم رفع الحظر عن حسابك*\n\nيمكنك الآن استخدام المنصة بشكل طبيعي.\n\n✅ *Your account has been reactivated*\nYou can now use the platform normally.`, { parse_mode: "Markdown" });
       } catch (err) { /* ignore */ }
     }
 
@@ -338,7 +316,6 @@ export const approveWithdrawal = async (req, res) => {
       [request.user_id, -request.amount]
     );
 
-    // Send Telegram notification
     const userResult = await query("SELECT tg_id FROM users WHERE id = $1", [request.user_id]);
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       try {
@@ -376,7 +353,6 @@ export const rejectWithdrawal = async (req, res) => {
       [request.amount, request.user_id]
     );
 
-    // Send Telegram notification
     const userResult = await query("SELECT tg_id FROM users WHERE id = $1", [request.user_id]);
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       try {
@@ -415,7 +391,7 @@ export const getAllTrades = async (req, res) => {
   }
 };
 
-// Close trade - FIXED: sends notification
+// Close trade
 export const closeTrade = async (req, res) => {
   try {
     const { trade_id } = req.body;
@@ -440,7 +416,6 @@ export const closeTrade = async (req, res) => {
       await query("UPDATE users SET losses = COALESCE(losses, 0) + $1 WHERE id = $2", [Math.abs(pnl), trade.user_id]);
     }
 
-    // Save to history
     const duration = Math.floor((new Date() - new Date(trade.opened_at)) / 1000);
     await query(
       `INSERT INTO trades_history (user_id, trade_id, symbol, direction, entry_price, exit_price, lot_size, pnl, duration_seconds, opened_at, closed_at, close_reason)
@@ -453,14 +428,11 @@ export const closeTrade = async (req, res) => {
       [trade.user_id, pnl, `Trade #${trade_id} closed by admin`]
     );
 
-    // FIXED: Send Telegram notification
     const userResult = await query("SELECT tg_id, balance FROM users WHERE id = $1", [trade.user_id]);
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       try {
         const user = userResult.rows[0];
-        await bot.sendMessage(Number(user.tg_id), `🔔 *Trade Closed*
-${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}
-💰 Balance: $${Number(user.balance).toFixed(2)}`, { parse_mode: "Markdown" });
+        await bot.sendMessage(Number(user.tg_id), `🔔 *Trade Closed*\n${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n💰 Balance: $${Number(user.balance).toFixed(2)}`, { parse_mode: "Markdown" });
       } catch (err) { /* ignore */ }
     }
 
@@ -551,7 +523,7 @@ export const createKey = async (req, res) => {
   }
 };
 
-// Broadcast message - FIXED: sends via Telegram AND saves to DB
+// Broadcast message
 export const broadcast = async (req, res) => {
   try {
     const { message, title } = req.body;
@@ -560,13 +532,11 @@ export const broadcast = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Message required" });
     }
 
-    // Save to system_messages
     await query(
       "INSERT INTO system_messages (title, message) VALUES ($1, $2)",
       [title || 'إشعار', message]
     );
 
-    // FIXED: Also send via Telegram to all users
     const users = await query("SELECT tg_id FROM users WHERE tg_id IS NOT NULL AND is_banned = FALSE");
     let sent = 0;
     let failed = 0;
@@ -603,7 +573,7 @@ export const updateSettings = async (req, res) => {
   }
 };
 
-// Clear all withdrawal requests for a user
+// Clear user withdrawals
 export const clearUserWithdrawals = async (req, res) => {
   try {
     const { user_id } = req.body;
@@ -684,7 +654,6 @@ export const getReferralStats = async (req, res) => {
     const creditedRefs = await query("SELECT COUNT(*) as count, COALESCE(SUM(bonus_amount), 0) as total FROM referrals WHERE status = 'credited'");
     const pendingRefs = await query("SELECT COUNT(*) as count FROM referrals WHERE status = 'pending'");
     
-    // Top referrers
     const topReferrers = await query(`
       SELECT u.name, u.tg_id, COUNT(r.id) as ref_count, COALESCE(u.referral_earnings, 0) as earnings
       FROM users u
@@ -720,7 +689,6 @@ export const getUserReferrals = async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // Generate referral code if not exists
     if (!user.referral_code) {
       const code = crypto.randomBytes(4).toString('hex').toUpperCase();
       await query("UPDATE users SET referral_code = $1 WHERE id = $2", [code, user_id]);
@@ -745,30 +713,40 @@ export const getUserReferrals = async (req, res) => {
   }
 };
 
-// ===== MASS TRADES SYSTEM =====
+// ===== ENHANCED MASS TRADES SYSTEM v3.1 =====
 
-// Open mass trade
-export const openMassTrade = async (req, res) => {
+// Create a scheduled mass trade (pending - waiting for admin to set percentage)
+export const createScheduledMassTrade = async (req, res) => {
   try {
-    const { symbol, direction, note } = req.body;
+    const { symbol, direction, note, scheduled_time, scheduled_date, duration_seconds } = req.body;
 
-    // Count eligible users (non-banned, with balance > 0)
+    const entryPrice = 2650 + (Math.random() - 0.5) * 10;
     const usersCount = await query("SELECT COUNT(*) as count FROM users WHERE is_banned = FALSE AND balance > 0");
 
     const result = await query(
-      `INSERT INTO mass_trades (symbol, direction, note, participants_count, status)
-       VALUES ($1, $2, $3, $4, 'open') RETURNING *`,
-      [symbol || 'XAUUSD', direction || 'BUY', note || '', usersCount.rows[0].count]
+      `INSERT INTO mass_trades (symbol, direction, note, participants_count, status, scheduled_time, scheduled_date, duration_seconds, entry_price, is_scheduled)
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9) RETURNING *`,
+      [
+        symbol || 'XAUUSD',
+        direction || 'BUY',
+        note || '',
+        usersCount.rows[0].count,
+        scheduled_time || null,
+        scheduled_date || new Date().toISOString().split('T')[0],
+        duration_seconds || 3600,
+        entryPrice,
+        !!scheduled_time
+      ]
     );
 
-    res.json({ ok: true, message: "Mass trade opened", data: result.rows[0] });
+    res.json({ ok: true, message: "Mass trade created (pending)", data: result.rows[0] });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }
 };
 
-// Close mass trade with percentage
-export const closeMassTrade = async (req, res) => {
+// Activate a pending mass trade (admin sets percentage, creates user trades, sends notifications)
+export const activateMassTrade = async (req, res) => {
   try {
     const { mass_trade_id, percentage } = req.body;
 
@@ -776,16 +754,25 @@ export const closeMassTrade = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Percentage required" });
     }
 
-    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1 AND status = 'open'", [mass_trade_id]);
+    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1 AND status = 'pending'", [mass_trade_id]);
     if (tradeResult.rows.length === 0) {
-      return res.status(404).json({ ok: false, error: "Mass trade not found or already closed" });
+      return res.status(404).json({ ok: false, error: "Mass trade not found or not pending" });
     }
 
-    // Get all eligible users
+    const massTrade = tradeResult.rows[0];
+    const durationSeconds = Number(massTrade.duration_seconds) || 3600;
+    const entryPrice = Number(massTrade.entry_price) || (2650 + (Math.random() - 0.5) * 10);
+
+    // Update mass trade to 'open' status
+    await query(
+      "UPDATE mass_trades SET status = 'open', percentage = $1, activated_at = NOW() WHERE id = $2",
+      [percentage, mass_trade_id]
+    );
+
+    // Get all eligible users (non-banned, with balance > 0)
     const users = await query("SELECT * FROM users WHERE is_banned = FALSE AND balance > 0");
 
-    let totalAffected = 0;
-    let totalPnl = 0;
+    let totalCreated = 0;
 
     for (const user of users.rows) {
       // Check for custom override
@@ -799,69 +786,245 @@ export const closeMassTrade = async (req, res) => {
         : Number(percentage);
 
       const balanceBefore = Number(user.balance);
-      const pnlAmount = Number((balanceBefore * appliedPercentage / 100).toFixed(2));
-      const balanceAfter = Number((balanceBefore + pnlAmount).toFixed(2));
+      const targetPnl = Number((balanceBefore * appliedPercentage / 100).toFixed(2));
+      const direction = targetPnl >= 0 ? 'BUY' : 'SELL';
 
-      // Update user balance
-      await query("UPDATE users SET balance = $1 WHERE id = $2", [balanceAfter, user.id]);
-
-      // Update wins/losses
-      if (pnlAmount >= 0) {
-        await query("UPDATE users SET wins = COALESCE(wins, 0) + $1 WHERE id = $2", [pnlAmount, user.id]);
-      } else {
-        await query("UPDATE users SET losses = COALESCE(losses, 0) + $1 WHERE id = $2", [Math.abs(pnlAmount), user.id]);
-      }
-
-      // Log operation
+      // Create individual visual trade for this user
       await query(
-        "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'pnl', $2, $3)",
-        [user.id, pnlAmount, `Mass trade #${mass_trade_id} (${appliedPercentage >= 0 ? '+' : ''}${appliedPercentage}%)`]
+        `INSERT INTO mass_trade_user_trades (mass_trade_id, user_id, symbol, direction, entry_price, current_price, lot_size, pnl, target_pnl, status, opened_at)
+         VALUES ($1, $2, $3, $4, $5, $5, 0.05, 0, $6, 'open', NOW())
+         ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET status = 'open', target_pnl = $6, pnl = 0, opened_at = NOW()`,
+        [mass_trade_id, user.id, massTrade.symbol || 'XAUUSD', direction, entryPrice, targetPnl]
       );
 
       // Save participant record
       await query(
         `INSERT INTO mass_trade_participants (mass_trade_id, user_id, balance_before, balance_after, pnl_amount, percentage_applied)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET balance_after = $4, pnl_amount = $5, percentage_applied = $6`,
-        [mass_trade_id, user.id, balanceBefore, balanceAfter, pnlAmount, appliedPercentage]
-      );
-
-      // Save to trades_history for user stats tracking
-      const massTradeData = tradeResult.rows[0]; // already fetched above
-      await query(
-        `INSERT INTO trades_history (user_id, symbol, direction, entry_price, exit_price, lot_size, pnl, duration_seconds, opened_at, closed_at, close_reason)
-         VALUES ($1, $2, $3, 0, 0, 0, $4, 0, $5, NOW(), 'mass_trade')`,
-        [user.id, massTradeData.symbol || 'XAUUSD', massTradeData.direction || 'BUY', pnlAmount, massTradeData.created_at]
+         VALUES ($1, $2, $3, $3, 0, $4)
+         ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET balance_before = $3, percentage_applied = $4`,
+        [mass_trade_id, user.id, balanceBefore, appliedPercentage]
       );
 
       // Send Telegram notification
       if (user.tg_id) {
         try {
-          await bot.sendMessage(Number(user.tg_id), `🔔 *Trade Closed*
-${pnlAmount >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnlAmount >= 0 ? "+" : ""}$${Math.abs(pnlAmount).toFixed(2)} (${appliedPercentage >= 0 ? '+' : ''}${appliedPercentage}%)
-💰 Balance: $${balanceAfter.toFixed(2)}`, { parse_mode: "Markdown" });
+          await bot.sendMessage(Number(user.tg_id), `🚀 *البوت دخل صفقة جديدة!*
+
+🔸 *الرمز:* ${massTrade.symbol || 'XAUUSD'}
+📊 *الاتجاه:* ${direction}
+⏱ *المدة:* ${Math.round(durationSeconds / 60)} دقيقة
+💰 *سعر الدخول:* $${entryPrice.toFixed(2)}
+
+📱 يمكنك المراقبة من خيار *صفقاتي*
+
+---
+
+🚀 *Bot entered a new trade!*
+🔸 *Symbol:* ${massTrade.symbol || 'XAUUSD'}
+📊 *Direction:* ${direction}
+⏱ *Duration:* ${Math.round(durationSeconds / 60)} min
+💰 *Entry:* $${entryPrice.toFixed(2)}
+
+📱 Monitor from *My Trades*`, { parse_mode: "Markdown" });
         } catch (err) { /* ignore */ }
       }
 
-      totalAffected++;
-      totalPnl += pnlAmount;
+      totalCreated++;
     }
 
-    // Close mass trade
-    await query(
-      "UPDATE mass_trades SET status = 'closed', percentage = $1, closed_at = NOW(), participants_count = $2 WHERE id = $3",
-      [percentage, totalAffected, mass_trade_id]
-    );
+    // Update participants count
+    await query("UPDATE mass_trades SET participants_count = $1 WHERE id = $2", [totalCreated, mass_trade_id]);
 
     res.json({
       ok: true,
-      message: `Mass trade closed. ${totalAffected} users affected.`,
+      message: `Mass trade activated! ${totalCreated} user trades created.`,
       data: {
-        affected: totalAffected,
-        totalPnl: totalPnl.toFixed(2),
+        mass_trade_id,
+        participants: totalCreated,
         percentage
       }
     });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Close mass trade (called automatically after duration or manually)
+export const closeMassTrade = async (req, res) => {
+  try {
+    const { mass_trade_id, percentage } = req.body;
+
+    // Check if it's a pending trade being closed directly (old behavior)
+    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1", [mass_trade_id]);
+    if (tradeResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "Mass trade not found" });
+    }
+
+    const massTrade = tradeResult.rows[0];
+
+    // If it's still pending and percentage is provided, activate and close immediately (legacy behavior)
+    if (massTrade.status === 'pending' && percentage !== undefined) {
+      // Get all eligible users
+      const users = await query("SELECT * FROM users WHERE is_banned = FALSE AND balance > 0");
+      let totalAffected = 0;
+      let totalPnl = 0;
+
+      for (const user of users.rows) {
+        const overrideResult = await query(
+          "SELECT custom_percentage FROM mass_trade_overrides WHERE mass_trade_id = $1 AND user_id = $2",
+          [mass_trade_id, user.id]
+        );
+
+        const appliedPercentage = overrideResult.rows.length > 0 
+          ? Number(overrideResult.rows[0].custom_percentage) 
+          : Number(percentage);
+
+        const balanceBefore = Number(user.balance);
+        const pnlAmount = Number((balanceBefore * appliedPercentage / 100).toFixed(2));
+        const balanceAfter = Number((balanceBefore + pnlAmount).toFixed(2));
+
+        await query("UPDATE users SET balance = $1 WHERE id = $2", [balanceAfter, user.id]);
+
+        if (pnlAmount >= 0) {
+          await query("UPDATE users SET wins = COALESCE(wins, 0) + $1 WHERE id = $2", [pnlAmount, user.id]);
+        } else {
+          await query("UPDATE users SET losses = COALESCE(losses, 0) + $1 WHERE id = $2", [Math.abs(pnlAmount), user.id]);
+        }
+
+        await query(
+          "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'pnl', $2, $3)",
+          [user.id, pnlAmount, `Mass trade #${mass_trade_id} (${appliedPercentage >= 0 ? '+' : ''}${appliedPercentage}%)`]
+        );
+
+        await query(
+          `INSERT INTO mass_trade_participants (mass_trade_id, user_id, balance_before, balance_after, pnl_amount, percentage_applied)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET balance_after = $4, pnl_amount = $5, percentage_applied = $6`,
+          [mass_trade_id, user.id, balanceBefore, balanceAfter, pnlAmount, appliedPercentage]
+        );
+
+        await query(
+          `INSERT INTO trades_history (user_id, symbol, direction, entry_price, exit_price, lot_size, pnl, duration_seconds, opened_at, closed_at, close_reason)
+           VALUES ($1, $2, $3, 0, 0, 0, $4, 0, $5, NOW(), 'mass_trade')`,
+          [user.id, massTrade.symbol || 'XAUUSD', massTrade.direction || 'BUY', pnlAmount, massTrade.created_at]
+        );
+
+        if (user.tg_id) {
+          try {
+            await bot.sendMessage(Number(user.tg_id), `🔔 *تم إغلاق الصفقة*\n${pnlAmount >= 0 ? "🟢 ربح" : "🔴 خسارة"}: ${pnlAmount >= 0 ? "+" : ""}$${Math.abs(pnlAmount).toFixed(2)} (${appliedPercentage >= 0 ? '+' : ''}${appliedPercentage}%)\n💰 الرصيد: $${balanceAfter.toFixed(2)}\n\n🔔 *Trade Closed*\n${pnlAmount >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnlAmount >= 0 ? "+" : ""}$${Math.abs(pnlAmount).toFixed(2)}\n💰 Balance: $${balanceAfter.toFixed(2)}`, { parse_mode: "Markdown" });
+          } catch (err) { /* ignore */ }
+        }
+
+        totalAffected++;
+        totalPnl += pnlAmount;
+      }
+
+      await query(
+        "UPDATE mass_trades SET status = 'closed', percentage = $1, closed_at = NOW(), participants_count = $2 WHERE id = $3",
+        [percentage, totalAffected, mass_trade_id]
+      );
+
+      return res.json({
+        ok: true,
+        message: `Mass trade closed. ${totalAffected} users affected.`,
+        data: { affected: totalAffected, totalPnl: totalPnl.toFixed(2), percentage }
+      });
+    }
+
+    // If it's an 'open' trade (with live user trades), close all user trades and apply PnL
+    if (massTrade.status === 'open') {
+      const userTrades = await query(
+        "SELECT mt.*, u.tg_id, u.balance FROM mass_trade_user_trades mt JOIN users u ON mt.user_id = u.id WHERE mt.mass_trade_id = $1 AND mt.status = 'open'",
+        [mass_trade_id]
+      );
+
+      let totalAffected = 0;
+      let totalPnl = 0;
+
+      for (const ut of userTrades.rows) {
+        const finalPnl = Number(ut.target_pnl || ut.pnl || 0);
+        const balanceBefore = Number(ut.balance);
+        const balanceAfter = Number((balanceBefore + finalPnl).toFixed(2));
+
+        // Close user trade
+        await query(
+          "UPDATE mass_trade_user_trades SET status = 'closed', pnl = $1, closed_at = NOW(), close_reason = 'mass_close' WHERE id = $2",
+          [finalPnl, ut.id]
+        );
+
+        // Update user balance
+        await query("UPDATE users SET balance = $1 WHERE id = $2", [balanceAfter, ut.user_id]);
+
+        if (finalPnl >= 0) {
+          await query("UPDATE users SET wins = COALESCE(wins, 0) + $1 WHERE id = $2", [finalPnl, ut.user_id]);
+        } else {
+          await query("UPDATE users SET losses = COALESCE(losses, 0) + $1 WHERE id = $2", [Math.abs(finalPnl), ut.user_id]);
+        }
+
+        // Log operation
+        await query(
+          "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'pnl', $2, $3)",
+          [ut.user_id, finalPnl, `Mass trade #${mass_trade_id} closed`]
+        );
+
+        // Update participant record
+        await query(
+          `UPDATE mass_trade_participants SET balance_after = $1, pnl_amount = $2 WHERE mass_trade_id = $3 AND user_id = $4`,
+          [balanceAfter, finalPnl, mass_trade_id, ut.user_id]
+        );
+
+        // Save to trades_history
+        await query(
+          `INSERT INTO trades_history (user_id, symbol, direction, entry_price, exit_price, lot_size, pnl, duration_seconds, opened_at, closed_at, close_reason)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), 'mass_trade')`,
+          [ut.user_id, ut.symbol, ut.direction, ut.entry_price, ut.current_price, ut.lot_size, finalPnl, 
+           Math.floor((Date.now() - new Date(ut.opened_at).getTime()) / 1000), ut.opened_at]
+        );
+
+        // Send notification
+        if (ut.tg_id) {
+          try {
+            await bot.sendMessage(Number(ut.tg_id), `🔔 *تم إغلاق الصفقة*\n${finalPnl >= 0 ? "🟢 ربح" : "🔴 خسارة"}: ${finalPnl >= 0 ? "+" : ""}$${Math.abs(finalPnl).toFixed(2)}\n💰 الرصيد: $${balanceAfter.toFixed(2)}\n\n🔔 *Trade Closed*\n${finalPnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${finalPnl >= 0 ? "+" : ""}$${Math.abs(finalPnl).toFixed(2)}\n💰 Balance: $${balanceAfter.toFixed(2)}`, { parse_mode: "Markdown" });
+          } catch (err) { /* ignore */ }
+        }
+
+        totalAffected++;
+        totalPnl += finalPnl;
+      }
+
+      await query(
+        "UPDATE mass_trades SET status = 'closed', closed_at = NOW(), participants_count = $1 WHERE id = $2",
+        [totalAffected, mass_trade_id]
+      );
+
+      return res.json({
+        ok: true,
+        message: `Mass trade closed. ${totalAffected} users affected.`,
+        data: { affected: totalAffected, totalPnl: totalPnl.toFixed(2) }
+      });
+    }
+
+    return res.status(400).json({ ok: false, error: "Mass trade is already closed" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Open mass trade (legacy - creates as pending)
+export const openMassTrade = async (req, res) => {
+  try {
+    const { symbol, direction, note } = req.body;
+
+    const usersCount = await query("SELECT COUNT(*) as count FROM users WHERE is_banned = FALSE AND balance > 0");
+    const entryPrice = 2650 + (Math.random() - 0.5) * 10;
+
+    const result = await query(
+      `INSERT INTO mass_trades (symbol, direction, note, participants_count, status, entry_price)
+       VALUES ($1, $2, $3, $4, 'pending', $5) RETURNING *`,
+      [symbol || 'XAUUSD', direction || 'BUY', note || '', usersCount.rows[0].count, entryPrice]
+    );
+
+    res.json({ ok: true, message: "Mass trade created (pending)", data: result.rows[0] });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }
@@ -872,7 +1035,7 @@ export const setMassTradeOverride = async (req, res) => {
   try {
     const { mass_trade_id, user_id, custom_percentage } = req.body;
 
-    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1 AND status = 'open'", [mass_trade_id]);
+    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1 AND status IN ('pending', 'open')", [mass_trade_id]);
     if (tradeResult.rows.length === 0) {
       return res.status(404).json({ ok: false, error: "Mass trade not found or already closed" });
     }
@@ -925,14 +1088,137 @@ export const getMassTradeDetails = async (req, res) => {
       WHERE mto.mass_trade_id = $1
     `, [id]);
 
+    // Get user trades if any
+    const userTrades = await query(`
+      SELECT mtut.*, u.name, u.tg_id
+      FROM mass_trade_user_trades mtut
+      JOIN users u ON mtut.user_id = u.id
+      WHERE mtut.mass_trade_id = $1
+      ORDER BY mtut.pnl DESC
+    `, [id]);
+
     res.json({
       ok: true,
       data: {
         trade: trade.rows[0],
         participants: participants.rows,
-        overrides: overrides.rows
+        overrides: overrides.rows,
+        userTrades: userTrades.rows
       }
     });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== EXTRA TRADES PER USER =====
+
+// Add user to extra trades list
+export const addExtraTradeUser = async (req, res) => {
+  try {
+    const { user_id, extra_trades_per_day, note } = req.body;
+
+    const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    await query(
+      `INSERT INTO mass_trade_extra_users (user_id, extra_trades_per_day, note, is_active)
+       VALUES ($1, $2, $3, TRUE)
+       ON CONFLICT (user_id) DO UPDATE SET extra_trades_per_day = $2, note = $3, is_active = TRUE, updated_at = NOW()`,
+      [user_id, extra_trades_per_day || 1, note || '']
+    );
+
+    res.json({ ok: true, message: "Extra trade user added" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Remove user from extra trades list
+export const removeExtraTradeUser = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    await query("UPDATE mass_trade_extra_users SET is_active = FALSE, updated_at = NOW() WHERE user_id = $1", [user_id]);
+
+    res.json({ ok: true, message: "Extra trade user removed" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Get extra trade users list
+export const getExtraTradeUsers = async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT mtu.*, u.name, u.tg_id, u.balance
+      FROM mass_trade_extra_users mtu
+      JOIN users u ON mtu.user_id = u.id
+      WHERE mtu.is_active = TRUE
+      ORDER BY mtu.created_at DESC
+    `);
+
+    res.json({ ok: true, data: result.rows });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== SCHEDULED MASS TRADES =====
+
+// Create today's 3 scheduled trades (called by cron or manually)
+export const createDailyScheduledTrades = async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const schedules = [
+      { time: '14:00', note: 'صفقة الظهر | Afternoon Trade' },
+      { time: '18:00', note: 'صفقة المساء | Evening Trade' },
+      { time: '21:30', note: 'صفقة الليل | Night Trade' }
+    ];
+
+    const created = [];
+
+    for (const schedule of schedules) {
+      // Check if already exists for today
+      const existing = await query(
+        "SELECT id FROM mass_trades WHERE scheduled_date = $1 AND scheduled_time = $2 AND is_scheduled = TRUE",
+        [today, schedule.time]
+      );
+
+      if (existing.rows.length === 0) {
+        const entryPrice = 2650 + (Math.random() - 0.5) * 10;
+        const directions = ['BUY', 'SELL'];
+        const direction = directions[Math.floor(Math.random() * 2)];
+        const usersCount = await query("SELECT COUNT(*) as count FROM users WHERE is_banned = FALSE AND balance > 0");
+
+        const result = await query(
+          `INSERT INTO mass_trades (symbol, direction, note, participants_count, status, scheduled_time, scheduled_date, duration_seconds, entry_price, is_scheduled)
+           VALUES ('XAUUSD', $1, $2, $3, 'pending', $4, $5, 3600, $6, TRUE) RETURNING *`,
+          [direction, schedule.note, usersCount.rows[0].count, schedule.time, today, entryPrice]
+        );
+
+        created.push(result.rows[0]);
+      }
+    }
+
+    res.json({ ok: true, message: `${created.length} scheduled trades created for ${today}`, data: created });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Get today's scheduled trades
+export const getTodayScheduledTrades = async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await query(
+      "SELECT * FROM mass_trades WHERE scheduled_date = $1 ORDER BY scheduled_time ASC",
+      [today]
+    );
+
+    res.json({ ok: true, data: result.rows });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }

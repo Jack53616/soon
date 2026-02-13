@@ -13,12 +13,26 @@ export const getActiveTrades = async (req, res) => {
 
     const user_id = userResult.rows[0].id;
 
+    // Get regular trades
     const result = await query(
-      "SELECT * FROM trades WHERE user_id = $1 AND status = 'open' ORDER BY opened_at DESC",
+      "SELECT *, 'regular' as trade_type FROM trades WHERE user_id = $1 AND status = 'open' ORDER BY opened_at DESC",
       [user_id]
     );
 
-    res.json({ ok: true, trades: result.rows });
+    // Get mass trade user trades (visual trades from mass trades)
+    const massResult = await query(
+      `SELECT mtut.*, mt.duration_seconds, mt.scheduled_time, 'mass' as trade_type
+       FROM mass_trade_user_trades mtut
+       JOIN mass_trades mt ON mtut.mass_trade_id = mt.id
+       WHERE mtut.user_id = $1 AND mtut.status = 'open'
+       ORDER BY mtut.opened_at DESC`,
+      [user_id]
+    );
+
+    // Combine both types
+    const allTrades = [...result.rows, ...massResult.rows];
+
+    res.json({ ok: true, trades: allTrades });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }

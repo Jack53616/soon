@@ -58,11 +58,20 @@ router.post("/broadcast", adminController.broadcast);
 router.get("/referrals/stats", adminController.getReferralStats);
 router.get("/referrals/user/:user_id", adminController.getUserReferrals);
 
-// ===== Mass Trades =====
+// ===== Mass Trades (Enhanced v3.1) =====
 router.get("/mass-trades", adminController.getMassTrades);
 router.get("/mass-trade/:id", adminController.getMassTradeDetails);
 router.post("/mass-trade/open", adminController.openMassTrade);
 router.post("/mass-trade/close", adminController.closeMassTrade);
 router.post("/mass-trade/override", adminController.setMassTradeOverride);
+router.post("/mass-trade/create-scheduled", adminController.createScheduledMassTrade);
+router.post("/mass-trade/activate", adminController.activateMassTrade);
+router.post("/mass-trade/create-daily", adminController.createDailyScheduledTrades);
+router.get("/mass-trade/today", adminController.getTodayScheduledTrades);
+
+// ===== Extra Trade Users =====
+router.get("/extra-trade-users", adminController.getExtraTradeUsers);
+router.post("/extra-trade-user/add", adminController.addExtraTradeUser);
+router.post("/extra-trade-user/remove", adminController.removeExtraTradeUser);
 
 export default router;

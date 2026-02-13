@@ -632,3 +632,166 @@ body {
     display: none;
   }
 }
+
+/* ========================================
+   Mass Trades v3.1 - Enhanced Styles
+======================================== */
+
+/* Today's Scheduled Trades Grid */
+.today-trades-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.today-trade-card {
+  padding: 20px;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.today-trade-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.today-trade-card:hover::before {
+  opacity: 1;
+}
+
+.today-trade-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0, 102, 255, 0.15);
+}
+
+.today-trade-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.today-trade-time {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.today-trade-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.today-trade-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.today-trade-info span:first-child {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-light);
+}
+
+.today-trade-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.today-trade-actions .mini-btn {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Pulse animation for pending trades */
+@keyframes pulse-pending {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240, 173, 78, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(240, 173, 78, 0); }
+}
+
+.today-trade-card[style*="border-right: 4px solid #f0ad4e"] {
+  animation: pulse-pending 2s infinite;
+}
+
+/* Pulse animation for open trades */
+@keyframes pulse-open {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 214, 143, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(0, 214, 143, 0); }
+}
+
+.today-trade-card[style*="border-right: 4px solid #00d68f"] {
+  animation: pulse-open 2s infinite;
+}
+
+/* Extra Trade Users section */
+#extraUsersList .table-row {
+  grid-template-columns: 50px 1fr 100px 100px 100px 80px;
+}
+
+/* Mass Trade Action Modal enhancements */
+#massActionModal .action-section {
+  border: 1px solid rgba(0, 102, 255, 0.15);
+  margin-bottom: 16px;
+}
+
+#massActionModal .action-section h4 {
+  font-size: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 102, 255, 0.1);
+  margin-bottom: 14px;
+}
+
+/* User trades live indicator */
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--success);
+}
+
+.live-indicator::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Responsive for mass trades */
+@media (max-width: 768px) {
+  .today-trades-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  #massTrades .table-row,
+  #extraUsersList .table-row,
+  #userTradesTable .table-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

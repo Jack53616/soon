@@ -30,7 +30,7 @@
   <!-- Main Panel -->
   <section id="panel" class="hidden">
     <header class="top-bar glass">
-      <h1>🎛️ لوحة إدارة QL Trading v3.0</h1>
+      <h1>🎛️ لوحة إدارة QL Trading v3.1</h1>
       <div class="header-actions">
         <span id="adminStatus" class="status-badge">🟢 متصل</span>
         <button id="logoutBtn" class="btn-small">خروج</button>
@@ -224,11 +224,22 @@
         </div>
       </section>
 
-      <!-- Mass Trades Tab -->
+      <!-- Mass Trades Tab - ENHANCED v3.1 -->
       <section id="tab-mass" class="tab-content">
+        
+        <!-- Today's Scheduled Trades -->
+        <div class="card glass" style="border: 2px solid rgba(0,214,143,0.3);">
+          <div class="card-header">
+            <h3>📅 صفقات اليوم المجدولة</h3>
+            <button id="createDailyBtn" class="btn-small success">إنشاء صفقات اليوم</button>
+          </div>
+          <div id="todayScheduled" class="today-trades-grid"></div>
+        </div>
+
+        <!-- Create Manual Mass Trade -->
         <div class="card glass">
           <div class="card-header">
-            <h3>🎯 فتح صفقة جماعية جديدة</h3>
+            <h3>🎯 فتح صفقة جماعية يدوية</h3>
           </div>
           <div class="action-section">
             <div class="action-row">
@@ -247,37 +258,96 @@
           </div>
         </div>
 
+        <!-- Extra Trade Users Management -->
+        <div class="card glass" style="border: 2px solid rgba(255,165,0,0.3);">
+          <div class="card-header">
+            <h3>⭐ مستخدمون بصفقات إضافية</h3>
+          </div>
+          <div class="action-section">
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
+              أضف مستخدمين يحصلون على صفقة إضافية كل يوم بالإضافة للصفقات الجماعية العادية.
+            </p>
+            <div class="action-row">
+              <input id="extraUserId" type="number" class="input small" placeholder="User ID"/>
+              <input id="extraTradesCount" type="number" class="input small" placeholder="عدد الصفقات الإضافية" value="1"/>
+              <input id="extraNote" class="input" placeholder="ملاحظة (اختياري)"/>
+              <button id="addExtraUserBtn" class="btn success">إضافة</button>
+            </div>
+          </div>
+          <div id="extraUsersList" class="table-container" style="margin-top: 12px;"></div>
+        </div>
+
+        <!-- Mass Trades History -->
         <div class="card glass">
           <div class="card-header">
-            <h3>📋 الصفقات الجماعية</h3>
+            <h3>📋 سجل الصفقات الجماعية</h3>
           </div>
           <div id="massTrades" class="table-container"></div>
         </div>
 
-        <!-- Mass Trade Close Modal -->
-        <div id="massCloseModal" class="card glass hidden" style="border: 2px solid var(--accent);">
+        <!-- Mass Trade Activate/Close Modal -->
+        <div id="massActionModal" class="card glass hidden" style="border: 2px solid var(--accent);">
           <div class="card-header">
-            <h3>🔒 إغلاق صفقة جماعية #<span id="massCloseId">-</span></h3>
-            <button id="closeMassModal" class="btn-small">✕</button>
+            <h3 id="massActionTitle">🔒 صفقة جماعية #<span id="massActionId">-</span></h3>
+            <button id="closeMassActionModal" class="btn-small">✕</button>
           </div>
-          <div class="action-section">
-            <h4>📊 النسبة العامة للجميع</h4>
-            <div class="action-row">
-              <input id="massPercentage" type="number" step="0.01" class="input small" placeholder="النسبة % (مثال: 5 أو -3)"/>
-              <button id="closeMassTradeBtn" class="btn danger">إغلاق وتطبيق على الجميع</button>
+          
+          <!-- For Pending trades: Activate with percentage -->
+          <div id="activateSection">
+            <div class="action-section">
+              <h4>🚀 تفعيل الصفقة (إضافة نسبة الأرباح/الخسارة)</h4>
+              <div class="action-row">
+                <input id="activatePercentage" type="number" step="0.01" class="input small" placeholder="النسبة % (مثال: 5 أو -3)"/>
+                <button id="activateMassTradeBtn" class="btn success">تفعيل وإرسال للجميع</button>
+              </div>
+              <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">
+                عند التفعيل: سيتم إنشاء صفقة مفتوحة لكل مستخدم تبقى مفتوحة لمدة ساعة مع حركة أسعار حية، وسيتم إرسال إشعار تلغرام لكل مستخدم.
+              </p>
             </div>
-            <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">
-              أدخل نسبة موجبة للربح (مثال: 5 = +5%) أو سالبة للخسارة (مثال: -3 = -3%). سيتم تطبيقها على رصيد كل مستخدم.
-            </p>
           </div>
+
+          <!-- For Open trades: Close manually -->
+          <div id="closeSection" class="hidden">
+            <div class="action-section">
+              <h4>🔒 إغلاق الصفقة الجماعية</h4>
+              <button id="forceCloseMassTradeBtn" class="btn danger">إغلاق فوري لجميع الصفقات</button>
+              <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">
+                سيتم إغلاق جميع صفقات المستخدمين فوراً وتطبيق الأرباح/الخسائر على أرصدتهم.
+              </p>
+            </div>
+          </div>
+
+          <!-- Legacy: Direct close with percentage (for pending trades) -->
+          <div id="legacyCloseSection">
+            <div class="action-section">
+              <h4>⚡ إغلاق فوري (بدون فتح صفقات حية)</h4>
+              <div class="action-row">
+                <input id="massPercentage" type="number" step="0.01" class="input small" placeholder="النسبة % (مثال: 5 أو -3)"/>
+                <button id="closeMassTradeBtn" class="btn danger">إغلاق وتطبيق فوري</button>
+              </div>
+              <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">
+                هذا الخيار يطبق النسبة مباشرة على الأرصدة بدون فتح صفقات حية للمستخدمين (النظام القديم).
+              </p>
+            </div>
+          </div>
+
+          <!-- Override Section -->
           <div class="action-section">
-            <h4>⚙️ تحكم متقدم - نسبة مخصصة لمستخدم معين</h4>
+            <h4>⚙️ نسبة مخصصة لمستخدم معين</h4>
             <div class="action-row">
               <input id="overrideUserId" type="number" class="input small" placeholder="User ID"/>
-              <input id="overridePercentage" type="number" step="0.01" class="input small" placeholder="النسبة المخصصة %"/>
+              <input id="overridePercentage" type="number" step="0.01" class="input small" placeholder="النسبة %"/>
               <button id="setOverrideBtn" class="btn">تعيين نسبة مخصصة</button>
             </div>
             <div id="overridesList" style="margin-top: 12px;"></div>
+          </div>
+
+          <!-- User Trades List (for open mass trades) -->
+          <div id="userTradesList" class="hidden">
+            <div class="action-section">
+              <h4>👥 صفقات المستخدمين الحية</h4>
+              <div id="userTradesTable" class="table-container"></div>
+            </div>
           </div>
         </div>
       </section>
