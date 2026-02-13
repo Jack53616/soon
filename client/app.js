@@ -1383,7 +1383,7 @@ async function loadReferralInfo() {
   try {
     const r = await fetch(`/api/referral/${tg}`).then(r => r.json());
     if (r.ok) {
-      const botUsername = window.__BOT_USERNAME || 'QL_Trading_Bot';
+      const botUsername = window.__BOT_USERNAME || 'test5616_bot';
       const refLink = `https://t.me/${botUsername}?start=ref_${r.referral_code}`;
       const refLinkEl = $("#referralLink");
       if (refLinkEl) refLinkEl.textContent = refLink;
