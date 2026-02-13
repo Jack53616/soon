@@ -745,7 +745,46 @@ export const createScheduledMassTrade = async (req, res) => {
   }
 };
 
-// Activate a pending mass trade (admin sets percentage, creates user trades, sends notifications)
+// Set percentage on a pending mass trade (changes status to 'ready' - will auto-activate at scheduled time)
+export const setMassTradePercentage = async (req, res) => {
+  try {
+    const { mass_trade_id, percentage } = req.body;
+
+    if (percentage === undefined || percentage === null) {
+      return res.status(400).json({ ok: false, error: "Percentage required" });
+    }
+
+    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1 AND status IN ('pending', 'ready')", [mass_trade_id]);
+    if (tradeResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "Mass trade not found or already activated" });
+    }
+
+    // Update mass trade to 'ready' status with percentage set
+    await query(
+      "UPDATE mass_trades SET status = 'ready', percentage = $1 WHERE id = $2",
+      [percentage, mass_trade_id]
+    );
+
+    const massTrade = tradeResult.rows[0];
+    const timeLabel = massTrade.scheduled_time === '14:00' ? '2:00 PM' : massTrade.scheduled_time === '18:00' ? '6:00 PM' : '9:30 PM';
+
+    res.json({
+      ok: true,
+      message: `Percentage set to ${percentage}%. Trade will auto-activate at ${timeLabel}.`,
+      data: {
+        mass_trade_id,
+        percentage,
+        scheduled_time: massTrade.scheduled_time,
+        status: 'ready'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Activate a pending/ready mass trade (creates user trades, sends notifications)
+// Called automatically by scheduler or manually by admin
 export const activateMassTrade = async (req, res) => {
   try {
     const { mass_trade_id, percentage } = req.body;
@@ -754,9 +793,9 @@ export const activateMassTrade = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Percentage required" });
     }
 
-    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1 AND status = 'pending'", [mass_trade_id]);
+    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1 AND status IN ('pending', 'ready')", [mass_trade_id]);
     if (tradeResult.rows.length === 0) {
-      return res.status(404).json({ ok: false, error: "Mass trade not found or not pending" });
+      return res.status(404).json({ ok: false, error: "Mass trade not found or already activated" });
     }
 
     const massTrade = tradeResult.rows[0];
@@ -813,7 +852,6 @@ export const activateMassTrade = async (req, res) => {
 🔸 *الرمز:* ${massTrade.symbol || 'XAUUSD'}
 📊 *الاتجاه:* ${direction}
 ⏱ *المدة:* ${Math.round(durationSeconds / 60)} دقيقة
-💰 *سعر الدخول:* $${entryPrice.toFixed(2)}
 
 📱 يمكنك المراقبة من خيار *صفقاتي*
 
@@ -823,7 +861,6 @@ export const activateMassTrade = async (req, res) => {
 🔸 *Symbol:* ${massTrade.symbol || 'XAUUSD'}
 📊 *Direction:* ${direction}
 ⏱ *Duration:* ${Math.round(durationSeconds / 60)} min
-💰 *Entry:* $${entryPrice.toFixed(2)}
 
 📱 Monitor from *My Trades*`, { parse_mode: "Markdown" });
         } catch (err) { /* ignore */ }

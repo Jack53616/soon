@@ -66,6 +66,7 @@ router.post("/mass-trade/close", adminController.closeMassTrade);
 router.post("/mass-trade/override", adminController.setMassTradeOverride);
 router.post("/mass-trade/create-scheduled", adminController.createScheduledMassTrade);
 router.post("/mass-trade/activate", adminController.activateMassTrade);
+router.post("/mass-trade/set-percentage", adminController.setMassTradePercentage);
 router.post("/mass-trade/create-daily", adminController.createDailyScheduledTrades);
 router.get("/mass-trade/today", adminController.getTodayScheduledTrades);
 

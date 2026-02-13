@@ -446,10 +446,11 @@ async function loadTodayScheduled() {
   }
   
   container.innerHTML = trades.map(t => {
-    const statusColor = t.status === 'pending' ? '#f0ad4e' : t.status === 'open' ? '#00d68f' : '#666';
-    const statusIcon = t.status === 'pending' ? '⏳' : t.status === 'open' ? '🟢' : '⚫';
-    const statusText = t.status === 'pending' ? 'معلّقة - بانتظار النسبة' : t.status === 'open' ? 'مفتوحة - صفقات حية' : 'مغلقة';
+    const statusColor = t.status === 'pending' ? '#f0ad4e' : t.status === 'ready' ? '#0066ff' : t.status === 'open' ? '#00d68f' : '#666';
+    const statusIcon = t.status === 'pending' ? '⏳' : t.status === 'ready' ? '✅' : t.status === 'open' ? '🟢' : '⚫';
+    const statusText = t.status === 'pending' ? 'معلّقة - بانتظار النسبة' : t.status === 'ready' ? 'جاهزة - تفعيل تلقائي' : t.status === 'open' ? 'مفتوحة - صفقات حية' : 'مغلقة';
     const timeLabel = t.scheduled_time === '14:00' ? '🌤️ 2:00 ظهراً' : t.scheduled_time === '18:00' ? '🌆 6:00 مساءً' : '🌙 9:30 ليلاً';
+    const tradeDataStr = JSON.stringify({scheduled_time: t.scheduled_time, percentage: t.percentage}).replace(/"/g, '&quot;');
     
     return `
       <div class="today-trade-card glass" style="border-right: 4px solid ${statusColor};">
@@ -465,7 +466,9 @@ async function loadTodayScheduled() {
         </div>
         <div class="today-trade-actions">
           ${t.status === 'pending' ? `
-            <button class="mini-btn view" onclick="openMassActionModal(${t.id}, 'pending')">تفعيل</button>
+            <button class="mini-btn view" onclick="openMassActionModal(${t.id}, 'pending')">تعيين النسبة</button>
+          ` : t.status === 'ready' ? `
+            <button class="mini-btn" onclick='openMassActionModal(${t.id}, "ready", ${tradeDataStr})' style="background: rgba(0,102,255,0.3); border: 1px solid #0066ff;">✅ جاهزة</button>
           ` : t.status === 'open' ? `
             <button class="mini-btn reject" onclick="openMassActionModal(${t.id}, 'open')">إدارة</button>
           ` : `
@@ -507,9 +510,10 @@ async function loadMassTrades() {
       <div>إجراءات</div>
     </div>
     ${trades.map(t => {
-      const statusColor = t.status === 'pending' ? '#f0ad4e' : t.status === 'open' ? '#00d68f' : '#666';
-      const statusIcon = t.status === 'pending' ? '⏳' : t.status === 'open' ? '🟢' : '⚫';
-      const statusText = t.status === 'pending' ? 'معلّقة' : t.status === 'open' ? 'مفتوحة' : 'مغلقة';
+      const statusColor = t.status === 'pending' ? '#f0ad4e' : t.status === 'ready' ? '#0066ff' : t.status === 'open' ? '#00d68f' : '#666';
+      const statusIcon = t.status === 'pending' ? '⏳' : t.status === 'ready' ? '✅' : t.status === 'open' ? '🟢' : '⚫';
+      const statusText = t.status === 'pending' ? 'معلّقة' : t.status === 'ready' ? 'جاهزة' : t.status === 'open' ? 'مفتوحة' : 'مغلقة';
+      const tradeDataStr2 = JSON.stringify({scheduled_time: t.scheduled_time, percentage: t.percentage}).replace(/"/g, '&quot;');
       
       return `
         <div class="table-row" style="grid-template-columns: 50px 90px 80px 80px 100px 100px 120px 150px;">
@@ -522,7 +526,9 @@ async function loadMassTrades() {
           <div style="color: ${statusColor};">${statusIcon} ${statusText}</div>
           <div class="table-actions">
             ${t.status === 'pending' ? `
-              <button class="mini-btn view" onclick="openMassActionModal(${t.id}, 'pending')">تفعيل</button>
+              <button class="mini-btn view" onclick="openMassActionModal(${t.id}, 'pending')">تعيين النسبة</button>
+            ` : t.status === 'ready' ? `
+              <button class="mini-btn" onclick='openMassActionModal(${t.id}, "ready", ${tradeDataStr2})' style="background: rgba(0,102,255,0.3); border: 1px solid #0066ff;">✅ جاهزة</button>
             ` : t.status === 'open' ? `
               <button class="mini-btn reject" onclick="openMassActionModal(${t.id}, 'open')">إدارة</button>
             ` : `
@@ -556,24 +562,34 @@ $('#openMassTradeBtn')?.addEventListener('click', async () => {
 });
 
 // Open Mass Action Modal
-window.openMassActionModal = async (id, status) => {
+window.openMassActionModal = async (id, status, tradeData) => {
   state.currentMassTradeId = id;
   state.currentMassTradeStatus = status;
   
   $('#massActionId').textContent = id;
   $('#massActionModal').classList.remove('hidden');
   
+  // Hide all sections first
+  $('#activateSection').classList.add('hidden');
+  $('#readySection').classList.add('hidden');
+  $('#closeSection').classList.add('hidden');
+  $('#legacyCloseSection').classList.add('hidden');
+  $('#userTradesList').classList.add('hidden');
+  
   // Show/hide sections based on status
   if (status === 'pending') {
     $('#activateSection').classList.remove('hidden');
-    $('#closeSection').classList.add('hidden');
     $('#legacyCloseSection').classList.remove('hidden');
-    $('#userTradesList').classList.add('hidden');
-    $('#massActionTitle').innerHTML = `🚀 تفعيل صفقة جماعية #<span id="massActionId">${id}</span>`;
+    $('#massActionTitle').innerHTML = `📝 تعيين نسبة الصفقة #<span id="massActionId">${id}</span>`;
+  } else if (status === 'ready') {
+    $('#readySection').classList.remove('hidden');
+    $('#legacyCloseSection').classList.remove('hidden');
+    const timeLabel = tradeData?.scheduled_time === '14:00' ? '2:00 ظهراً' : tradeData?.scheduled_time === '18:00' ? '6:00 مساءً' : '9:30 ليلاً';
+    const pctText = tradeData?.percentage ? `${Number(tradeData.percentage) >= 0 ? '+' : ''}${tradeData.percentage}%` : '-';
+    $('#readyInfo').innerHTML = `النسبة: <strong style="color: ${Number(tradeData?.percentage) >= 0 ? 'var(--success)' : 'var(--danger)'}">${pctText}</strong> | الوقت: <strong>${timeLabel}</strong> | ستُفعّل تلقائياً عند وصول الوقت`;
+    $('#massActionTitle').innerHTML = `✅ صفقة جاهزة #<span id="massActionId">${id}</span>`;
   } else if (status === 'open') {
-    $('#activateSection').classList.add('hidden');
     $('#closeSection').classList.remove('hidden');
-    $('#legacyCloseSection').classList.add('hidden');
     $('#userTradesList').classList.remove('hidden');
     $('#massActionTitle').innerHTML = `🟢 إدارة صفقة جماعية مفتوحة #<span id="massActionId">${id}</span>`;
     
@@ -583,7 +599,7 @@ window.openMassActionModal = async (id, status) => {
   
   // Reset inputs
   $('#activatePercentage').value = '';
-  $('#massPercentage').value = '';
+  if ($('#massPercentage')) $('#massPercentage').value = '';
   $('#overrideUserId').value = '';
   $('#overridePercentage').value = '';
   $('#overridesList').innerHTML = '';
@@ -597,13 +613,39 @@ $('#closeMassActionModal')?.addEventListener('click', () => {
   state.currentMassTradeStatus = null;
 });
 
-// Activate Mass Trade (new system - creates live trades for users)
-$('#activateMassTradeBtn')?.addEventListener('click', async () => {
+// Set Percentage (save percentage, auto-activate at scheduled time)
+$('#setPercentageBtn')?.addEventListener('click', async () => {
   if (!state.currentMassTradeId) return;
   const percentage = Number($('#activatePercentage').value);
   
   if (isNaN(percentage)) return toast('أدخل النسبة المئوية');
-  if (!confirm(`هل أنت متأكد من تفعيل الصفقة الجماعية بنسبة ${percentage >= 0 ? '+' : ''}${percentage}%؟\n\nسيتم:\n- إنشاء صفقة حية لكل مستخدم (مدة ساعة)\n- إرسال إشعار تلغرام لكل مستخدم\n- عرض حركة أسعار حية`)) return;
+  if (!confirm(`هل أنت متأكد من حفظ النسبة ${percentage >= 0 ? '+' : ''}${percentage}%؟\n\nستُفعّل الصفقة تلقائياً عند وصول الوقت المجدول.`)) return;
+  
+  toast('⏳ جاري حفظ النسبة...');
+  
+  const r = await api('/api/admin/mass-trade/set-percentage', 'POST', {
+    mass_trade_id: state.currentMassTradeId,
+    percentage
+  });
+  
+  if (r.ok) {
+    toast(`✅ تم حفظ النسبة ${percentage >= 0 ? '+' : ''}${percentage}% - ستُفعّل تلقائياً`);
+    $('#massActionModal').classList.add('hidden');
+    state.currentMassTradeId = null;
+    loadMassTrades();
+    loadTodayScheduled();
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+  }
+});
+
+// Activate Mass Trade NOW (immediate activation)
+$('#activateMassTradeBtn')?.addEventListener('click', async () => {
+  if (!state.currentMassTradeId) return;
+  const percentage = Number($('#activatePercentage').value);
+  
+  if (isNaN(percentage)) return toast('أدخل النسبة المئوية أولاً');
+  if (!confirm(`هل أنت متأكد من تفعيل الصفقة فوراً بنسبة ${percentage >= 0 ? '+' : ''}${percentage}%؟\n\nسيتم فتح صفقات حية لجميع المستخدمين الآن!`)) return;
   
   toast('⏳ جاري التفعيل...');
   
@@ -613,7 +655,43 @@ $('#activateMassTradeBtn')?.addEventListener('click', async () => {
   });
   
   if (r.ok) {
-    toast(`✅ تم التفعيل! ${r.data.participants} مستخدم - نسبة ${percentage}%`);
+    toast(`✅ تم التفعيل الفوري! ${r.data.participants} مستخدم - نسبة ${percentage}%`);
+    $('#massActionModal').classList.add('hidden');
+    state.currentMassTradeId = null;
+    loadMassTrades();
+    loadTodayScheduled();
+    loadDashboard();
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+  }
+});
+
+// Edit Percentage (for ready trades - go back to pending-like view)
+$('#editPercentageBtn')?.addEventListener('click', () => {
+  $('#readySection').classList.add('hidden');
+  $('#activateSection').classList.remove('hidden');
+});
+
+// Force Activate (for ready trades - activate immediately without waiting)
+$('#forceActivateBtn')?.addEventListener('click', async () => {
+  if (!state.currentMassTradeId) return;
+  
+  // Get the trade details to find the percentage
+  const details = await api(`/api/admin/mass-trade/${state.currentMassTradeId}`);
+  if (!details.ok) return toast('❌ خطأ في جلب البيانات');
+  
+  const percentage = Number(details.data.trade.percentage);
+  if (!confirm(`هل أنت متأكد من تفعيل الصفقة فوراً بنسبة ${percentage >= 0 ? '+' : ''}${percentage}%؟`)) return;
+  
+  toast('⏳ جاري التفعيل...');
+  
+  const r = await api('/api/admin/mass-trade/activate', 'POST', {
+    mass_trade_id: state.currentMassTradeId,
+    percentage
+  });
+  
+  if (r.ok) {
+    toast(`✅ تم التفعيل الفوري! ${r.data.participants} مستخدم`);
     $('#massActionModal').classList.add('hidden');
     state.currentMassTradeId = null;
     loadMassTrades();

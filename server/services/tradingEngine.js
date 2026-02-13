@@ -416,6 +416,138 @@ async function checkScheduler() {
 }
 
 /* =========================
+   AUTO-ACTIVATE READY TRADES
+   Checks every 30 seconds for 'ready' trades whose scheduled time has arrived
+   If the admin has set a percentage (status='ready'), the trade auto-opens at its time
+========================= */
+
+async function autoActivateReadyTrades() {
+  try {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+
+    // Find 'ready' trades for today where scheduled time has arrived
+    const readyTrades = await query(
+      `SELECT * FROM mass_trades 
+       WHERE scheduled_date = $1 
+       AND status = 'ready' 
+       AND scheduled_time IS NOT NULL 
+       AND is_scheduled = TRUE`,
+      [today]
+    );
+
+    for (const massTrade of readyTrades.rows) {
+      const scheduledTime = massTrade.scheduled_time; // e.g. '14:00', '18:00', '21:30'
+      const [schedHour, schedMin] = scheduledTime.split(':').map(Number);
+      
+      // Check if current time >= scheduled time
+      if (currentHour > schedHour || (currentHour === schedHour && currentMinute >= schedMin)) {
+        console.log(`🚀 Auto-activating ready mass trade #${massTrade.id} (scheduled: ${scheduledTime}, now: ${currentTimeStr})`);
+        
+        try {
+          await autoActivateMassTrade(massTrade);
+        } catch (activateErr) {
+          console.error(`Failed to auto-activate mass trade #${massTrade.id}:`, activateErr.message);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Auto-activate check error:", err.message);
+  }
+}
+
+/* =========================
+   AUTO-ACTIVATE A SINGLE MASS TRADE
+   Internal function called by the scheduler
+========================= */
+
+async function autoActivateMassTrade(massTrade) {
+  const percentage = Number(massTrade.percentage);
+  const durationSeconds = Number(massTrade.duration_seconds) || 3600;
+  const entryPrice = Number(massTrade.entry_price) || (2650 + (Math.random() - 0.5) * 10);
+  const mass_trade_id = massTrade.id;
+
+  // Update mass trade to 'open' status
+  await query(
+    "UPDATE mass_trades SET status = 'open', activated_at = NOW() WHERE id = $1",
+    [mass_trade_id]
+  );
+
+  // Get all eligible users (non-banned, with balance > 0)
+  const users = await query("SELECT * FROM users WHERE is_banned = FALSE AND balance > 0");
+
+  let totalCreated = 0;
+
+  for (const user of users.rows) {
+    // Check for custom override
+    let appliedPercentage = percentage;
+    try {
+      const overrideResult = await query(
+        "SELECT custom_percentage FROM mass_trade_overrides WHERE mass_trade_id = $1 AND user_id = $2",
+        [mass_trade_id, user.id]
+      );
+      if (overrideResult.rows.length > 0) {
+        appliedPercentage = Number(overrideResult.rows[0].custom_percentage);
+      }
+    } catch (e) { /* no overrides table or no override */ }
+
+    const balanceBefore = Number(user.balance);
+    const targetPnl = Number((balanceBefore * appliedPercentage / 100).toFixed(2));
+    const direction = targetPnl >= 0 ? 'BUY' : 'SELL';
+
+    // Create individual visual trade for this user
+    await query(
+      `INSERT INTO mass_trade_user_trades (mass_trade_id, user_id, symbol, direction, entry_price, current_price, lot_size, pnl, target_pnl, status, opened_at)
+       VALUES ($1, $2, $3, $4, $5, $5, 0.05, 0, $6, 'open', NOW())
+       ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET status = 'open', target_pnl = $6, pnl = 0, opened_at = NOW()`,
+      [mass_trade_id, user.id, massTrade.symbol || 'XAUUSD', direction, entryPrice, targetPnl]
+    );
+
+    // Save participant record
+    try {
+      await query(
+        `INSERT INTO mass_trade_participants (mass_trade_id, user_id, balance_before, balance_after, pnl_amount, percentage_applied)
+         VALUES ($1, $2, $3, $3, 0, $4)
+         ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET balance_before = $3, percentage_applied = $4`,
+        [mass_trade_id, user.id, balanceBefore, appliedPercentage]
+      );
+    } catch (e) { /* ignore participant save errors */ }
+
+    // Send Telegram notification (without entry price)
+    if (user.tg_id) {
+      try {
+        await bot.sendMessage(Number(user.tg_id), `🚀 *البوت دخل صفقة جديدة!*
+
+🔸 *الرمز:* ${massTrade.symbol || 'XAUUSD'}
+📊 *الاتجاه:* ${direction}
+⏱ *المدة:* ${Math.round(durationSeconds / 60)} دقيقة
+
+📱 يمكنك المراقبة من خيار *صفقاتي*
+
+---
+
+🚀 *Bot entered a new trade!*
+🔸 *Symbol:* ${massTrade.symbol || 'XAUUSD'}
+📊 *Direction:* ${direction}
+⏱ *Duration:* ${Math.round(durationSeconds / 60)} min
+
+📱 Monitor from *My Trades*`, { parse_mode: "Markdown" });
+      } catch (err) { /* ignore */ }
+    }
+
+    totalCreated++;
+  }
+
+  // Update participants count
+  await query("UPDATE mass_trades SET participants_count = $1 WHERE id = $2", [totalCreated, mass_trade_id]);
+
+  console.log(`✅ Auto-activated mass trade #${mass_trade_id}: ${totalCreated} user trades created with ${percentage}%`);
+}
+
+/* =========================
    START ENGINE
 ========================= */
 
@@ -429,8 +561,14 @@ export const startTradingEngine = () => {
   // Check daily scheduler every 60 seconds
   setInterval(checkScheduler, 60000);
   
+  // Check for ready trades to auto-activate every 30 seconds
+  setInterval(autoActivateReadyTrades, 30000);
+  
   // Run scheduler immediately on startup
   checkScheduler();
   
-  console.log("🤖 Trading Engine Started (Enhanced Mode v3.1 with Mass Trades)");
+  // Also check for any ready trades immediately
+  autoActivateReadyTrades();
+  
+  console.log("🤖 Trading Engine Started (Enhanced Mode v3.1 with Auto-Activation)");
 };

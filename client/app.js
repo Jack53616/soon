@@ -1245,7 +1245,7 @@ async function loadTrades(){
                 </div>
                 <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
                   <small style="opacity:0.6">⏱ ${timeStr}</small>
-                  <small style="opacity:0.5;">💰 $${Number(trade.current_price || 0).toFixed(2)}</small>
+                  ${!isMassTrade ? `<small style="opacity:0.5;">💰 $${Number(trade.current_price || 0).toFixed(2)}</small>` : ''}
                 </div>
               </div>
               <div style="display:flex; align-items:center; gap:8px;">

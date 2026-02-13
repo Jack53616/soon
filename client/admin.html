@@ -292,17 +292,38 @@
             <button id="closeMassActionModal" class="btn-small">✕</button>
           </div>
           
-          <!-- For Pending trades: Activate with percentage -->
+          <!-- For Pending trades: Set percentage (auto-activate at scheduled time) -->
           <div id="activateSection">
             <div class="action-section">
-              <h4>🚀 تفعيل الصفقة (إضافة نسبة الأرباح/الخسارة)</h4>
+              <h4>📝 تعيين نسبة الأرباح/الخسارة</h4>
               <div class="action-row">
                 <input id="activatePercentage" type="number" step="0.01" class="input small" placeholder="النسبة % (مثال: 5 أو -3)"/>
-                <button id="activateMassTradeBtn" class="btn success">تفعيل وإرسال للجميع</button>
+                <button id="setPercentageBtn" class="btn success">✅ حفظ النسبة (تفعيل تلقائي بالوقت)</button>
               </div>
               <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">
-                عند التفعيل: سيتم إنشاء صفقة مفتوحة لكل مستخدم تبقى مفتوحة لمدة ساعة مع حركة أسعار حية، وسيتم إرسال إشعار تلغرام لكل مستخدم.
+                💡 عند حفظ النسبة، ستتحول الصفقة لحالة "جاهزة" وستُفعّل تلقائياً عند وصول الوقت المجدول.
+                سيتم إنشاء صفقة حية لكل مستخدم (مدة ساعة) مع إشعار تلغرام.
               </p>
+              <hr style="border-color: rgba(255,255,255,0.1); margin: 16px 0;">
+              <h4>⚡ تفعيل فوري (بدون انتظار الوقت)</h4>
+              <button id="activateMassTradeBtn" class="btn" style="background: rgba(255,165,0,0.3); border: 1px solid orange;">🚀 تفعيل الآن فوراً</button>
+              <p style="color: var(--muted); font-size: 12px; margin-top: 6px;">
+                هذا الخيار يفعّل الصفقة فوراً بدون انتظار الوقت المجدول (يجب إدخال النسبة أعلاه أولاً).
+              </p>
+            </div>
+          </div>
+
+          <!-- For Ready trades: Already has percentage, waiting for time -->
+          <div id="readySection" class="hidden">
+            <div class="action-section">
+              <div style="padding: 16px; background: rgba(0,214,143,0.1); border-radius: 12px; border: 1px solid rgba(0,214,143,0.3);">
+                <h4 style="color: var(--success); margin-bottom: 8px;">✅ النسبة محفوظة - بانتظار الوقت المجدول</h4>
+                <p id="readyInfo" style="color: var(--muted); font-size: 13px;"></p>
+              </div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button id="editPercentageBtn" class="btn" style="background: rgba(255,255,255,0.1);">✏️ تعديل النسبة</button>
+                <button id="forceActivateBtn" class="btn" style="background: rgba(255,165,0,0.3); border: 1px solid orange;">🚀 تفعيل الآن فوراً</button>
+              </div>
             </div>
           </div>
 
