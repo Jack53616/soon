@@ -647,14 +647,14 @@ function startAutoRefresh(){
   
   // Initial load
   refreshUser();
-  loadTrades();
+  loadTrades(true);
   refreshOps();
   loadStats();
   
   state.refreshTimer = setInterval(async ()=>{
     try {
       await refreshUser();
-      await loadTrades();
+      // loadTrades is handled by startRealtimeUpdates — no need to call here
       await refreshOps();
       
       // Update stats every 10 seconds
@@ -666,7 +666,7 @@ function startAutoRefresh(){
     } catch(err) {
       console.error('Auto refresh error:', err);
     }
-  }, 3000);
+  }, 5000);
 }
 
 $$(".seg-btn").forEach(btn=>{
@@ -1196,101 +1196,159 @@ function startFeed(){
   state.feedTimer = setInterval(once, 180000);
 }
 
-async function loadTrades(){
+// Track rendered trade IDs to avoid full re-render on update
+let _renderedTradeIds = [];
+
+async function loadTrades(forceRedraw = false){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   if(!tg) return;
   
   try{
     const r = await fetch(`/api/trades/${tg}`).then(r=>r.json());
     const box = $("#tradesList");
-    box.innerHTML = "";
     
     // Calculate total PnL from all open trades
     let totalPnl = 0;
     
     if(r.ok && r.trades && r.trades.length > 0){
-      r.trades.forEach(trade=>{
-        const div = document.createElement("div");
-        div.className="op";
-        
-        const pnl = Number(trade.pnl || 0);
-        totalPnl += pnl;
-        
-        const pnlColor = pnl >= 0 ? "#00d68f" : "#ff3b63";
-        const pnlSign = pnl >= 0 ? "+" : "";
-        
-        const opened = new Date(trade.opened_at);
-        const duration = trade.duration_seconds || 3600;
-        const elapsed = Math.floor((Date.now() - opened.getTime()) / 1000);
-        const remaining = Math.max(0, duration - elapsed);
-        const hours = Math.floor(remaining / 3600);
-        const minutes = Math.floor((remaining % 3600) / 60);
-        const seconds = remaining % 60;
-        const timeStr = remaining > 0 ? `${hours}h ${minutes}m ${seconds}s` : (state.lang === 'ar' ? 'جاري الإغلاق...' : 'Closing...');
-        
-        const isMassTrade = trade.trade_type === 'mass';
-        const tradeLabel = isMassTrade ? (state.lang === 'ar' ? '🤖 صفقة البوت' : '🤖 Bot Trade') : '';
-        const progressPercent = Math.min(100, Math.round((elapsed / duration) * 100));
-        
-        // Progress bar color based on PnL
-        const progressColor = pnl >= 0 ? '#00d68f' : '#ff3b63';
-        
-        div.innerHTML = `
-          <div style="width:100%;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
-              <div style="flex:1;">
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span>${trade.symbol} ${trade.direction} (${trade.lot_size})</span>
-                  ${tradeLabel ? `<span style="font-size:10px; background:rgba(0,102,255,0.2); color:#3d8bff; padding:2px 6px; border-radius:10px;">${tradeLabel}</span>` : ''}
-                </div>
-                <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-                  <small style="opacity:0.6">⏱ ${timeStr}</small>
-                  ${!isMassTrade ? `<small style="opacity:0.5;">💰 $${Number(trade.current_price || 0).toFixed(2)}</small>` : ''}
-                </div>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <div style="text-align:right;">
-                  <b style="color:${pnlColor}; font-size:16px;">${pnlSign}$${Math.abs(pnl).toFixed(2)}</b>
-                </div>
-                ${!isMassTrade ? `<button class="btn-close-trade" data-trade-id="${trade.id}" data-trade-type="regular" style="padding:4px 8px; font-size:12px; background:#ff4444; color:white; border:none; border-radius:4px; cursor:pointer;">✕</button>` : ''}
-              </div>
-            </div>
-            <!-- Progress bar -->
-            <div style="width:100%; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
-              <div style="width:${progressPercent}%; height:100%; background:${progressColor}; border-radius:2px; transition:width 1s linear;"></div>
-            </div>
-          </div>
-        `;
-        box.appendChild(div);
-      });
+      const currentIds = r.trades.map(t => String(t.id));
       
-      // Add close trade handlers (only for regular trades, not mass trades)
-      $$(".btn-close-trade").forEach(btn=>{
-        btn.addEventListener("click", async ()=>{
-          const tradeId = btn.dataset.tradeId;
-          const tradeType = btn.dataset.tradeType;
-          if (tradeType === 'mass') return; // Mass trades cannot be closed manually
+      // Check if trade list changed (new trade added or trade closed)
+      const listChanged = forceRedraw ||
+        currentIds.length !== _renderedTradeIds.length ||
+        currentIds.some((id, i) => id !== _renderedTradeIds[i]);
+      
+      if(listChanged){
+        // Full redraw only when list changes
+        box.innerHTML = "";
+        _renderedTradeIds = currentIds;
+        
+        r.trades.forEach(trade=>{
+          const div = document.createElement("div");
+          div.className="op";
+          div.dataset.tradeId = trade.id;
           
-          const confirmMsg = state.lang === 'ar' ? 'هل تريد إغلاق هذه الصفقة الآن؟' : 'Close this trade now?';
-          if(confirm(confirmMsg)){
-            try{
-              const r = await fetch(`/api/trades/close/${tradeId}`, {method:"POST"}).then(r=>r.json());
-              if(r.ok){
-                const closedMsg = state.lang === 'ar' ? `✅ تم إغلاق الصفقة: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}` : `✅ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}`;
-                notify(closedMsg);
-                await refreshUser();
-                await loadTrades();
-                await refreshOps();
-              }else{
-                const errMsg = state.lang === 'ar' ? '❌ فشل إغلاق الصفقة' : '❌ Failed to close trade';
-                notify(r.error || errMsg);
+          const pnl = Number(trade.pnl || 0);
+          totalPnl += pnl;
+          const pnlColor = pnl >= 0 ? "#00d68f" : "#ff3b63";
+          const pnlSign = pnl >= 0 ? "+" : "";
+          
+          const opened = new Date(trade.opened_at);
+          const duration = trade.duration_seconds || 3600;
+          const elapsed = Math.floor((Date.now() - opened.getTime()) / 1000);
+          const remaining = Math.max(0, duration - elapsed);
+          const hours = Math.floor(remaining / 3600);
+          const minutes = Math.floor((remaining % 3600) / 60);
+          const seconds = remaining % 60;
+          const timeStr = remaining > 0 ? `${hours}h ${minutes}m ${seconds}s` : (state.lang === 'ar' ? 'جاري الإغلاق...' : 'Closing...');
+          
+          const isMassTrade = trade.trade_type === 'mass';
+          const tradeLabel = isMassTrade ? (state.lang === 'ar' ? '🤖 صفقة البوت' : '🤖 Bot Trade') : '';
+          const progressPercent = Math.min(100, Math.round((elapsed / duration) * 100));
+          const progressColor = pnl >= 0 ? '#00d68f' : '#ff3b63';
+          
+          div.innerHTML = `
+            <div style="width:100%;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+                <div style="flex:1;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span>${trade.symbol} ${trade.direction} (${trade.lot_size})</span>
+                    ${tradeLabel ? `<span style="font-size:10px; background:rgba(0,102,255,0.2); color:#3d8bff; padding:2px 6px; border-radius:10px;">${tradeLabel}</span>` : ''}
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                    <small class="trade-timer" style="opacity:0.6">⏱ ${timeStr}</small>
+                    ${!isMassTrade ? `<small class="trade-price" style="opacity:0.5;">💰 $${Number(trade.current_price || 0).toFixed(2)}</small>` : ''}
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="text-align:right;">
+                    <b class="trade-pnl" style="color:${pnlColor}; font-size:16px;">${pnlSign}$${Math.abs(pnl).toFixed(2)}</b>
+                  </div>
+                  ${!isMassTrade ? `<button class="btn-close-trade" data-trade-id="${trade.id}" data-trade-type="regular" style="padding:4px 8px; font-size:12px; background:#ff4444; color:white; border:none; border-radius:4px; cursor:pointer;">✕</button>` : ''}
+                </div>
+              </div>
+              <!-- Progress bar -->
+              <div style="width:100%; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
+                <div class="trade-progress" style="width:${progressPercent}%; height:100%; background:${progressColor}; border-radius:2px; transition:width 1s linear;"></div>
+              </div>
+            </div>
+          `;
+          box.appendChild(div);
+        });
+        
+        // Add close trade handlers
+        $$(".btn-close-trade").forEach(btn=>{
+          btn.addEventListener("click", async ()=>{
+            const tradeId = btn.dataset.tradeId;
+            const tradeType = btn.dataset.tradeType;
+            if (tradeType === 'mass') return;
+            
+            const confirmMsg = state.lang === 'ar' ? 'هل تريد إغلاق هذه الصفقة الآن؟' : 'Close this trade now?';
+            if(confirm(confirmMsg)){
+              try{
+                const r = await fetch(`/api/trades/close/${tradeId}`, {method:"POST"}).then(r=>r.json());
+                if(r.ok){
+                  const closedMsg = state.lang === 'ar' ? `✅ تم إغلاق الصفقة: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}` : `✅ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}`;
+                  notify(closedMsg);
+                  await refreshUser();
+                  await loadTrades(true);
+                  await refreshOps();
+                }else{
+                  const errMsg = state.lang === 'ar' ? '❌ فشل إغلاق الصفقة' : '❌ Failed to close trade';
+                  notify(r.error || errMsg);
+                }
+              }catch(err){
+                notify(state.lang === 'ar' ? '❌ خطأ في الاتصال' : '❌ Connection error');
               }
-            }catch(err){
-              notify(state.lang === 'ar' ? '❌ خطأ في الاتصال' : '❌ Connection error');
             }
+          });
+        });
+        
+      } else {
+        // Smart update: only update PnL, timer, price, progress bar in-place (no flicker)
+        r.trades.forEach(trade => {
+          const card = box.querySelector(`[data-trade-id="${trade.id}"]`);
+          if (!card) return;
+          
+          const pnl = Number(trade.pnl || 0);
+          totalPnl += pnl;
+          const pnlColor = pnl >= 0 ? "#00d68f" : "#ff3b63";
+          const pnlSign = pnl >= 0 ? "+" : "";
+          
+          // Update PnL value
+          const pnlEl = card.querySelector('.trade-pnl');
+          if (pnlEl) {
+            pnlEl.textContent = `${pnlSign}$${Math.abs(pnl).toFixed(2)}`;
+            pnlEl.style.color = pnlColor;
+          }
+          
+          // Update current price
+          const priceEl = card.querySelector('.trade-price');
+          if (priceEl) {
+            priceEl.textContent = `💰 $${Number(trade.current_price || 0).toFixed(2)}`;
+          }
+          
+          // Update timer
+          const opened = new Date(trade.opened_at);
+          const duration = trade.duration_seconds || 3600;
+          const elapsed = Math.floor((Date.now() - opened.getTime()) / 1000);
+          const remaining = Math.max(0, duration - elapsed);
+          const hours = Math.floor(remaining / 3600);
+          const minutes = Math.floor((remaining % 3600) / 60);
+          const seconds = remaining % 60;
+          const timeStr = remaining > 0 ? `${hours}h ${minutes}m ${seconds}s` : (state.lang === 'ar' ? 'جاري الإغلاق...' : 'Closing...');
+          const timerEl = card.querySelector('.trade-timer');
+          if (timerEl) timerEl.textContent = `⏱ ${timeStr}`;
+          
+          // Update progress bar
+          const progressPercent = Math.min(100, Math.round((elapsed / duration) * 100));
+          const progressEl = card.querySelector('.trade-progress');
+          if (progressEl) {
+            progressEl.style.width = `${progressPercent}%`;
+            progressEl.style.background = pnlColor;
           }
         });
-      });
+      }
       
       const tradeBadge = $("#tradeBadge");
       if(tradeBadge){
@@ -1302,11 +1360,16 @@ async function loadTrades(){
       updatePnLDisplay(totalPnl);
       
     } else {
-      const emptyDiv = document.createElement("div");
-      emptyDiv.className="op";
-      const noTradesText = state.lang === 'ar' ? 'لا توجد صفقات مفتوحة' : 'No open trades';
-      emptyDiv.innerHTML = `<span style="opacity:0.5">${noTradesText}</span>`;
-      box.appendChild(emptyDiv);
+      // No open trades - clear list only if it had trades before
+      if (_renderedTradeIds.length > 0 || box.innerHTML === '' || forceRedraw) {
+        box.innerHTML = "";
+        _renderedTradeIds = [];
+        const emptyDiv = document.createElement("div");
+        emptyDiv.className="op";
+        const noTradesText = state.lang === 'ar' ? 'لا توجد صفقات مفتوحة' : 'No open trades';
+        emptyDiv.innerHTML = `<span style="opacity:0.5">${noTradesText}</span>`;
+        box.appendChild(emptyDiv);
+      }
       
       const tradeBadge = $("#tradeBadge");
       if(tradeBadge){
@@ -1341,16 +1404,18 @@ function notify(msg){
 let tradesUpdateInterval = null;
 
 function startRealtimeUpdates() {
-  // Update trades every 3 seconds
   if (tradesUpdateInterval) clearInterval(tradesUpdateInterval);
   tradesUpdateInterval = setInterval(async () => {
-    const activeTab = document.querySelector('.tab.show');
-    if (activeTab && activeTab.id === 'tab-trades') {
+    try {
+      // Always update trades data (smart update: no flicker if list unchanged)
       await loadTrades();
+      
+      // Update user balance every cycle too
+      await refreshUser();
+    } catch(err) {
+      console.error('Realtime update error:', err);
     }
-    // Also refresh user balance periodically
-    await refreshUser();
-  }, 3000);
+  }, 2000); // Every 2 seconds for smooth real-time feel
 }
 
 function stopRealtimeUpdates() {
