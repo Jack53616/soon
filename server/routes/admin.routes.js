@@ -86,5 +86,6 @@ router.post("/agent/revoke", agentController.revokeAgent);
 router.get("/supervisors", supervisorController.getSupervisors);
 router.post("/supervisor/create", supervisorController.createSupervisor);
 router.post("/supervisor/toggle", supervisorController.toggleSupervisor);
+router.post("/supervisor/change-password", supervisorController.changeSupervisorPassword);
 
 export default router;

@@ -1126,6 +1126,96 @@ $('#clearAllWithdrawalsBtn')?.addEventListener('click', async () => {
   else toast('❌ ' + (r.error || 'خطأ'));
 });
 
+// ===== SUPERVISOR MANAGEMENT =====
+async function loadSupervisors() {
+  const r = await api('/api/admin/supervisors');
+  const box = $('#svList');
+  if (!box) return;
+  if (!r.ok || !r.supervisors?.length) {
+    box.innerHTML = '<span style="color:var(--muted)">لا يوجد مشرفون حتى الآن</span>';
+    return;
+  }
+  box.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:right;padding:6px 10px;color:var(--muted);border-bottom:1px solid var(--border)">اسم المستخدم</th>
+          <th style="text-align:right;padding:6px 10px;color:var(--muted);border-bottom:1px solid var(--border)">الاسم</th>
+          <th style="text-align:right;padding:6px 10px;color:var(--muted);border-bottom:1px solid var(--border)">الحالة</th>
+          <th style="text-align:right;padding:6px 10px;color:var(--muted);border-bottom:1px solid var(--border)">آخر دخول</th>
+          <th style="text-align:right;padding:6px 10px;color:var(--muted);border-bottom:1px solid var(--border)">إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${r.supervisors.map(sv => `
+          <tr>
+            <td style="padding:6px 10px;font-family:monospace">${sv.username}</td>
+            <td style="padding:6px 10px">${sv.name || '—'}</td>
+            <td style="padding:6px 10px">
+              <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;
+                background:${sv.is_active ? 'rgba(63,185,80,0.15)' : 'rgba(248,81,73,0.15)'};
+                color:${sv.is_active ? '#3fb950' : '#f85149'}">
+                ${sv.is_active ? '✅ نشط' : '🔴 معطّل'}
+              </span>
+            </td>
+            <td style="padding:6px 10px;color:var(--muted);font-size:12px">${sv.last_login ? new Date(sv.last_login).toLocaleString('ar') : 'لم يدخل بعد'}</td>
+            <td style="padding:6px 10px">
+              <button onclick="toggleSupervisor(${sv.id}, ${sv.is_active})" 
+                style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:5px;cursor:pointer;font-size:12px;">
+                ${sv.is_active ? '🔴 تعطيل' : '✅ تفعيل'}
+              </button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+window.toggleSupervisor = async (id, isActive) => {
+  const action = isActive ? 'تعطيل' : 'تفعيل';
+  if (!confirm(`هل تريد ${action} هذا المشرف؟`)) return;
+  const r = await api('/api/admin/supervisor/toggle', 'POST', { supervisor_id: id });
+  if (r.ok) { toast(`✅ تم ${action} المشرف`); loadSupervisors(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
+};
+
+$('#createSvBtn')?.addEventListener('click', async () => {
+  const username = $('#svNewUsername')?.value?.trim();
+  const password = $('#svNewPassword')?.value;
+  const name = $('#svNewName')?.value?.trim();
+  if (!username || !password || !name) return toast('❌ يرجى ملء جميع الحقول');
+  if (password.length < 6) return toast('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+  const r = await api('/api/admin/supervisor/create', 'POST', { username, password, name });
+  if (r.ok) {
+    toast('✅ تم إنشاء حساب المشرف بنجاح');
+    $('#svNewUsername').value = '';
+    $('#svNewPassword').value = '';
+    $('#svNewName').value = '';
+    loadSupervisors();
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+$('#changeSvPasswordBtn')?.addEventListener('click', async () => {
+  const username = $('#svChangeUsername')?.value?.trim();
+  const password = $('#svChangePassword')?.value;
+  if (!username || !password) return toast('❌ يرجى إدخال اسم المستخدم وكلمة المرور الجديدة');
+  if (password.length < 6) return toast('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+  const r = await api('/api/admin/supervisor/change-password', 'POST', { username, new_password: password });
+  if (r.ok) {
+    toast('✅ تم تغيير كلمة المرور بنجاح');
+    $('#svChangeUsername').value = '';
+    $('#svChangePassword').value = '';
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+// Load supervisors when settings tab is opened
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'settings') loadSupervisors();
+  });
+});
+
 // Auto refresh every 30 seconds
 setInterval(() => {
   if (state.token && !$('#panel').classList.contains('hidden')) {

@@ -271,9 +271,46 @@ export const createSupervisor = async (req, res) => {
 export const getSupervisors = async (req, res) => {
   try {
     const result = await query(
-      "SELECT id, username, name, is_active, created_at, last_login_at FROM supervisors ORDER BY created_at DESC"
+      "SELECT id, username, name, is_active, created_at, last_login_at as last_login FROM supervisors ORDER BY created_at DESC"
     );
-    res.json({ ok: true, data: result.rows });
+    res.json({ ok: true, supervisors: result.rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+};
+
+// ===== ADMIN API: Change supervisor password =====
+export const changeSupervisorPassword = async (req, res) => {
+  try {
+    const { username, new_password } = req.body;
+
+    if (!username || !new_password) {
+      return res.status(400).json({ ok: false, error: "Username and new password required" });
+    }
+
+    if (new_password.length < 6) {
+      return res.status(400).json({ ok: false, error: "Password must be at least 6 characters" });
+    }
+
+    const existing = await query("SELECT id FROM supervisors WHERE username = $1", [username]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "Supervisor not found" });
+    }
+
+    const passwordHash = await bcrypt.hash(new_password, 12);
+
+    await query(
+      "UPDATE supervisors SET password_hash = $1, updated_at = NOW() WHERE username = $2",
+      [passwordHash, username]
+    );
+
+    // Log the action
+    await query(
+      "INSERT INTO ops (user_id, type, amount, note) VALUES (0, 'admin', 0, $1)",
+      [`Admin changed password for supervisor: ${username} at ${new Date().toISOString()}`]
+    ).catch(() => {}); // ignore if ops table doesn't allow user_id=0
+
+    res.json({ ok: true, message: `Password updated for supervisor: ${username}` });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

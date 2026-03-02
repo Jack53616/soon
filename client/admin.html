@@ -481,6 +481,41 @@
               <button id="clearAllWithdrawalsBtn" class="btn danger">تصفير جميع طلبات السحب</button>
             </div>
           </div>
+
+          <!-- Supervisor Management Card -->
+          <div class="card glass" style="grid-column: 1 / -1;">
+            <div class="card-header">
+              <h3>🛡️ إدارة حسابات المشرفين (Supervisors)</h3>
+            </div>
+
+            <!-- Create New Supervisor -->
+            <div style="margin-bottom:20px;">
+              <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">إنشاء حساب مشرف جديد — يمكنه الدخول إلى لوحة المشرف فقط</p>
+              <div class="action-row" style="flex-wrap:wrap;gap:8px;">
+                <input id="svNewUsername" class="input" placeholder="اسم المستخدم" style="max-width:160px;"/>
+                <input id="svNewPassword" class="input" type="password" placeholder="كلمة المرور" style="max-width:160px;"/>
+                <input id="svNewName" class="input" placeholder="الاسم الكامل" style="max-width:160px;"/>
+                <button id="createSvBtn" class="btn">➕ إنشاء</button>
+              </div>
+            </div>
+
+            <!-- Change Password for existing supervisor -->
+            <div style="margin-bottom:20px;border-top:1px solid var(--border);padding-top:16px;">
+              <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">تغيير كلمة مرور مشرف موجود</p>
+              <div class="action-row" style="flex-wrap:wrap;gap:8px;">
+                <input id="svChangeUsername" class="input" placeholder="اسم المستخدم" style="max-width:160px;"/>
+                <input id="svChangePassword" class="input" type="password" placeholder="كلمة المرور الجديدة" style="max-width:160px;"/>
+                <button id="changeSvPasswordBtn" class="btn">🔒 تغيير كلمة المرور</button>
+              </div>
+            </div>
+
+            <!-- Supervisors List -->
+            <div style="border-top:1px solid var(--border);padding-top:16px;">
+              <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">قائمة المشرفين الحاليين</p>
+              <div id="svList" style="font-size:13px;">جاري التحميل...</div>
+            </div>
+          </div>
+
         </div>
       </section>
     </main>

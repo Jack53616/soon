@@ -780,81 +780,147 @@ function renderMethod(){
 }
 renderMethod();
 
-$("#reqWithdraw").addEventListener("click", async ()=>{
+// ===== Withdraw Fee Confirmation Modal =====
+function showWithdrawConfirm(tg, amount, method, address, feeData) {
+  const isAr = state.lang === 'ar';
+  const feeRate = feeData.fee_rate || 0;
+  const feeAmount = feeData.fee_amount || 0;
+  const netAmount = feeData.net_amount || amount;
+  const daysLabel = feeData.days_since_deposit ?? '?';
+
+  let tierLabel = '';
+  if (isAr) {
+    if (feeRate === 25) tierLabel = 'حساب جديد (أقل من 15 يوم)';
+    else if (feeRate === 15) tierLabel = 'بين 16-30 يوم';
+    else if (feeRate === 5) tierLabel = 'بعد 30 يوم';
+    else if (feeRate === 3) tierLabel = 'عميل وفي ❤️ (90+ يوم)';
+    else tierLabel = feeRate + '%';
+  } else {
+    if (feeRate === 25) tierLabel = 'New account (< 15 days)';
+    else if (feeRate === 15) tierLabel = '16-30 days';
+    else if (feeRate === 5) tierLabel = 'After 30 days';
+    else if (feeRate === 3) tierLabel = 'Loyal client ❤️ (90+ days)';
+    else tierLabel = feeRate + '%';
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'withdrawConfirmOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  const warningHtml = feeRate > 5 ? `
+    <div style="background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#d29922;">
+      ⚠️ ${isAr
+        ? 'رسوم السحب مرتفعة لأن حسابك عمره ' + daysLabel + ' يوم. تنخفض الرسوم بعد 30 يوم إلى 5% وبعد 90 يوم إلى 3%.'
+        : 'Higher fee applies because your account is ' + daysLabel + ' days old. Fee drops to 5% after 30 days and 3% after 90 days.'
+      }
+    </div>
+  ` : '';
+
+  overlay.innerHTML = `
+    <div style="background:#161b22;border:1px solid #30363d;border-radius:16px;padding:28px;max-width:380px;width:100%;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:32px;margin-bottom:8px">💸</div>
+        <div style="font-size:18px;font-weight:700;">${isAr ? 'تأكيد طلب السحب' : 'Confirm Withdrawal'}</div>
+      </div>
+      <div style="background:#0d1117;border-radius:12px;padding:16px;margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #30363d;">
+          <span style="color:#8b949e;font-size:13px">${isAr ? 'المبلغ المطلوب' : 'Requested Amount'}</span>
+          <span style="font-weight:600">${amount.toFixed(2)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #30363d;">
+          <span style="color:#8b949e;font-size:13px">${isAr ? 'رسوم السحب' : 'Withdrawal Fee'} (${feeRate}%)</span>
+          <span style="color:#f85149;font-weight:600">-${feeAmount.toFixed(2)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #30363d;">
+          <span style="color:#8b949e;font-size:13px">${isAr ? 'ستستلم' : 'You Receive'}</span>
+          <span style="color:#3fb950;font-weight:700;font-size:16px">${netAmount.toFixed(2)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;">
+          <span style="color:#8b949e;font-size:13px">${isAr ? 'مستوى الرسوم' : 'Fee Tier'}</span>
+          <span style="color:#d29922;font-size:12px">${tierLabel}</span>
+        </div>
+      </div>
+      ${warningHtml}
+      <div style="display:flex;gap:10px;">
+        <button id="confirmWithdrawBtn" style="flex:1;padding:12px;background:#3fb950;border:none;border-radius:8px;color:#000;font-size:15px;font-weight:700;cursor:pointer;">
+          ✅ ${isAr ? 'تأكيد' : 'Confirm'}
+        </button>
+        <button id="cancelWithdrawBtn" style="flex:1;padding:12px;background:transparent;border:1px solid #30363d;border-radius:8px;color:#8b949e;font-size:15px;cursor:pointer;">
+          ❌ ${isAr ? 'إلغاء' : 'Cancel'}
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.getElementById('cancelWithdrawBtn').onclick = () => overlay.remove();
+
+  document.getElementById('confirmWithdrawBtn').onclick = async () => {
+    overlay.remove();
+    const btn = $("#reqWithdraw");
+    const originalText = btn.textContent;
+    btn.textContent = isAr ? 'جاري الإرسال...' : 'Sending...';
+    btn.disabled = true;
+
+    try {
+      const r = await fetch("/api/wallet/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tg_id: tg, amount, method, address })
+      }).then(r => r.json());
+
+      if (!r.ok) {
+        let errorMsg = r.error || "Error";
+        if (errorMsg.includes("No saved address")) errorMsg = isAr ? 'احفظ عنوان المحفظة أولاً' : 'Save wallet address first';
+        else if (errorMsg.includes("Insufficient")) errorMsg = isAr ? 'الرصيد غير كافي' : 'Insufficient balance';
+        else if (errorMsg.includes("maintenance")) errorMsg = isAr ? 'السحب متوقف مؤقتاً' : 'Withdrawals paused';
+        return notify("❌ " + errorMsg);
+      }
+
+      showWithdrawSuccess(amount);
+      $("#amount").value = '';
+      if ($("#withdrawAddr")) $("#withdrawAddr").value = '';
+      await refreshUser();
+      await refreshRequests();
+    } catch (err) {
+      notify(isAr ? '❌ خطأ في الاتصال' : '❌ Connection error');
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  };
+}
+
+$("#reqWithdraw").addEventListener("click", async () => {
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   const amount = Number($("#amount").value || 0);
   const address = $("#withdrawAddr")?.value?.trim() || '';
-  
-  // Validation
-  if(!address) {
-    return notify(state.lang === 'ar' ? "❌ أدخل عنوان المحفظة" : "❌ Enter wallet address");
-  }
-  
-  // Validate wallet address length (26-64 characters for most crypto addresses)
-  if(address.length < 26 || address.length > 64) {
-    return notify(state.lang === 'ar' ? "❌ عنوان المحفظة غير صحيح (26-64 حرف)" : "❌ Invalid wallet address (26-64 characters)");
-  }
-  
-  // Validate address format (alphanumeric only)
-  if(!/^[a-zA-Z0-9]+$/.test(address)) {
-    return notify(state.lang === 'ar' ? "❌ عنوان المحفظة يجب أن يحتوي على أحرف وأرقام فقط" : "❌ Address must contain only letters and numbers");
-  }
-  
-  if(amount <= 0) {
-    return notify(state.lang === 'ar' ? "❌ أدخل مبلغ صحيح" : "❌ Enter valid amount");
-  }
-  
+  const isAr = state.lang === 'ar';
+
+  if (!address) return notify(isAr ? "❌ أدخل عنوان المحفظة" : "❌ Enter wallet address");
+  if (address.length < 26 || address.length > 64) return notify(isAr ? "❌ عنوان المحفظة غير صحيح (26-64 حرف)" : "❌ Invalid wallet address (26-64 characters)");
+  if (!/^[a-zA-Z0-9]+$/.test(address)) return notify(isAr ? "❌ عنوان المحفظة يجب أن يحتوي على أحرف وأرقام فقط" : "❌ Address must contain only letters and numbers");
+  if (amount <= 0) return notify(isAr ? "❌ أدخل مبلغ صحيح" : "❌ Enter valid amount");
+
   const userBalance = Number(state.user?.balance || 0);
-  if(amount > userBalance) {
-    return notify(state.lang === 'ar' ? "❌ الرصيد غير كافي" : "❌ Insufficient balance");
-  }
-  
-  // Show loading state
+  if (amount > userBalance) return notify(isAr ? "❌ الرصيد غير كافي" : "❌ Insufficient balance");
+
+  // Fetch fee preview then show confirmation modal
   const btn = $("#reqWithdraw");
   const originalText = btn.textContent;
-  btn.textContent = state.lang === 'ar' ? 'جاري الإرسال...' : 'Sending...';
+  btn.textContent = isAr ? 'جاري الحساب...' : 'Calculating...';
   btn.disabled = true;
-  
+
   try {
-    const r = await fetch("/api/wallet/withdraw",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({tg_id:tg, amount, method: state.method, address})
-    }).then(r=>r.json());
-    
-    if(!r.ok) {
-      btn.textContent = originalText;
-      btn.disabled = false;
-      
-      // Better error messages
-      let errorMsg = r.error || "Error";
-      if(errorMsg.includes("No saved address")) {
-        errorMsg = state.lang === 'ar' ? 'احفظ عنوان المحفظة أولاً' : 'Save wallet address first';
-      } else if(errorMsg.includes("Insufficient")) {
-        errorMsg = state.lang === 'ar' ? 'الرصيد غير كافي' : 'Insufficient balance';
-      } else if(errorMsg.includes("maintenance") || errorMsg.includes("صيانة")) {
-        errorMsg = state.lang === 'ar' ? 'السحب متوقف مؤقتاً للصيانة' : 'Withdrawals paused for maintenance';
-      }
-      
-      return notify("❌ " + errorMsg);
-    }
-    
-    // Show success animation
-    showWithdrawSuccess(amount);
-    
-    // Clear fields
-    $("#amount").value = '';
-    if($("#withdrawAddr")) $("#withdrawAddr").value = '';
-    
-    // Refresh data
-    await refreshUser(); 
-    await refreshRequests();
-  } catch(err) {
-    console.error('Withdraw error:', err);
-    notify(state.lang === 'ar' ? '❌ خطأ في الاتصال' : '❌ Connection error');
-  } finally {
+    const feeRes = await fetch(`/api/wallet/withdraw/fee-preview?tg_id=${tg}&amount=${amount}`).then(r => r.json());
     btn.textContent = originalText;
     btn.disabled = false;
+    const feeData = feeRes.ok ? feeRes : { fee_rate: 5, fee_amount: amount * 0.05, net_amount: amount * 0.95, days_since_deposit: '?' };
+    showWithdrawConfirm(tg, amount, state.method, address, feeData);
+  } catch (err) {
+    btn.textContent = originalText;
+    btn.disabled = false;
+    notify(isAr ? '❌ خطأ في الاتصال' : '❌ Connection error');
   }
 });
 
@@ -913,6 +979,15 @@ function hydrateUser(user){
   if(spTgId) spTgId.textContent = tgId || "—";
   if(spName) spName.textContent = name || "—";
   if(spEmail) spEmail.textContent = email || "—";
+
+  // ===== Rank Display: Member / Agent =====
+  const isAgent = user.is_agent === true || user.is_agent === 1 || user.role === 'agent';
+  const rankText = isAgent ? '🤝 Agent' : '👤 Member';
+  const rankColor = isAgent ? '#58a6ff' : '#ffd700';
+  const rankBadge = $("#userRankBadge");
+  const spRank = $("#spUserRank");
+  if(rankBadge) rankBadge.textContent = rankText;
+  if(spRank){ spRank.textContent = rankText; spRank.style.color = rankColor; }
 }
 
 // Update PnL ticker and chart based on open trades
