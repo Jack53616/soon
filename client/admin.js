@@ -166,6 +166,7 @@ async function loadUsers() {
         <div>${u.sub_expires ? new Date(u.sub_expires).toLocaleDateString('ar') : 'منتهي'}</div>
         <div class="table-actions">
           <button class="mini-btn view" onclick="viewUser(${u.id})">عرض</button>
+          <button class="mini-btn" style="background: rgba(0,102,255,0.2); border: 1px solid #0066ff; font-size: 11px;" onclick="viewUserReferrals(${u.id}, '${(u.name || u.tg_id).replace(/'/g, '')}')">👥 مدعوين</button>
         </div>
       </div>
     `).join('')}
@@ -323,6 +324,85 @@ $('#unbanUserBtn')?.addEventListener('click', async () => {
   else toast('❌ ' + (r.error || 'خطأ'));
 });
 
+// ===== REFERRALS MODAL =====
+window.viewUserReferrals = async (userId, userName) => {
+  const r = await api(`/api/admin/referrals/user/${userId}`);
+  if (!r.ok) return toast('❌ خطأ في جلب بيانات الدعوات');
+  
+  const data = r.data;
+  const referrals = data.referrals || [];
+  
+  // Create modal if it doesn't exist
+  let modal = $('#referralsModal');
+  if (!modal) {
+    const modalEl = document.createElement('div');
+    modalEl.id = 'referralsModal';
+    modalEl.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    modalEl.innerHTML = `
+      <div style="background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 100%; max-width: 700px; max-height: 80vh; overflow-y: auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 id="referralsModalTitle" style="margin:0;">👥 المدعوين</h3>
+          <button onclick="document.getElementById('referralsModal').remove()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div id="referralsModalContent"></div>
+      </div>
+    `;
+    document.body.appendChild(modalEl);
+    modal = modalEl;
+  }
+  
+  $('#referralsModalTitle').textContent = `👥 مدعوو ${userName} (${referrals.length})`;
+  
+  const content = $('#referralsModalContent');
+  if (referrals.length === 0) {
+    content.innerHTML = `
+      <div style="text-align:center;padding:40px;color:var(--muted);">
+        <div style="font-size:48px;margin-bottom:12px;">👤</div>
+        <div>لم يدعُ هذا المستخدم أحداً بعد</div>
+        <div style="margin-top:8px;font-size:13px;">كود الدعوة: <strong style="color:var(--primary);">${data.referral_code || '-'}</strong></div>
+      </div>
+    `;
+  } else {
+    content.innerHTML = `
+      <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+        <div style="background:rgba(0,214,143,0.1);border:1px solid var(--success);border-radius:8px;padding:12px 20px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:var(--success);">${referrals.length}</div>
+          <div style="font-size:12px;color:var(--muted);">إجمالي المدعوين</div>
+        </div>
+        <div style="background:rgba(0,102,255,0.1);border:1px solid #0066ff;border-radius:8px;padding:12px 20px;text-align:center;">
+          <div style="font-size:22px;font-weight:700;color:#0066ff;">$${Number(data.referral_earnings || 0).toFixed(2)}</div>
+          <div style="font-size:12px;color:var(--muted);">إجمالي أرباح الدعوة</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;padding:12px 20px;text-align:center;">
+          <div style="font-size:16px;font-weight:700;color:var(--primary);">${data.referral_code || '-'}</div>
+          <div style="font-size:12px;color:var(--muted);">كود الدعوة</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+        <div class="table-row header" style="grid-template-columns: 40px 1fr 120px 100px 130px;">
+          <div>#</div>
+          <div>الاسم</div>
+          <div>Telegram ID</div>
+          <div>الحالة</div>
+          <div>تاريخ الانضمام</div>
+        </div>
+        ${referrals.map((ref, i) => `
+          <div class="table-row" style="grid-template-columns: 40px 1fr 120px 100px 130px;">
+            <div style="color:var(--muted);">${i + 1}</div>
+            <div>${ref.referred_name || '-'}</div>
+            <div style="font-family:monospace;font-size:12px;">${ref.referred_tg_id || '-'}</div>
+            <div>${ref.status === 'credited' ? '<span style="color:var(--success);">✅ مُكافأ</span>' : '<span style="color:#f0ad4e;">⏳ معلّق</span>'}</div>
+            <div style="font-size:12px;color:var(--muted);">${new Date(ref.created_at).toLocaleDateString('ar')}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  
+  modal.style.display = 'flex';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+};
+
 // ===== WITHDRAWALS =====
 async function loadWithdrawals() {
   const r = await api(`/api/admin/withdrawals?status=${state.withdrawFilter}`);
@@ -330,21 +410,28 @@ async function loadWithdrawals() {
   
   const wds = r.data || [];
   $('#wds').innerHTML = `
-    <div class="table-row header">
+    <div class="table-row header" style="grid-template-columns: 50px 120px 90px 100px 200px 130px 120px;">
       <div>ID</div>
       <div>المستخدم</div>
       <div>المبلغ</div>
       <div>الطريقة</div>
+      <div>عنوان المحفظة</div>
       <div>الحالة</div>
       <div>إجراءات</div>
     </div>
-    ${wds.map(w => `
-      <div class="table-row">
+    ${wds.map(w => {
+      const walletAddr = w.address || w.saved_wallet_address || '-';
+      const shortAddr = walletAddr.length > 20 ? walletAddr.substring(0, 10) + '...' + walletAddr.substring(walletAddr.length - 6) : walletAddr;
+      return `
+      <div class="table-row" style="grid-template-columns: 50px 120px 90px 100px 200px 130px 120px;">
         <div>${w.id}</div>
         <div>${w.user_name || w.user_id}</div>
-        <div>$${Number(w.amount || 0).toFixed(2)}</div>
-        <div>${w.method || '-'}</div>
-        <div>${w.status === 'pending' ? '⏳ قيد الانتظار' : w.status === 'approved' ? '✅ مقبول' : '❌ مرفوض'}</div>
+        <div style="color: var(--success); font-weight: 700;">$${Number(w.amount || 0).toFixed(2)}</div>
+        <div>${w.method === 'usdt_trc20' ? '🔵 USDT TRC20' : w.method === 'usdt_erc20' ? '🟣 USDT ERC20' : w.method || '-'}</div>
+        <div style="font-family: monospace; font-size: 12px;">
+          <span title="${walletAddr}" style="cursor: pointer;" onclick="navigator.clipboard.writeText('${walletAddr}').then(()=>toast('✅ تم نسخ العنوان'))">${shortAddr} 📋</span>
+        </div>
+        <div>${w.status === 'pending' ? '<span style="color:#f0ad4e;">⏳ قيد الانتظار</span>' : w.status === 'approved' ? '<span style="color:var(--success);">✅ مقبول</span>' : '<span style="color:var(--danger);">❌ مرفوض</span>'}</div>
         <div class="table-actions">
           ${w.status === 'pending' ? `
             <button class="mini-btn view" onclick="approveWithdraw(${w.id})">قبول</button>
@@ -352,7 +439,7 @@ async function loadWithdrawals() {
           ` : '-'}
         </div>
       </div>
-    `).join('')}
+    `}).join('')}
     ${wds.length === 0 ? '<div style="padding: 20px; text-align: center; color: var(--muted);">لا توجد طلبات</div>' : ''}
   `;
 }

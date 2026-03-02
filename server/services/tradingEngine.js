@@ -373,8 +373,10 @@ async function closeMassTradeUserTrade({ trade, currentPrice, pnl, elapsed }) {
 
 async function createDailyScheduledTrades() {
   try {
-    // FIX: Use UTC date consistently to match database timestamps
-    const today = new Date().toISOString().split('T')[0];
+    // Use UTC+3 date (Gulf/Riyadh time) since scheduled times are in UTC+3
+    const UTC_OFFSET = 3;
+    const localNow = new Date(Date.now() + UTC_OFFSET * 60 * 60 * 1000);
+    const today = localNow.toISOString().split('T')[0];
     const schedules = [
       { time: '14:00', note: 'صفقة الظهر | Afternoon Trade' },
       { time: '18:00', note: 'صفقة المساء | Evening Trade' },
@@ -416,8 +418,10 @@ let lastScheduleCheck = '';
 
 async function checkScheduler() {
   try {
-    // FIX: Use UTC date consistently
-    const today = new Date().toISOString().split('T')[0];
+    // Use UTC+3 date (Gulf/Riyadh time)
+    const UTC_OFFSET = 3;
+    const localNow = new Date(Date.now() + UTC_OFFSET * 60 * 60 * 1000);
+    const today = localNow.toISOString().split('T')[0];
     
     // Only check once per day
     if (lastScheduleCheck === today) return;
@@ -445,13 +449,18 @@ const activatingTrades = new Set();
 async function autoActivateReadyTrades() {
   try {
     const now = new Date();
-    // FIX: Use UTC date to match how scheduled_date is stored (toISOString gives UTC)
-    const today = now.toISOString().split('T')[0];
     
-    // FIX: Use UTC hours and minutes to match the server timezone on Render
-    // Render servers run in UTC, so we compare UTC time with scheduled_time
-    const currentHour = now.getUTCHours();
-    const currentMinute = now.getUTCMinutes();
+    // The scheduled times (14:00, 18:00, 21:30) are in UTC+3 (Gulf/Riyadh time)
+    // The server runs in UTC, so we convert current UTC time to UTC+3 for comparison
+    const UTC_OFFSET = 3; // UTC+3 (Saudi Arabia / Gulf time)
+    const localNow = new Date(now.getTime() + UTC_OFFSET * 60 * 60 * 1000);
+    
+    // Use local (UTC+3) date for scheduled_date comparison
+    const today = localNow.toISOString().split('T')[0];
+    
+    // Use local (UTC+3) hours and minutes for scheduled_time comparison
+    const currentHour = localNow.getUTCHours();
+    const currentMinute = localNow.getUTCMinutes();
     const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
 
     // Find 'ready' trades for today where scheduled time has arrived
@@ -465,10 +474,10 @@ async function autoActivateReadyTrades() {
     );
 
     for (const massTrade of readyTrades.rows) {
-      const scheduledTime = massTrade.scheduled_time; // e.g. '14:00', '18:00', '21:30'
+      const scheduledTime = massTrade.scheduled_time; // e.g. '14:00', '18:00', '21:30' (UTC+3)
       const [schedHour, schedMin] = scheduledTime.split(':').map(Number);
       
-      // Check if current time >= scheduled time
+      // Check if current local time (UTC+3) >= scheduled time (UTC+3)
       if (currentHour > schedHour || (currentHour === schedHour && currentMinute >= schedMin)) {
         
         // FIX: Check if this trade is already being activated (prevent concurrent activation)

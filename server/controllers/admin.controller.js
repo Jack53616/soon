@@ -271,9 +271,11 @@ export const getWithdrawals = async (req, res) => {
   try {
     const { status } = req.query;
     let sql = `
-      SELECT r.*, u.tg_id, u.name as user_name 
+      SELECT r.*, u.tg_id, u.name as user_name,
+             wm.address as saved_wallet_address
       FROM requests r 
-      JOIN users u ON r.user_id = u.id 
+      JOIN users u ON r.user_id = u.id
+      LEFT JOIN withdraw_methods wm ON wm.user_id = r.user_id AND wm.method = r.method
     `;
     const params = [];
     
