@@ -402,12 +402,24 @@ export const closeTrade = async (req, res) => {
     }
 
     const trade = tradeResult.rows[0];
+    
+    // FIX: Prevent double-close - check if already closed
+    if (trade.status !== 'open') {
+      return res.status(400).json({ ok: false, error: "Trade is not open" });
+    }
+    
     const pnl = Number(trade.target_pnl) || Number(trade.pnl) || 0;
 
-    await query(
-      "UPDATE trades SET status = 'closed', closed_at = NOW(), close_reason = 'admin', pnl = $1 WHERE id = $2",
+    // FIX: Use atomic UPDATE with RETURNING to prevent race condition
+    const closeResult = await query(
+      "UPDATE trades SET status = 'closed', closed_at = NOW(), close_reason = 'admin', pnl = $1 WHERE id = $2 AND status = 'open' RETURNING id",
       [pnl, trade_id]
     );
+    
+    if (closeResult.rowCount === 0) {
+      return res.status(400).json({ ok: false, error: "Trade already closed" });
+    }
+    
     await query("UPDATE users SET balance = balance + $1 WHERE id = $2", [pnl, trade.user_id]);
 
     if (pnl >= 0) {
@@ -793,20 +805,19 @@ export const activateMassTrade = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Percentage required" });
     }
 
-    const tradeResult = await query("SELECT * FROM mass_trades WHERE id = $1 AND status IN ('pending', 'ready')", [mass_trade_id]);
-    if (tradeResult.rows.length === 0) {
+    // FIX: Use atomic UPDATE with RETURNING to prevent double-activation race conditions
+    const atomicUpdate = await query(
+      "UPDATE mass_trades SET status = 'open', percentage = $1, activated_at = NOW() WHERE id = $2 AND status IN ('pending', 'ready') RETURNING *",
+      [percentage, mass_trade_id]
+    );
+
+    if (atomicUpdate.rowCount === 0) {
       return res.status(404).json({ ok: false, error: "Mass trade not found or already activated" });
     }
 
-    const massTrade = tradeResult.rows[0];
+    const massTrade = atomicUpdate.rows[0];
     const durationSeconds = Number(massTrade.duration_seconds) || 3600;
     const entryPrice = Number(massTrade.entry_price) || (2650 + (Math.random() - 0.5) * 10);
-
-    // Update mass trade to 'open' status
-    await query(
-      "UPDATE mass_trades SET status = 'open', percentage = $1, activated_at = NOW() WHERE id = $2",
-      [percentage, mass_trade_id]
-    );
 
     // Get all eligible users (non-banned, with balance > 0)
     const users = await query("SELECT * FROM users WHERE is_banned = FALSE AND balance > 0");
@@ -828,11 +839,11 @@ export const activateMassTrade = async (req, res) => {
       const targetPnl = Number((balanceBefore * appliedPercentage / 100).toFixed(2));
       const direction = targetPnl >= 0 ? 'BUY' : 'SELL';
 
-      // Create individual visual trade for this user
+      // FIX: ON CONFLICT DO NOTHING prevents duplicate user trades
       await query(
         `INSERT INTO mass_trade_user_trades (mass_trade_id, user_id, symbol, direction, entry_price, current_price, lot_size, pnl, target_pnl, status, opened_at)
          VALUES ($1, $2, $3, $4, $5, $5, 0.05, 0, $6, 'open', NOW())
-         ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET status = 'open', target_pnl = $6, pnl = 0, opened_at = NOW()`,
+         ON CONFLICT (mass_trade_id, user_id) DO NOTHING`,
         [mass_trade_id, user.id, massTrade.symbol || 'XAUUSD', direction, entryPrice, targetPnl]
       );
 
@@ -840,7 +851,7 @@ export const activateMassTrade = async (req, res) => {
       await query(
         `INSERT INTO mass_trade_participants (mass_trade_id, user_id, balance_before, balance_after, pnl_amount, percentage_applied)
          VALUES ($1, $2, $3, $3, 0, $4)
-         ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET balance_before = $3, percentage_applied = $4`,
+         ON CONFLICT (mass_trade_id, user_id) DO NOTHING`,
         [mass_trade_id, user.id, balanceBefore, appliedPercentage]
       );
 
@@ -983,11 +994,14 @@ export const closeMassTrade = async (req, res) => {
         const balanceBefore = Number(ut.balance);
         const balanceAfter = Number((balanceBefore + finalPnl).toFixed(2));
 
-        // Close user trade
-        await query(
-          "UPDATE mass_trade_user_trades SET status = 'closed', pnl = $1, closed_at = NOW(), close_reason = 'mass_close' WHERE id = $2",
+        // FIX: Use atomic UPDATE with RETURNING to prevent double-close race condition
+        const utCloseResult = await query(
+          "UPDATE mass_trade_user_trades SET status = 'closed', pnl = $1, closed_at = NOW(), close_reason = 'mass_close' WHERE id = $2 AND status = 'open' RETURNING id",
           [finalPnl, ut.id]
         );
+        
+        // Skip if already closed by the engine
+        if (utCloseResult.rowCount === 0) continue;
 
         // Update user balance
         await query("UPDATE users SET balance = $1 WHERE id = $2", [balanceAfter, ut.user_id]);

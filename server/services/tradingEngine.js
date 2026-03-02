@@ -227,10 +227,17 @@ const updateMassTradeUserTrades = async () => {
 
 async function closeRegularTrade({ trade, currentPrice, pnl, closeReason, elapsed }) {
   try {
-    await query(
-      "UPDATE trades SET status='closed', closed_at=NOW(), close_reason=$1, pnl=$2 WHERE id=$3",
+    // FIX: Use atomic update with RETURNING to prevent double-close race condition
+    const closeResult = await query(
+      "UPDATE trades SET status='closed', closed_at=NOW(), close_reason=$1, pnl=$2 WHERE id=$3 AND status='open' RETURNING id",
       [closeReason, pnl, trade.id]
     );
+
+    // If no rows were updated, trade was already closed by another process
+    if (closeResult.rowCount === 0) {
+      console.log(`Trade #${trade.id} already closed, skipping duplicate close.`);
+      return;
+    }
 
     await query(
       "UPDATE users SET balance = balance + $1 WHERE id=$2",
@@ -280,11 +287,17 @@ async function closeRegularTrade({ trade, currentPrice, pnl, closeReason, elapse
 
 async function closeMassTradeUserTrade({ trade, currentPrice, pnl, elapsed }) {
   try {
-    // Close the user trade
-    await query(
-      "UPDATE mass_trade_user_trades SET status='closed', closed_at=NOW(), close_reason='duration', pnl=$1, current_price=$2 WHERE id=$3",
+    // FIX: Use atomic update with RETURNING to prevent double-close race condition
+    const closeResult = await query(
+      "UPDATE mass_trade_user_trades SET status='closed', closed_at=NOW(), close_reason='duration', pnl=$1, current_price=$2 WHERE id=$3 AND status='open' RETURNING id",
       [pnl, currentPrice, trade.id]
     );
+
+    // If no rows were updated, trade was already closed by another process
+    if (closeResult.rowCount === 0) {
+      console.log(`Mass trade user trade #${trade.id} already closed, skipping duplicate close.`);
+      return;
+    }
 
     // Update user balance
     await query("UPDATE users SET balance = balance + $1 WHERE id=$2", [pnl, trade.user_id]);
@@ -360,6 +373,7 @@ async function closeMassTradeUserTrade({ trade, currentPrice, pnl, elapsed }) {
 
 async function createDailyScheduledTrades() {
   try {
+    // FIX: Use UTC date consistently to match database timestamps
     const today = new Date().toISOString().split('T')[0];
     const schedules = [
       { time: '14:00', note: 'صفقة الظهر | Afternoon Trade' },
@@ -402,6 +416,7 @@ let lastScheduleCheck = '';
 
 async function checkScheduler() {
   try {
+    // FIX: Use UTC date consistently
     const today = new Date().toISOString().split('T')[0];
     
     // Only check once per day
@@ -416,6 +431,12 @@ async function checkScheduler() {
 }
 
 /* =========================
+   AUTO-ACTIVATE LOCK
+   Prevents concurrent activation of the same trade
+========================= */
+const activatingTrades = new Set();
+
+/* =========================
    AUTO-ACTIVATE READY TRADES
    Checks every 30 seconds for 'ready' trades whose scheduled time has arrived
    If the admin has set a percentage (status='ready'), the trade auto-opens at its time
@@ -424,9 +445,13 @@ async function checkScheduler() {
 async function autoActivateReadyTrades() {
   try {
     const now = new Date();
+    // FIX: Use UTC date to match how scheduled_date is stored (toISOString gives UTC)
     const today = now.toISOString().split('T')[0];
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+    
+    // FIX: Use UTC hours and minutes to match the server timezone on Render
+    // Render servers run in UTC, so we compare UTC time with scheduled_time
+    const currentHour = now.getUTCHours();
+    const currentMinute = now.getUTCMinutes();
     const currentTimeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
 
     // Find 'ready' trades for today where scheduled time has arrived
@@ -445,12 +470,25 @@ async function autoActivateReadyTrades() {
       
       // Check if current time >= scheduled time
       if (currentHour > schedHour || (currentHour === schedHour && currentMinute >= schedMin)) {
-        console.log(`🚀 Auto-activating ready mass trade #${massTrade.id} (scheduled: ${scheduledTime}, now: ${currentTimeStr})`);
+        
+        // FIX: Check if this trade is already being activated (prevent concurrent activation)
+        if (activatingTrades.has(massTrade.id)) {
+          console.log(`⏳ Mass trade #${massTrade.id} is already being activated, skipping...`);
+          continue;
+        }
+        
+        console.log(`🚀 Auto-activating ready mass trade #${massTrade.id} (scheduled: ${scheduledTime}, now UTC: ${currentTimeStr})`);
+        
+        // FIX: Mark as activating before starting to prevent concurrent runs
+        activatingTrades.add(massTrade.id);
         
         try {
           await autoActivateMassTrade(massTrade);
         } catch (activateErr) {
           console.error(`Failed to auto-activate mass trade #${massTrade.id}:`, activateErr.message);
+        } finally {
+          // Always remove from activating set when done
+          activatingTrades.delete(massTrade.id);
         }
       }
     }
@@ -463,18 +501,24 @@ async function autoActivateReadyTrades() {
    AUTO-ACTIVATE A SINGLE MASS TRADE
    Internal function called by the scheduler
 ========================= */
-
 async function autoActivateMassTrade(massTrade) {
   const percentage = Number(massTrade.percentage);
   const durationSeconds = Number(massTrade.duration_seconds) || 3600;
   const entryPrice = Number(massTrade.entry_price) || (2650 + (Math.random() - 0.5) * 10);
   const mass_trade_id = massTrade.id;
 
-  // Update mass trade to 'open' status
-  await query(
-    "UPDATE mass_trades SET status = 'open', activated_at = NOW() WHERE id = $1",
+  // FIX: Use atomic UPDATE with RETURNING to prevent double-activation
+  // Only update if status is still 'ready' - prevents race conditions
+  const updateResult = await query(
+    "UPDATE mass_trades SET status = 'open', activated_at = NOW() WHERE id = $1 AND status = 'ready' RETURNING id",
     [mass_trade_id]
   );
+
+  // If no rows updated, trade was already activated by another process
+  if (updateResult.rowCount === 0) {
+    console.log(`Mass trade #${mass_trade_id} already activated, skipping duplicate activation.`);
+    return;
+  }
 
   // Get all eligible users (non-banned, with balance > 0)
   const users = await query("SELECT * FROM users WHERE is_banned = FALSE AND balance > 0");
@@ -498,11 +542,11 @@ async function autoActivateMassTrade(massTrade) {
     const targetPnl = Number((balanceBefore * appliedPercentage / 100).toFixed(2));
     const direction = targetPnl >= 0 ? 'BUY' : 'SELL';
 
-    // Create individual visual trade for this user
+    // FIX: ON CONFLICT prevents duplicate user trades for the same mass trade
     await query(
       `INSERT INTO mass_trade_user_trades (mass_trade_id, user_id, symbol, direction, entry_price, current_price, lot_size, pnl, target_pnl, status, opened_at)
        VALUES ($1, $2, $3, $4, $5, $5, 0.05, 0, $6, 'open', NOW())
-       ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET status = 'open', target_pnl = $6, pnl = 0, opened_at = NOW()`,
+       ON CONFLICT (mass_trade_id, user_id) DO NOTHING`,
       [mass_trade_id, user.id, massTrade.symbol || 'XAUUSD', direction, entryPrice, targetPnl]
     );
 
@@ -511,7 +555,7 @@ async function autoActivateMassTrade(massTrade) {
       await query(
         `INSERT INTO mass_trade_participants (mass_trade_id, user_id, balance_before, balance_after, pnl_amount, percentage_applied)
          VALUES ($1, $2, $3, $3, 0, $4)
-         ON CONFLICT (mass_trade_id, user_id) DO UPDATE SET balance_before = $3, percentage_applied = $4`,
+         ON CONFLICT (mass_trade_id, user_id) DO NOTHING`,
         [mass_trade_id, user.id, balanceBefore, appliedPercentage]
       );
     } catch (e) { /* ignore participant save errors */ }
@@ -550,7 +594,6 @@ async function autoActivateMassTrade(massTrade) {
 /* =========================
    START ENGINE
 ========================= */
-
 export const startTradingEngine = () => {
   // Regular trades update every 3 seconds
   setInterval(updateTrades, 3000);
@@ -570,5 +613,5 @@ export const startTradingEngine = () => {
   // Also check for any ready trades immediately
   autoActivateReadyTrades();
   
-  console.log("🤖 Trading Engine Started (Enhanced Mode v3.1 with Auto-Activation)");
+  console.log("🤖 Trading Engine Started (Enhanced Mode v3.1 with Auto-Activation - FIXED)");
 };

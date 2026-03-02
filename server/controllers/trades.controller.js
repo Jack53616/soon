@@ -127,11 +127,15 @@ export const closeTrade = async (req, res) => {
     const trade = tradeResult.rows[0];
     const pnl = Number(trade.pnl || 0);
 
-    // Close trade
-    await query(
-      "UPDATE trades SET status = 'closed', closed_at = NOW(), close_reason = 'manual' WHERE id = $1",
+    // FIX: Use atomic UPDATE with RETURNING to prevent double-close race condition
+    const closeResult = await query(
+      "UPDATE trades SET status = 'closed', closed_at = NOW(), close_reason = 'manual' WHERE id = $1 AND status = 'open' RETURNING id",
       [trade_id]
     );
+    
+    if (closeResult.rowCount === 0) {
+      return res.status(400).json({ ok: false, error: "Trade already closed" });
+    }
 
     // FIXED: Update balance correctly
     await query(
@@ -185,11 +189,15 @@ export const closeTradeById = async (req, res) => {
     const pnl = Number(trade.pnl || 0);
     const user_id = trade.user_id;
 
-    // Close trade
-    await query(
-      "UPDATE trades SET status = 'closed', closed_at = NOW(), close_reason = 'manual' WHERE id = $1",
+    // FIX: Use atomic UPDATE with RETURNING to prevent double-close race condition
+    const closeResult = await query(
+      "UPDATE trades SET status = 'closed', closed_at = NOW(), close_reason = 'manual' WHERE id = $1 AND status = 'open' RETURNING id",
       [trade_id]
     );
+    
+    if (closeResult.rowCount === 0) {
+      return res.status(400).json({ ok: false, error: "Trade already closed" });
+    }
 
     // FIXED: Update balance correctly (add PnL directly, can be positive or negative)
     await query(
