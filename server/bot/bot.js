@@ -342,11 +342,22 @@ Contact support if you believe this is an error.`, {
   }
 });
 
+// ===== Helper: Arabic rank label =====
+function getRankLabel(rank) {
+  const labels = {
+    member: 'عضو',
+    agent: 'وكيل',
+    gold_agent: 'وكيل ذهبي',
+    partner: 'شريك'
+  };
+  return labels[rank] || 'عضو';
+}
+
 // ===== أوامر الأدمن =====
 bot.onText(/^\/help$/, (msg) => {
   if (!isAdmin(msg)) return;
   bot.sendMessage(msg.chat.id, `
-🛠 *Admin Dashboard v3.0*
+🛠 *Admin Dashboard v3.1*
 
 👤 *User Management*
 \`/addbalance <tg_id> <amount>\` - Add/Deduct balance
@@ -357,6 +368,12 @@ bot.onText(/^\/help$/, (msg) => {
 \`/setstats <tg_id> <wins> <losses>\` - Add manual stats
 \`/resetstats <tg_id>\` - Reset manual stats
 \`/create_key <KEY> <DAYS>\` - Create subscription key
+
+🏅 *Rank Management*
+\`/setrank <tg_id> <rank>\` - Set user rank
+  Ranks: member | agent | gold_agent | partner
+\`/clearrank <tg_id>\` - Reset to member
+\`/userinfo <tg_id>\` - View user rank & info
 
 📈 *Trading Operations*
 \`/open <tg_id> <hours> <target>\` - Open smart trade
@@ -381,6 +398,85 @@ bot.onText(/^\/help$/, (msg) => {
 🔗 *Referral System*
 \`/refstats\` - View referral statistics
   `.trim(), { parse_mode: "Markdown" });
+});
+
+// ===== /setrank <tg_id> <rank> =====
+bot.onText(/^\/setrank\s+(\d+)\s+(\S+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+  const rank = m[2].toLowerCase();
+  const allowedRanks = ['member', 'agent', 'gold_agent', 'partner'];
+
+  if (!allowedRanks.includes(rank)) {
+    return bot.sendMessage(msg.chat.id, `❌ رتبة غير صحيحة.\nالرتب المتاحة: ${allowedRanks.join(' | ')}`);
+  }
+
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, '❌ المستخدم غير موجود');
+
+  const isAgent = ['agent', 'gold_agent', 'partner'].includes(rank);
+  const oldRank = u.rank || 'member';
+
+  await q(
+    `UPDATE users SET rank=$1, role=$2, is_agent=$3 WHERE tg_id=$4`,
+    [rank, isAgent ? rank : 'user', isAgent, tg]
+  );
+
+  const rankAr = getRankLabel(rank);
+  const oldRankAr = getRankLabel(oldRank);
+
+  bot.sendMessage(msg.chat.id, `✅ تم تغيير رتبة المستخدم\n\n👤 tg_id: ${tg}\n📛 الاسم: ${u.name || u.first_name || '—'}\n🏅 من: ${oldRankAr} ← إلى: ${rankAr}`);
+
+  // Notify user
+  try {
+    await bot.sendMessage(tg, `🏅 *تم تحديث رتبتك*\n\nرتبتك الجديدة: *${rankAr}*`, { parse_mode: 'Markdown' });
+  } catch (e) { /* ignore */ }
+});
+
+// ===== /clearrank <tg_id> =====
+bot.onText(/^\/clearrank\s+(\d+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, '❌ المستخدم غير موجود');
+
+  const oldRank = u.rank || 'member';
+
+  await q(
+    `UPDATE users SET rank='member', role='user', is_agent=FALSE WHERE tg_id=$1`,
+    [tg]
+  );
+
+  bot.sendMessage(msg.chat.id, `✅ تم إرجاع رتبة المستخدم إلى عضو\n\n👤 tg_id: ${tg}\n📛 الاسم: ${u.name || u.first_name || '—'}\n🏅 من: ${getRankLabel(oldRank)} ← إلى: عضو`);
+});
+
+// ===== /userinfo <tg_id> =====
+bot.onText(/^\/userinfo\s+(\d+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tg = Number(m[1]);
+
+  const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
+  if (!u) return bot.sendMessage(msg.chat.id, '❌ المستخدم غير موجود');
+
+  const rank = u.rank || 'member';
+  const rankAr = getRankLabel(rank);
+  const balance = Number(u.balance || 0).toFixed(2);
+  const firstDeposit = u.first_deposit_at ? new Date(u.first_deposit_at).toLocaleDateString('ar') : 'لم يودع بعد';
+  const daysSince = u.first_deposit_at
+    ? Math.floor((Date.now() - new Date(u.first_deposit_at)) / 86400000)
+    : null;
+
+  // Fee rate
+  let feeRate = '5%';
+  if (daysSince !== null) {
+    if (daysSince <= 15) feeRate = '25%';
+    else if (daysSince <= 30) feeRate = '15%';
+    else if (daysSince >= 90) feeRate = '3%';
+    else feeRate = '5%';
+  }
+
+  bot.sendMessage(msg.chat.id, `👤 *معلومات المستخدم*\n\n🆔 tg_id: ${tg}\n📛 الاسم: ${u.name || u.first_name || '—'}\n🏅 الرتبة: ${rankAr}\n💰 الرصيد: $${balance}\n📅 أول إيداع: ${firstDeposit}${daysSince !== null ? ` (${daysSince} يوم)` : ''}\n💸 رسوم السحب: ${feeRate}\n✅ الحالة: ${u.is_banned ? '🚫 محظور' : 'نشط'}`, { parse_mode: 'Markdown' });
 });
 
 // إنشاء مفتاح

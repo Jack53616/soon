@@ -980,14 +980,20 @@ function hydrateUser(user){
   if(spName) spName.textContent = name || "—";
   if(spEmail) spEmail.textContent = email || "—";
 
-  // ===== Rank Display: Member / Agent =====
-  const isAgent = user.is_agent === true || user.is_agent === 1 || user.role === 'agent';
-  const rankText = isAgent ? '🤝 Agent' : '👤 Member';
-  const rankColor = isAgent ? '#58a6ff' : '#ffd700';
+  // ===== Rank Display (Arabic labels) =====
+  const rankMap = {
+    member:     { ar: '👤 عضو',          en: '👤 Member',      color: '#ffd700' },
+    agent:      { ar: '🤝 وكيل',          en: '🤝 Agent',       color: '#58a6ff' },
+    gold_agent: { ar: '🥇 وكيل ذهبي',    en: '🥇 Gold Agent',  color: '#ffd700' },
+    partner:    { ar: '🌟 شريك',          en: '🌟 Partner',     color: '#a371f7' }
+  };
+  const userRank = user.rank || (user.is_agent ? 'agent' : 'member');
+  const rankInfo = rankMap[userRank] || rankMap.member;
+  const rankText = state.lang === 'ar' ? rankInfo.ar : rankInfo.en;
   const rankBadge = $("#userRankBadge");
   const spRank = $("#spUserRank");
   if(rankBadge) rankBadge.textContent = rankText;
-  if(spRank){ spRank.textContent = rankText; spRank.style.color = rankColor; }
+  if(spRank){ spRank.textContent = rankText; spRank.style.color = rankInfo.color; }
 }
 
 // Update PnL ticker and chart based on open trades

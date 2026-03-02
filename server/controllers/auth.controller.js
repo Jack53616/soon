@@ -4,6 +4,7 @@ import { extractKeyCandidates } from "../utils/keyExtractor.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import bot from "../bot/bot.js";
+import { registerAgentReferral } from "./agent.controller.js";
 
 // Generate unique referral code
 function generateReferralCode() {
@@ -153,6 +154,20 @@ export const activate = async (req, res) => {
         "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'info', 0, 'Account activated')",
         [user.id]
       );
+
+      // ===== Agent: Register referral in agent_referrals =====
+      // If this user was referred by someone, link them in agent_referrals
+      if (referredBy) {
+        try {
+          // Find the referrer user by tg_id
+          const referrerUser = await query("SELECT id FROM users WHERE tg_id = $1", [referredBy]);
+          if (referrerUser.rows.length > 0) {
+            await registerAgentReferral(referrerUser.rows[0].id, user.id);
+          }
+        } catch (e) {
+          console.error("[Auth] Agent referral registration error:", e.message);
+        }
+      }
     }
 
     // Mark key as used
