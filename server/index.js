@@ -15,6 +15,8 @@ import adminRoutes from "./routes/admin.routes.js";
 import marketsRoutes from "./routes/markets.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import leaderboardRoutes from "./routes/leaderboard.routes.js";
+import supervisorRoutes from "./routes/supervisor.routes.js";
+import agentRoutes from "./routes/agent.routes.js";
 
 // Bot
 import bot from "./bot/bot.js";
@@ -74,6 +76,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/markets", marketsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/supervisor", supervisorRoutes);
+app.use("/api/agent", agentRoutes);
 
 // Get user statistics (Direct endpoint for frontend)
 app.get("/api/stats/:tg_id", async (req, res) => {

@@ -1,5 +1,7 @@
 import express from "express";
 import * as adminController from "../controllers/admin.controller.js";
+import * as agentController from "../controllers/agent.controller.js";
+import * as supervisorController from "../controllers/supervisor.controller.js";
 
 const router = express.Router();
 
@@ -74,5 +76,15 @@ router.post("/mass-trade/create-daily", adminController.createDailyScheduledTrad
 router.get("/extra-trade-users", adminController.getExtraTradeUsers);
 router.post("/extra-trade-user/add", adminController.addExtraTradeUser);
 router.post("/extra-trade-user/remove", adminController.removeExtraTradeUser);
+
+// ===== Agent System =====
+router.get("/agents", agentController.getAllAgents);
+router.post("/agent/promote", agentController.promoteToAgent);
+router.post("/agent/revoke", agentController.revokeAgent);
+
+// ===== Supervisor Management =====
+router.get("/supervisors", supervisorController.getSupervisors);
+router.post("/supervisor/create", supervisorController.createSupervisor);
+router.post("/supervisor/toggle", supervisorController.toggleSupervisor);
 
 export default router;

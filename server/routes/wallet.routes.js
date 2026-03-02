@@ -25,4 +25,7 @@ router.get("/requests/:tg_id", walletController.getRequests);
 // POST /api/deposit - Process deposit (with referral bonus)
 router.post("/deposit", walletController.processDeposit);
 
+// GET /api/wallet/withdraw/fee-preview - Preview withdrawal fee
+router.get("/withdraw/fee-preview", walletController.getWithdrawalFeePreview);
+
 export default router;

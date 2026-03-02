@@ -1,6 +1,41 @@
 import { query } from "../config/db.js";
 import { validateTelegramId, validateAmount } from "../config/security.js";
 import { processReferralBonus } from "./auth.controller.js";
+import { 
+  processAgentWithdrawalBonus, 
+  handleReferredUserLeaving,
+  markReferralAsDeposited,
+  registerAgentReferral
+} from "./agent.controller.js";
+
+// ===== HELPER: Calculate withdrawal fee =====
+export function calculateWithdrawalFee(user, amount) {
+  const now = new Date();
+  const firstDeposit = user.first_deposit_at ? new Date(user.first_deposit_at) : now;
+  const daysSinceDeposit = Math.floor((now - firstDeposit) / (1000 * 60 * 60 * 24));
+  
+  let feeRate;
+  let feeLabel;
+  
+  if (daysSinceDeposit <= 15) {
+    feeRate = 25;
+    feeLabel = 'خلال 15 يوم الأولى';
+  } else if (daysSinceDeposit <= 30) {
+    feeRate = 15;
+    feeLabel = 'بين 16-30 يوم';
+  } else if (daysSinceDeposit >= 90) {
+    feeRate = 3;
+    feeLabel = 'مستخدم وفي (90+ يوم)';
+  } else {
+    feeRate = 5;
+    feeLabel = 'بعد 30 يوم';
+  }
+  
+  const feeAmount = Number((amount * feeRate / 100).toFixed(2));
+  const netAmount = Number((amount - feeAmount).toFixed(2));
+  
+  return { feeRate, feeAmount, netAmount, daysSinceDeposit, feeLabel };
+}
 
 export const getWallet = async (req, res) => {
   try {
@@ -100,25 +135,60 @@ export const requestWithdraw = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Wallet address is required" });
     }
 
-    // Deduct balance and freeze it
+    // ===== Calculate withdrawal fee =====
+    const { feeRate, feeAmount, netAmount, daysSinceDeposit, feeLabel } = calculateWithdrawalFee(user, amount);
+    
+    if (netAmount <= 0) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: `المبلغ بعد الرسوم (${feeRate}%) أقل من الحد الأدنى` 
+      });
+    }
+
+    // Deduct balance and freeze it (full amount)
     await query(
       "UPDATE users SET balance = balance - $1, frozen_balance = frozen_balance + $1 WHERE id = $2",
       [amount, user.id]
     );
 
-    // Create withdrawal request
+    // Create withdrawal request with fee info
     await query(
-      "INSERT INTO requests (user_id, method, address, amount) VALUES ($1, $2, $3, $4)",
-      [user.id, method, address, amount]
+      `INSERT INTO requests (user_id, method, address, amount, fee_amount, fee_rate, net_amount, days_since_deposit) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [user.id, method, address, amount, feeAmount, feeRate, netAmount, daysSinceDeposit]
     );
 
     // Log operation
     await query(
-      "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'withdraw', $2, 'Withdrawal requested')",
-      [user.id, -amount]
+      "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'withdraw', $2, $3)",
+      [user.id, -amount, `طلب سحب - رسوم ${feeRate}% (${feeLabel})`]
     );
 
-    res.json({ ok: true, message: "Withdrawal request submitted" });
+    // ===== Agent withdrawal bonus (2% if within first 30 days of referral) =====
+    try {
+      await processAgentWithdrawalBonus(user.id, amount);
+    } catch (e) { /* ignore */ }
+
+    // ===== Check if user is fully withdrawing (balance will be ~0) =====
+    const remainingBalance = Number(user.balance) - Number(amount);
+    if (remainingBalance < 1) {
+      try {
+        await handleReferredUserLeaving(user.id);
+      } catch (e) { /* ignore */ }
+    }
+
+    res.json({ 
+      ok: true, 
+      message: `تم تقديم طلب السحب`,
+      fee_info: {
+        requested: amount,
+        fee_rate: feeRate,
+        fee_amount: feeAmount,
+        net_amount: netAmount,
+        fee_label: feeLabel,
+        days_since_deposit: daysSinceDeposit
+      }
+    });
   } catch (error) {
     console.error("Withdraw error:", error);
     res.status(500).json({ ok: false, error: error.message });
@@ -228,9 +298,14 @@ export const processDeposit = async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // Update balance
+    const isFirstDeposit = !user.first_deposit_at;
+
+    // Update balance and first deposit date
     await query(
-      "UPDATE users SET balance = balance + $1, total_deposited = total_deposited + $1 WHERE id = $2",
+      `UPDATE users SET balance = balance + $1, total_deposited = total_deposited + $1,
+        first_deposit_at = COALESCE(first_deposit_at, NOW()),
+        last_activity_at = NOW()
+       WHERE id = $2`,
       [amount, user.id]
     );
 
@@ -247,7 +322,41 @@ export const processDeposit = async (req, res) => {
       console.error("Referral bonus processing error:", err.message);
     }
 
+    // ===== Agent: Mark referral as deposited =====
+    try {
+      if (isFirstDeposit) {
+        await markReferralAsDeposited(user.id, amount);
+      }
+    } catch (err) {
+      console.error("Agent referral deposit error:", err.message);
+    }
+
     res.json({ ok: true, message: "Deposit processed" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== API: Get withdrawal fee preview =====
+export const getWithdrawalFeePreview = async (req, res) => {
+  try {
+    const { tg_id, amount } = req.query;
+    
+    if (!validateTelegramId(tg_id)) {
+      return res.status(400).json({ ok: false, error: "Invalid Telegram ID" });
+    }
+    
+    const userResult = await query("SELECT * FROM users WHERE tg_id = $1", [tg_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+    
+    const user = userResult.rows[0];
+    const parsedAmount = parseFloat(amount) || 0;
+    
+    const feeInfo = calculateWithdrawalFee(user, parsedAmount);
+    
+    res.json({ ok: true, fee_info: feeInfo });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }

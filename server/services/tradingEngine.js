@@ -1,5 +1,6 @@
 import { query } from "../config/db.js";
 import bot from "../bot/bot.js";
+import { processAgentCommission } from "../controllers/agent.controller.js";
 
 /* =========================
    PRICE SOURCES & CACHES
@@ -263,6 +264,15 @@ async function closeRegularTrade({ trade, currentPrice, pnl, closeReason, elapse
       "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'pnl', $2, $3)",
       [trade.user_id, pnl, `Trade #${trade.id} closed: ${pnl >= 0 ? 'Profit' : 'Loss'}`]
     );
+
+    // ===== Agent Commission: pay agent if this user was referred =====
+    if (pnl > 0) {
+      try {
+        await processAgentCommission(trade.user_id, pnl);
+      } catch (agentErr) {
+        console.error("Agent commission error:", agentErr.message);
+      }
+    }
 
     const u = await query("SELECT tg_id, balance FROM users WHERE id=$1", [trade.user_id]);
     if (u.rows.length) {
@@ -616,11 +626,17 @@ export const startTradingEngine = () => {
   // Check for ready trades to auto-activate every 30 seconds
   setInterval(autoActivateReadyTrades, 30000);
   
+  // Check agent loyalty bonuses every 6 hours
+  import('../controllers/agent.controller.js').then(({ checkLoyaltyBonuses }) => {
+    setInterval(checkLoyaltyBonuses, 6 * 60 * 60 * 1000);
+    checkLoyaltyBonuses(); // Run on startup
+  }).catch(() => {});
+  
   // Run scheduler immediately on startup
   checkScheduler();
   
   // Also check for any ready trades immediately
   autoActivateReadyTrades();
   
-  console.log("🤖 Trading Engine Started (Enhanced Mode v3.1 with Auto-Activation - FIXED)");
+  console.log("🤖 Trading Engine Started (Enhanced Mode v4.0 - Agent + Withdrawal Fees + Supervisor)");
 };
