@@ -539,7 +539,8 @@ gateBtn?.addEventListener("click", async ()=>{
   const tg_id = state.tg_id || Number(prompt("Enter Telegram ID (test):","1262317603"));
   if(!tg_id){ toast("Missing Telegram ID"); return; }
   const initData = TWA?.initData || null;
-  const payload = { key, rawKey, candidates, tg_id, name, email, initData };
+  const tg_username = TWA?.initDataUnsafe?.user?.username || null;
+  const payload = { key, rawKey, candidates, tg_id, name, email, initData, tg_username };
 
   const restore = gateBtn.textContent;
   gateBtn.disabled = true;
@@ -994,6 +995,9 @@ function hydrateUser(user){
   const spRank = $("#spUserRank");
   if(rankBadge) rankBadge.textContent = rankText;
   if(spRank){ spRank.textContent = rankText; spRank.style.color = rankInfo.color; }
+
+  // Update country flag
+  if (window._hydrateCountryHook) window._hydrateCountryHook(user);
 }
 
 // Update PnL ticker and chart based on open trades
@@ -1644,4 +1648,234 @@ $("#shareRefLinkBtn")?.addEventListener("click", () => {
   }else{
     showGate();
   }
+})();
+
+// ===== Button Click Animation & Sound System =====
+(function initClickFeedback() {
+  // Create click sound using Web Audio API (no file needed)
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    }
+    return audioCtx;
+  }
+
+  function playClickSound(type = 'soft') {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'soft') {
+        osc.frequency.setValueAtTime(520, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      } else if (type === 'success') {
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.setValueAtTime(660, ctx.currentTime + 0.07);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.14);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.25);
+      } else if (type === 'tab') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(380, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(480, ctx.currentTime + 0.06);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.08);
+      }
+    } catch(e) {}
+  }
+
+  function triggerHaptic(style = 'light') {
+    try {
+      if (TWA?.HapticFeedback?.impactOccurred) {
+        TWA.HapticFeedback.impactOccurred(style);
+      } else if (navigator.vibrate) {
+        navigator.vibrate(style === 'light' ? 10 : style === 'medium' ? 20 : 30);
+      }
+    } catch(e) {}
+  }
+
+  function addRipple(el, e) {
+    const rect = el.getBoundingClientRect();
+    const x = (e.clientX || rect.left + rect.width / 2) - rect.left;
+    const y = (e.clientY || rect.top + rect.height / 2) - rect.top;
+    const ripple = document.createElement('span');
+    ripple.style.cssText = `
+      position:absolute;left:${x}px;top:${y}px;
+      width:0;height:0;border-radius:50%;
+      background:rgba(255,255,255,0.35);
+      transform:translate(-50%,-50%);
+      animation:rippleAnim 0.45s ease-out forwards;
+      pointer-events:none;z-index:9999;
+    `;
+    const prev = el.style.position;
+    if (!prev || prev === 'static') el.style.position = 'relative';
+    el.style.overflow = 'hidden';
+    el.appendChild(ripple);
+    setTimeout(() => { ripple.remove(); if(!prev || prev==='static') el.style.position = prev; }, 460);
+  }
+
+  // Inject ripple keyframe CSS once
+  if (!document.getElementById('rippleStyle')) {
+    const s = document.createElement('style');
+    s.id = 'rippleStyle';
+    s.textContent = `
+      @keyframes rippleAnim {
+        0%   { width:0; height:0; opacity:1; }
+        100% { width:200px; height:200px; opacity:0; }
+      }
+      .btn-press { transform: scale(0.94) !important; transition: transform 0.08s ease !important; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  // Delegate click events on all buttons
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('button, .seg-btn, .s-item, .mini-btn, .i-btn, .sheet-btn, [data-tab]');
+    if (!el) return;
+
+    // Add press animation
+    el.classList.add('btn-press');
+    setTimeout(() => el.classList.remove('btn-press'), 120);
+
+    // Ripple effect
+    addRipple(el, e);
+
+    // Determine sound type
+    const isTab = el.classList.contains('seg-btn') || el.dataset.tab;
+    const isSuccess = el.classList.contains('success') || el.id === 'confirmWithdrawBtn';
+
+    if (isTab) {
+      playClickSound('tab');
+      triggerHaptic('light');
+    } else if (isSuccess) {
+      playClickSound('success');
+      triggerHaptic('medium');
+    } else {
+      playClickSound('soft');
+      triggerHaptic('light');
+    }
+  }, { passive: true });
+})();
+
+// ===== Country / Flag Picker =====
+(function initCountryPicker() {
+  const COUNTRIES = [
+    { code: 'SY', flag: '🇸🇾', name: 'سوريا',        nameEn: 'Syria' },
+    { code: 'US', flag: '🇺🇸', name: 'أمريكا',       nameEn: 'USA' },
+    { code: 'DE', flag: '🇩🇪', name: 'ألمانيا',      nameEn: 'Germany' },
+    { code: 'SA', flag: '🇸🇦', name: 'السعودية',     nameEn: 'Saudi Arabia' },
+    { code: 'AE', flag: '🇦🇪', name: 'الإمارات',     nameEn: 'UAE' },
+    { code: 'EG', flag: '🇪🇬', name: 'مصر',          nameEn: 'Egypt' },
+    { code: 'IQ', flag: '🇮🇶', name: 'العراق',       nameEn: 'Iraq' },
+    { code: 'JO', flag: '🇯🇴', name: 'الأردن',       nameEn: 'Jordan' },
+    { code: 'LB', flag: '🇱🇧', name: 'لبنان',        nameEn: 'Lebanon' },
+    { code: 'KW', flag: '🇰🇼', name: 'الكويت',       nameEn: 'Kuwait' },
+    { code: 'QA', flag: '🇶🇦', name: 'قطر',          nameEn: 'Qatar' },
+    { code: 'TR', flag: '🇹🇷', name: 'تركيا',        nameEn: 'Turkey' },
+    { code: 'GB', flag: '🇬🇧', name: 'بريطانيا',     nameEn: 'UK' },
+    { code: 'FR', flag: '🇫🇷', name: 'فرنسا',        nameEn: 'France' },
+    { code: 'MA', flag: '🇲🇦', name: 'المغرب',       nameEn: 'Morocco' },
+    { code: 'DZ', flag: '🇩🇿', name: 'الجزائر',      nameEn: 'Algeria' },
+    { code: 'TN', flag: '🇹🇳', name: 'تونس',         nameEn: 'Tunisia' },
+    { code: 'LY', flag: '🇱🇾', name: 'ليبيا',        nameEn: 'Libya' },
+  ];
+
+  function getCurrentCountry() {
+    return localStorage.getItem('userCountry') || null;
+  }
+
+  function setCountryDisplay(code) {
+    const el = document.getElementById('spCountryDisplay');
+    if (!el) return;
+    if (!code) { el.textContent = '🏳️'; return; }
+    const c = COUNTRIES.find(x => x.code === code);
+    if (c) {
+      const isAr = (state.lang === 'ar');
+      el.textContent = `${c.flag} ${isAr ? c.name : c.nameEn}`;
+    }
+  }
+
+  function openPicker() {
+    const sheet = document.getElementById('countryPickerSheet');
+    const backdrop = document.getElementById('countryPickerBackdrop');
+    const grid = document.getElementById('countryGrid');
+    if (!sheet || !grid) return;
+
+    const isAr = (state.lang === 'ar');
+    document.getElementById('cpTitle').textContent = isAr ? 'اختر دولتك' : 'Choose Your Country';
+    document.getElementById('cpCancel').textContent = isAr ? 'إلغاء' : 'Cancel';
+
+    grid.innerHTML = COUNTRIES.map(c => `
+      <button onclick="window._pickCountry('${c.code}')" style="
+        display:flex;flex-direction:column;align-items:center;gap:4px;
+        background:rgba(255,255,255,0.04);border:1px solid #2d333b;
+        border-radius:12px;padding:10px 6px;cursor:pointer;color:#e6edf3;font-size:11px;
+        transition:background 0.2s;">
+        <span style="font-size:26px;">${c.flag}</span>
+        <span>${isAr ? c.name : c.nameEn}</span>
+      </button>
+    `).join('');
+
+    sheet.style.display = 'block';
+    backdrop.style.display = 'block';
+    setTimeout(() => { sheet.style.transform = 'translateY(0)'; }, 10);
+  }
+
+  function closePicker() {
+    const sheet = document.getElementById('countryPickerSheet');
+    const backdrop = document.getElementById('countryPickerBackdrop');
+    if (sheet) sheet.style.display = 'none';
+    if (backdrop) backdrop.style.display = 'none';
+  }
+
+  window._pickCountry = async (code) => {
+    closePicker();
+    localStorage.setItem('userCountry', code);
+    setCountryDisplay(code);
+
+    // Save to server
+    if (state.tg_id) {
+      try {
+        await fetch('/api/user/country', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tg_id: state.tg_id, country: code })
+        });
+      } catch(e) {}
+    }
+  };
+
+  document.getElementById('spChangeCountryBtn')?.addEventListener('click', openPicker);
+  document.getElementById('spCountryDisplay')?.addEventListener('click', openPicker);
+  document.getElementById('cpCancel')?.addEventListener('click', closePicker);
+  document.getElementById('countryPickerBackdrop')?.addEventListener('click', closePicker);
+
+  // Load saved country on init
+  const saved = getCurrentCountry();
+  if (saved) setCountryDisplay(saved);
+
+  // Also update when user data loads
+  const origHydrate = window._hydrateCountryHook;
+  window._hydrateCountryHook = (user) => {
+    if (origHydrate) origHydrate(user);
+    const c = user?.country || getCurrentCountry();
+    if (c) {
+      localStorage.setItem('userCountry', c);
+      setCountryDisplay(c);
+    }
+  };
 })();

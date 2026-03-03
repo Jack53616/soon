@@ -161,7 +161,7 @@ async function loadUsers() {
     ${users.map(u => `
       <div class="table-row" style="${u.is_banned ? 'opacity: 0.5; border-right: 3px solid var(--danger);' : ''}">
         <div>${u.id}</div>
-        <div>${u.name || u.tg_id} ${u.is_banned ? '<span style="color:var(--danger);font-size:12px;">🚫 محظور</span>' : ''}</div>
+        <div>${u.name || u.tg_id}${u.tg_username ? ` <span style="color:#58a6ff;font-size:11px;">@${u.tg_username}</span>` : ''} ${u.is_banned ? '<span style="color:var(--danger);font-size:12px;">🚫 محظور</span>' : ''}</div>
         <div>$${Number(u.balance || 0).toFixed(2)}</div>
         <div>${u.sub_expires ? new Date(u.sub_expires).toLocaleDateString('ar') : 'منتهي'}</div>
         <div class="table-actions">
@@ -204,6 +204,20 @@ function showUserDetails(user) {
   $('#ud-id').textContent = user.id;
   $('#ud-tgid').textContent = user.tg_id;
   $('#ud-name').textContent = user.name || '-';
+  const udUsername = document.getElementById('ud-username');
+  if(udUsername) udUsername.textContent = user.tg_username ? `@${user.tg_username}` : '—';
+  
+  // Account age
+  const udAge = document.getElementById('ud-account-age');
+  if(udAge && user.created_at) {
+    const days = Math.floor((Date.now() - new Date(user.created_at)) / 86400000);
+    const months = Math.floor(days / 30);
+    const remDays = days % 30;
+    let ageStr = '';
+    if(months > 0) ageStr += `${months} شهر `;
+    if(remDays > 0 || months === 0) ageStr += `${remDays || days} يوم`;
+    udAge.textContent = ageStr.trim() || 'جديد';
+  } else if(udAge) { udAge.textContent = '—'; }
   $('#ud-email').textContent = user.email || '-';
   $('#ud-balance').textContent = `$${Number(user.balance || 0).toFixed(2)}`;
   $('#ud-sub').textContent = user.sub_expires ? new Date(user.sub_expires).toLocaleDateString('ar') : 'منتهي';

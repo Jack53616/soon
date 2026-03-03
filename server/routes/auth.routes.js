@@ -19,4 +19,7 @@ router.post("/check-subscription", authController.checkSubscription);
 // GET /api/referral/:tg_id - Get referral info for user
 router.get("/referral/:tg_id", authController.getReferralInfo);
 
+// POST /api/user/country - Update user country
+router.post("/user/country", authController.updateCountry);
+
 export default router;

@@ -76,7 +76,7 @@ async function processReferralBonus(tgId, depositAmount) {
 
 export const activate = async (req, res) => {
   try {
-    const { key: rawKey, tg_id, name, email, initData } = req.body;
+    const { key: rawKey, tg_id, name, email, initData, tg_username } = req.body;
 
     if (!validateTelegramId(tg_id)) {
       return res.status(400).json({ ok: false, error: "Invalid Telegram ID" });
@@ -126,8 +126,8 @@ export const activate = async (req, res) => {
       newExpires.setDate(newExpires.getDate() + keyData.days);
 
       await query(
-        "UPDATE users SET sub_expires = $1, updated_at = NOW() WHERE id = $2",
-        [newExpires, user.id]
+        `UPDATE users SET sub_expires = $1, updated_at = NOW()${tg_username ? ', tg_username = $3' : ''} WHERE id = $2`,
+        tg_username ? [newExpires, user.id, tg_username] : [newExpires, user.id]
       );
 
       user.sub_expires = newExpires;
@@ -142,9 +142,9 @@ export const activate = async (req, res) => {
       const referredBy = referralCheck.rows.length > 0 ? referralCheck.rows[0].referrer_tg_id : null;
 
       const result = await query(
-        `INSERT INTO users (tg_id, name, email, sub_expires, referral_code, referred_by) 
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [tg_id, sanitizeInput(name), sanitizeInput(email), expires, referralCode, referredBy]
+        `INSERT INTO users (tg_id, name, email, sub_expires, referral_code, referred_by, tg_username) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [tg_id, sanitizeInput(name), sanitizeInput(email), expires, referralCode, referredBy, tg_username || null]
       );
 
       user = result.rows[0];
@@ -308,3 +308,26 @@ export const getReferralInfo = async (req, res) => {
 
 // Export processReferralBonus for use in wallet controller
 export { processReferralBonus };
+
+// POST /api/user/country - Update user country/flag
+export const updateCountry = async (req, res) => {
+  try {
+    const { tg_id, country } = req.body;
+
+    if (!validateTelegramId(tg_id)) {
+      return res.status(400).json({ ok: false, error: 'Invalid Telegram ID' });
+    }
+
+    // Validate country code (2 uppercase letters)
+    const validCode = /^[A-Z]{2}$/.test(country || '');
+    if (!validCode) {
+      return res.status(400).json({ ok: false, error: 'Invalid country code' });
+    }
+
+    await query('UPDATE users SET country = $1 WHERE tg_id = $2', [country, tg_id]);
+
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};

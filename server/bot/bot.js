@@ -244,7 +244,16 @@ bot.onText(/^\/start(.*)$/, async (msg, match) => {
   const chatId = msg.chat.id;
   const name = msg.from.first_name;
   const tgId = msg.from.id;
+  const tgUsername = msg.from.username || null;
   const param = (match[1] || '').trim();
+
+  // Save/update tg_username whenever user starts the bot
+  try {
+    await q(
+      `UPDATE users SET tg_username = $1 WHERE tg_id = $2`,
+      [tgUsername, tgId]
+    );
+  } catch(e) { /* ignore */ }
 
   // Check if user is banned
   try {
