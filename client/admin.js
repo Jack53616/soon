@@ -204,6 +204,9 @@ function showUserDetails(user) {
   $('#ud-id').textContent = user.id;
   $('#ud-tgid').textContent = user.tg_id;
   $('#ud-name').textContent = user.name || '-';
+  // Pre-fill edit name input
+  const editNameInput = document.getElementById('editNameInput');
+  if(editNameInput) editNameInput.value = user.name || '';
   const udUsername = document.getElementById('ud-username');
   if(udUsername) udUsername.textContent = user.tg_username ? `@${user.tg_username}` : '—';
   
@@ -238,6 +241,37 @@ function showUserDetails(user) {
 $('#closeUserDetails')?.addEventListener('click', () => {
   $('#userDetails').classList.add('hidden');
   state.currentUser = null;
+});
+
+// Edit User Name
+$('#editNameBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  const newName = document.getElementById('editNameInput')?.value?.trim();
+  if (!newName) return toast('أدخل الاسم الجديد');
+  if (newName.length < 2) return toast('الاسم قصير جداً (2 أحرف على الأقل)');
+  if (newName.length > 60) return toast('الاسم طويل جداً (60 حرف كحد أقصى)');
+  
+  const btn = document.getElementById('editNameBtn');
+  btn.disabled = true;
+  btn.textContent = '...';
+  
+  const r = await api('/api/admin/user/name', 'POST', {
+    user_id: state.currentUser.id,
+    name: newName
+  });
+  
+  btn.disabled = false;
+  btn.textContent = 'حفظ الاسم';
+  
+  if (r.ok) {
+    toast('✅ تم تغيير الاسم بنجاح');
+    $('#ud-name').textContent = newName;
+    state.currentUser.name = newName;
+    // Update name in users list
+    loadUsers();
+  } else {
+    toast('❌ ' + (r.error || 'خطأ في تغيير الاسم'));
+  }
 });
 
 // Balance Management

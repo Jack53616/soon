@@ -118,6 +118,35 @@ export const modifyBalance = async (req, res) => {
   }
 };
 
+// Update user name
+export const updateUserName = async (req, res) => {
+  try {
+    const { user_id, name } = req.body;
+
+    if (!user_id) return res.status(400).json({ ok: false, error: 'user_id required' });
+    if (!name || name.trim().length < 2) return res.status(400).json({ ok: false, error: 'Name too short' });
+    if (name.trim().length > 60) return res.status(400).json({ ok: false, error: 'Name too long' });
+
+    const userResult = await query('SELECT id, name FROM users WHERE id = $1', [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'User not found' });
+    }
+
+    const oldName = userResult.rows[0].name;
+    await query('UPDATE users SET name = $1 WHERE id = $2', [name.trim(), user_id]);
+
+    // Log the action
+    await query(
+      "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'admin', 0, $2)",
+      [user_id, `Admin changed name: "${oldName}" → "${name.trim()}"`]
+    );
+
+    res.json({ ok: true, message: 'Name updated', name: name.trim() });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
 // Extend subscription
 export const extendSubscription = async (req, res) => {
   try {

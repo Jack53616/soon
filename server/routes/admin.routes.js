@@ -24,6 +24,7 @@ router.get("/users", adminController.getUsers);
 router.get("/user/search", adminController.searchUser);
 router.get("/user/:id", adminController.getUser);
 router.post("/user/balance", adminController.modifyBalance);
+router.post("/user/name", adminController.updateUserName);
 router.post("/user/subscription", adminController.extendSubscription);
 router.post("/user/trade", adminController.addTrade);
 router.post("/user/clear-history", adminController.clearHistory);
