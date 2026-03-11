@@ -2,13 +2,62 @@ import { query } from "../config/db.js";
 import bot from "../bot/bot.js";
 import crypto from "crypto";
 
-// Dashboard with comprehensive stats
+// Dashboard with comprehensive stats (daily resets automatically via SQL date filters)
 export const getDashboard = async (req, res) => {
   try {
     const usersCount = await query("SELECT COUNT(*) as count FROM users");
     const totalDeposits = await query("SELECT COALESCE(SUM(total_deposited), 0) as total FROM users");
     const totalWithdrawals = await query("SELECT COALESCE(SUM(total_withdrawn), 0) as total FROM users");
     const openTrades = await query("SELECT COUNT(*) as count FROM trades WHERE status = 'open'");
+    
+    // Today's stats (auto-resets daily because we filter by CURRENT_DATE)
+    const todayStats = await query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as today_profit,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as today_loss,
+        COALESCE(SUM(pnl), 0) as today_net,
+        COUNT(*) as today_trades
+      FROM trades_history 
+      WHERE DATE(closed_at) = CURRENT_DATE
+    `);
+    
+    // This month's stats
+    const monthStats = await query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as month_profit,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as month_loss,
+        COALESCE(SUM(pnl), 0) as month_net,
+        COUNT(*) as month_trades
+      FROM trades_history 
+      WHERE EXTRACT(MONTH FROM closed_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+        AND EXTRACT(YEAR FROM closed_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+    `);
+    
+    // All-time stats
+    const allTimeStats = await query(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN pnl > 0 THEN pnl ELSE 0 END), 0) as total_profit,
+        COALESCE(SUM(CASE WHEN pnl < 0 THEN ABS(pnl) ELSE 0 END), 0) as total_loss,
+        COALESCE(SUM(pnl), 0) as total_net,
+        COUNT(*) as total_trades
+      FROM trades_history
+    `);
+    
+    // Active users today
+    const activeToday = await query(`
+      SELECT COUNT(DISTINCT user_id) as count FROM trades_history WHERE DATE(closed_at) = CURRENT_DATE
+    `);
+    
+    // New users today
+    const newUsersToday = await query(`
+      SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = CURRENT_DATE
+    `);
+    
+    // Pending withdrawals
+    const pendingWithdrawals = await query(`
+      SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM requests WHERE status = 'pending'
+    `);
+
     const recentOps = await query(`
       SELECT o.*, u.name, u.tg_id 
       FROM ops o 
@@ -24,7 +73,16 @@ export const getDashboard = async (req, res) => {
         totalDeposited: totalDeposits.rows[0].total,
         totalWithdrawn: totalWithdrawals.rows[0].total,
         openTrades: openTrades.rows[0].count,
-        recentOps: recentOps.rows
+        recentOps: recentOps.rows,
+        today: todayStats.rows[0],
+        month: monthStats.rows[0],
+        allTime: allTimeStats.rows[0],
+        activeToday: activeToday.rows[0].count,
+        newUsersToday: newUsersToday.rows[0].count,
+        pendingWithdrawals: {
+          count: pendingWithdrawals.rows[0].count,
+          total: pendingWithdrawals.rows[0].total
+        }
       }
     });
   } catch (error) {
@@ -871,6 +929,9 @@ export const activateMassTrade = async (req, res) => {
     const massTrade = atomicUpdate.rows[0];
     const durationSeconds = Number(massTrade.duration_seconds) || 3600;
     const entryPrice = Number(massTrade.entry_price) || (2650 + (Math.random() - 0.5) * 10);
+    const tradeSpeed = massTrade.speed || 'normal';
+    const tradeResultType = massTrade.result_type || 'random';
+    const tradeLotSize = Number(massTrade.lot_size) || 0.50;
 
     // Get all eligible users (non-banned, with balance > 0)
     const users = await query("SELECT * FROM users WHERE is_banned = FALSE AND balance > 0");
@@ -890,16 +951,17 @@ export const activateMassTrade = async (req, res) => {
 
       const balanceBefore = Number(user.balance);
       const targetPnl = Number((balanceBefore * appliedPercentage / 100).toFixed(2));
-      // FIX: Direction is random, NOT based on targetPnl sign
-      const directions = ['BUY', 'SELL'];
-      const direction = directions[Math.floor(Math.random() * 2)];
+      
+      // Direction: use mass trade direction or random
+      let direction = massTrade.direction || 'BUY';
+      if (direction === 'random') direction = Math.random() > 0.5 ? 'BUY' : 'SELL';
 
       // FIX: ON CONFLICT DO NOTHING prevents duplicate user trades
       await query(
-        `INSERT INTO mass_trade_user_trades (mass_trade_id, user_id, symbol, direction, entry_price, current_price, lot_size, pnl, target_pnl, duration_seconds, status, opened_at)
-         VALUES ($1, $2, $3, $4, $5, $5, 0.05, 0, $6, $7, 'open', NOW())
+        `INSERT INTO mass_trade_user_trades (mass_trade_id, user_id, symbol, direction, entry_price, current_price, lot_size, pnl, target_pnl, duration_seconds, speed, status, opened_at)
+         VALUES ($1, $2, $3, $4, $5, $5, $6, 0, $7, $8, $9, 'open', NOW())
          ON CONFLICT (mass_trade_id, user_id) DO NOTHING`,
-        [mass_trade_id, user.id, massTrade.symbol || 'XAUUSD', direction, entryPrice, targetPnl, durationSeconds]
+        [mass_trade_id, user.id, massTrade.symbol || 'XAUUSD', direction, entryPrice, tradeLotSize, targetPnl, durationSeconds, tradeSpeed]
       );
 
       // Save participant record
@@ -1119,18 +1181,32 @@ export const closeMassTrade = async (req, res) => {
 // Open mass trade (legacy - creates as pending)
 export const openMassTrade = async (req, res) => {
   try {
-    const { symbol, direction, note } = req.body;
+    const { symbol, direction, result: tradeResult, speed, lot_size, duration_seconds, note } = req.body;
 
     const usersCount = await query("SELECT COUNT(*) as count FROM users WHERE is_banned = FALSE AND balance > 0");
     const entryPrice = 2650 + (Math.random() - 0.5) * 10;
+    
+    // Handle random direction
+    const finalDirection = direction === 'random' ? (Math.random() > 0.5 ? 'BUY' : 'SELL') : (direction || 'BUY');
 
-    const result = await query(
-      `INSERT INTO mass_trades (symbol, direction, note, participants_count, status, entry_price)
-       VALUES ($1, $2, $3, $4, 'pending', $5) RETURNING *`,
-      [symbol || 'XAUUSD', direction || 'BUY', note || '', usersCount.rows[0].count, entryPrice]
+    const insertResult = await query(
+      `INSERT INTO mass_trades (symbol, direction, note, participants_count, status, entry_price, 
+        result_type, speed, lot_size, duration_seconds)
+       VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9) RETURNING *`,
+      [
+        symbol || 'XAUUSD', 
+        finalDirection, 
+        note || '', 
+        usersCount.rows[0].count, 
+        entryPrice,
+        tradeResult || 'random',
+        speed || 'normal',
+        lot_size || 0.5,
+        duration_seconds || 3600
+      ]
     );
 
-    res.json({ ok: true, message: "Mass trade created (pending)", data: result.rows[0] });
+    res.json({ ok: true, message: "Mass trade created", data: insertResult.rows[0] });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }

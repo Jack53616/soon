@@ -123,6 +123,39 @@ async function loadDashboard() {
   $('#k-wd').textContent = `$${Number(d.totalWithdrawn || 0).toLocaleString()}`;
   $('#k-open').textContent = d.openTrades || 0;
   
+  // Today's stats (auto-resets daily)
+  if (d.today) {
+    const todayNet = Number(d.today.today_net || 0);
+    const el = $('#k-today-net');
+    if(el) { el.textContent = `${todayNet >= 0 ? '+' : ''}$${Math.abs(todayNet).toFixed(2)}`; el.style.color = todayNet >= 0 ? '#00d68f' : '#ff3b63'; }
+    const profitEl = $('#k-today-profit');
+    if(profitEl) profitEl.textContent = `+$${Number(d.today.today_profit || 0).toFixed(2)}`;
+    const lossEl = $('#k-today-loss');
+    if(lossEl) lossEl.textContent = `-$${Number(d.today.today_loss || 0).toFixed(2)}`;
+    const tradesEl = $('#k-today-trades');
+    if(tradesEl) tradesEl.textContent = d.today.today_trades || 0;
+  }
+  
+  // Monthly stats
+  if (d.month) {
+    const monthNet = Number(d.month.month_net || 0);
+    const el = $('#k-month-net');
+    if(el) { el.textContent = `${monthNet >= 0 ? '+' : ''}$${Math.abs(monthNet).toFixed(2)}`; el.style.color = monthNet >= 0 ? '#00d68f' : '#ff3b63'; }
+  }
+  
+  // All-time stats
+  if (d.allTime) {
+    const allNet = Number(d.allTime.total_net || 0);
+    const el = $('#k-alltime-net');
+    if(el) { el.textContent = `${allNet >= 0 ? '+' : ''}$${Math.abs(allNet).toFixed(2)}`; el.style.color = allNet >= 0 ? '#00d68f' : '#ff3b63'; }
+  }
+  
+  // Active today & pending withdrawals
+  const activeEl = $('#k-active-today');
+  if(activeEl) activeEl.textContent = d.activeToday || 0;
+  const pendingEl = $('#k-pending-wd');
+  if(pendingEl && d.pendingWithdrawals) pendingEl.textContent = `${d.pendingWithdrawals.count} ($${Number(d.pendingWithdrawals.total || 0).toFixed(0)})`;
+  
   const recent = r.data.recentOps || [];
   $('#recent').innerHTML = `
     <div class="table-row header">
@@ -690,13 +723,27 @@ async function loadMassTrades() {
 $('#openMassTradeBtn')?.addEventListener('click', async () => {
   const symbol = $('#massSymbol').value;
   const direction = $('#massDirection').value;
+  const result = $('#massResult')?.value || 'random';
+  const speed = $('#massSpeed')?.value || 'normal';
+  const lotSize = Number($('#massLotSize')?.value || 0.5);
+  const durationVal = Number($('#massDuration')?.value || 1);
+  const durationUnit = $('#massDurationUnit')?.value || 'hours';
   const note = $('#massNote').value.trim();
   
-  if (!confirm('هل أنت متأكد من فتح صفقة جماعية جديدة (معلّقة)؟')) return;
+  // Convert duration to seconds
+  let durationSec;
+  if (durationUnit === 'hours') durationSec = durationVal * 3600;
+  else if (durationUnit === 'minutes') durationSec = durationVal * 60;
+  else durationSec = durationVal;
   
-  const r = await api('/api/admin/mass-trade/open', 'POST', { symbol, direction, note });
+  if (!confirm('هل أنت متأكد من فتح صفقة جماعية جديدة؟')) return;
+  
+  const r = await api('/api/admin/mass-trade/open', 'POST', { 
+    symbol, direction, result, speed, lot_size: lotSize, 
+    duration_seconds: durationSec, note 
+  });
   if (r.ok) {
-    toast(`✅ تم إنشاء صفقة جماعية معلّقة`);
+    toast(`✅ تم إنشاء صفقة جماعية`);
     loadMassTrades();
     loadTodayScheduled();
     $('#massNote').value = '';
@@ -1340,13 +1387,15 @@ $('#viewReferralsBtn')?.addEventListener('click', async () => {
       listEl.innerHTML = `
         <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">👥 المحالين (${r.referrals.length}):</div>
         ${r.referrals.map(ref => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:6px;margin-bottom:4px;">
-            <div>
-              <span style="color:#eee;">${ref.name || 'غير معروف'}</span>
-              <span style="color:#666;font-size:11px;margin-right:8px;">TG: ${ref.tg_id}</span>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;border:1px solid rgba(255,255,255,0.05);">
+            <div style="flex:1;">
+              <div style="color:#eee;font-weight:600;">${ref.name || 'غير معروف'}</div>
+              <div style="color:#666;font-size:11px;">TG: ${ref.tg_id} • ID: ${ref.id}</div>
             </div>
-            <div style="display:flex;gap:6px;">
-              <button class="btn-small danger" onclick="removeReferral(${ref.id}, ${state.currentUser.id})">حذف</button>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" class="input small" id="transferTo_${ref.id}" placeholder="نقل إلى TG ID" style="width:120px;font-size:11px;padding:4px 6px;"/>
+              <button class="btn-small" style="background:rgba(163,113,247,0.2);border:1px solid #a371f7;color:#a371f7;font-size:11px;" onclick="transferSingleReferral(${ref.id}, ${ref.tg_id})">🔄 نقل</button>
+              <button class="btn-small danger" style="font-size:11px;" onclick="removeReferral(${ref.id}, ${state.currentUser.id})">❌ حذف</button>
             </div>
           </div>
         `).join('')}
@@ -1393,7 +1442,24 @@ window.removeReferral = async (referralId, parentUserId) => {
   const r = await api('/api/admin/referral/remove-single', 'POST', { referral_id: referralId });
   if (r.ok) {
     toast('✅ تم حذف الإحالة');
-    // Refresh referrals list
+    $('#viewReferralsBtn')?.click();
+  } else toast('❌ ' + (r.error || 'خطأ'));
+};
+
+// Global function for transferring a single referral to a new referrer
+window.transferSingleReferral = async (userId, userTgId) => {
+  const inputEl = document.getElementById(`transferTo_${userId}`);
+  const newReferrerTgId = inputEl?.value?.trim();
+  if (!newReferrerTgId) return toast('أدخل Telegram ID للنقل إليه');
+  if (String(newReferrerTgId) === String(userTgId)) return toast('لا يمكن نقل الشخص لنفسه');
+  if (!confirm(`هل تريد نقل المستخدم (ID: ${userId}) إلى المُحيل TG: ${newReferrerTgId}؟`)) return;
+  
+  const r = await api('/api/admin/referral/transfer', 'POST', { 
+    user_id: userId, 
+    new_referrer_tg_id: newReferrerTgId 
+  });
+  if (r.ok) {
+    toast('✅ تم نقل الإحالة بنجاح');
     $('#viewReferralsBtn')?.click();
   } else toast('❌ ' + (r.error || 'خطأ'));
 };

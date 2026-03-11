@@ -962,14 +962,16 @@ $("#whatsapp").onclick = ()=> window.open("https://wa.me/message/P6BBPSDL2CC4D1"
 function hydrateUser(user){
   if(!user) return;
   const balance = Number(user.balance || 0);
-  const wins = Number(user.wins || 0);
-  const losses = Number(user.losses || 0);
   
   $("#balance").textContent = "$" + balance.toFixed(2);
   $("#subLeft").textContent = user.sub_expires ? new Date(user.sub_expires).toLocaleDateString() : "—";
   
-  $("#pnlDay").textContent = "$" + wins.toFixed(2);
-  $("#pnlMonth").textContent = "$" + (wins - losses).toFixed(2);
+  // pnlDay and pnlMonth are updated by loadHomeStats() from real API data
+  // Only set them here if stats haven't loaded yet
+  if (!state.homeStatsLoaded) {
+    $("#pnlDay").textContent = "$0.00";
+    $("#pnlMonth").textContent = "$0.00";
+  }
 
   const name = user.name || user.first_name || "";
   const email = user.email || "";
@@ -1189,6 +1191,7 @@ async function refreshRequests(){
   if(rejectedEl) rejectedEl.textContent = rejected;
 }
 
+// Load stats for both home page and stats tab
 async function loadStats(){
   const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
   if(!tg) return;
@@ -1196,46 +1199,69 @@ async function loadStats(){
   try{
     const r = await fetch(`/api/stats/${tg}`).then(r=>r.json());
     if(r.ok){
-      // Update stats
+      // Helper to set stat values
       const setVal = (id, val, isMoney=true) => {
         const el = $(id);
         if(el) {
-          el.textContent = isMoney ? (val>=0?"+":"")+"$"+Math.abs(val).toFixed(2) : val;
+          el.textContent = isMoney ? (val>=0?"+":"")+ "$"+Math.abs(val).toFixed(2) : val;
           if(isMoney) el.style.color = val >= 0 ? "#9df09d" : "#ff8899";
         }
       };
       
+      // Update Stats tab
       setVal("#statToday", r.daily.net);
       setVal("#statMonth", r.monthly.net);
       setVal("#statAll", r.allTime.net);
       setVal("#statCount", r.allTime.count, false);
       
+      // Update Home page Day/Month cards with REAL data
+      const pnlDayEl = $("#pnlDay");
+      const pnlMonthEl = $("#pnlMonth");
+      if(pnlDayEl) {
+        const dNet = r.daily.net;
+        pnlDayEl.textContent = (dNet >= 0 ? "+" : "") + "$" + Math.abs(dNet).toFixed(2);
+        pnlDayEl.style.color = dNet >= 0 ? "#9df09d" : "#ff8899";
+      }
+      if(pnlMonthEl) {
+        const mNet = r.monthly.net;
+        pnlMonthEl.textContent = (mNet >= 0 ? "+" : "") + "$" + Math.abs(mNet).toFixed(2);
+        pnlMonthEl.style.color = mNet >= 0 ? "#9df09d" : "#ff8899";
+      }
+      
+      state.homeStatsLoaded = true;
+      
       // Update history list
       const box = $("#historyList");
-      box.innerHTML = "";
-      
-      if(r.history && r.history.length > 0){
-        r.history.forEach(trade => {
-          const div = document.createElement("div");
-          div.className = "op";
-          const pnl = Number(trade.pnl);
-          const color = pnl >= 0 ? "#9df09d" : "#ff8899";
-          const date = new Date(trade.closed_at).toLocaleDateString();
-          
-          div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; width:100%">
-              <div>
-                <span>${trade.symbol} ${trade.direction}</span>
-                <small>${date} • ${trade.close_reason}</small>
+      if(box) {
+        box.innerHTML = "";
+        
+        if(r.history && r.history.length > 0){
+          r.history.forEach(trade => {
+            const div = document.createElement("div");
+            div.className = "op";
+            const pnl = Number(trade.pnl);
+            const color = pnl >= 0 ? "#9df09d" : "#ff8899";
+            const date = new Date(trade.closed_at).toLocaleDateString();
+            const reason = trade.close_reason === 'auto_expire' ? '✅ مكتمل' 
+              : trade.close_reason === 'admin_close' ? '🔒 إداري' 
+              : trade.close_reason === 'user_close' ? '✋ يدوي'
+              : trade.close_reason || '';
+            
+            div.innerHTML = `
+              <div style="display:flex; justify-content:space-between; width:100%">
+                <div>
+                  <span>${trade.symbol || 'XAUUSD'} ${trade.direction || ''}</span>
+                  <small>${date} • ${reason}</small>
+                </div>
+                <b style="color:${color}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</b>
               </div>
-              <b style="color:${color}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</b>
-            </div>
-          `;
-          box.appendChild(div);
-        });
-      } else {
-        const noHistoryText = state.lang === 'ar' ? 'لا يوجد سجل بعد' : 'No history yet';
-        box.innerHTML = `<div class="op" style="justify-content:center; opacity:0.5">${noHistoryText}</div>`;
+            `;
+            box.appendChild(div);
+          });
+        } else {
+          const noHistoryText = state.lang === 'ar' ? 'لا يوجد سجل بعد' : 'No history yet';
+          box.innerHTML = `<div class="op" style="justify-content:center; opacity:0.5">${noHistoryText}</div>`;
+        }
       }
     }
   }catch(err){

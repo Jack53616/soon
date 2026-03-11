@@ -82,7 +82,71 @@
           </div>
         </div>
 
-        <div class="card glass">
+        <!-- Today's Performance (auto-resets daily) -->
+        <div class="kpi-grid" style="margin-top: 16px;">
+          <div class="kpi-card glass" style="border: 1px solid rgba(0,214,143,0.3);">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-today-net" style="color:#00d68f;">$0</span>
+              <span class="kpi-label">صافي اليوم</span>
+            </div>
+          </div>
+          <div class="kpi-card glass" style="border: 1px solid rgba(0,214,143,0.3);">
+            <div class="kpi-icon">🟢</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-today-profit" style="color:#00d68f;">$0</span>
+              <span class="kpi-label">أرباح اليوم</span>
+            </div>
+          </div>
+          <div class="kpi-card glass" style="border: 1px solid rgba(255,59,99,0.3);">
+            <div class="kpi-icon">🔴</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-today-loss" style="color:#ff3b63;">$0</span>
+              <span class="kpi-label">خسائر اليوم</span>
+            </div>
+          </div>
+          <div class="kpi-card glass" style="border: 1px solid rgba(88,166,255,0.3);">
+            <div class="kpi-icon">📊</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-today-trades">0</span>
+              <span class="kpi-label">صفقات اليوم</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly & All-Time Stats -->
+        <div class="kpi-grid" style="margin-top: 16px;">
+          <div class="kpi-card glass">
+            <div class="kpi-icon">🗓️</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-month-net">$0</span>
+              <span class="kpi-label">صافي الشهر</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">🌟</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-alltime-net">$0</span>
+              <span class="kpi-label">صافي الكل</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">👤</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-active-today">0</span>
+              <span class="kpi-label">نشطون اليوم</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-pending-wd">0</span>
+              <span class="kpi-label">سحوبات معلقة</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass" style="margin-top: 16px;">
           <div class="card-header">
             <h3>📋 آخر النشاط</h3>
           </div>
@@ -218,10 +282,7 @@
               <button id="viewReferralsBtn" class="btn" style="background:rgba(88,166,255,0.2);border:1px solid #58a6ff;">👥 عرض المحالين</button>
               <button id="removeReferrerBtn" class="btn warning">❌ إزالة المُحيل</button>
             </div>
-            <div class="action-row" style="margin-top:8px;">
-              <input id="transferRefToId" type="number" class="input small" placeholder="نقل إلى User ID"/>
-              <button id="transferReferralBtn" class="btn" style="background:rgba(163,113,247,0.2);border:1px solid #a371f7;">🔄 نقل الإحالة</button>
-            </div>
+            <p style="color: var(--muted); font-size: 12px; margin-top: 8px;">💡 اضغط "عرض المحالين" لرؤية قائمة المحالين مع خيارات نقل/حذف فردية لكل شخص</p>
             <div id="userReferralsList" class="hidden" style="margin-top:12px;"></div>
           </div>
 
@@ -290,24 +351,51 @@
           <div id="todayScheduled" class="today-trades-grid"></div>
         </div>
 
-        <!-- Create Manual Mass Trade -->
-        <div class="card glass">
+        <!-- Create Manual Mass Trade - ENHANCED -->
+        <div class="card glass" style="border: 2px solid rgba(163,113,247,0.3);">
           <div class="card-header">
-            <h3>🎯 فتح صفقة جماعية يدوية</h3>
+            <h3>🎯 فتح صفقة جماعية يدوية (محسّن)</h3>
           </div>
           <div class="action-section">
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
+              فتح صفقة لجميع المستخدمين النشطين مع تحكم كامل بالاتجاه والنتيجة والسرعة والمدة.
+            </p>
             <div class="action-row">
               <select id="massSymbol" class="input small">
                 <option value="XAUUSD">XAUUSD (ذهب)</option>
                 <option value="BTCUSDT">BTCUSDT</option>
                 <option value="ETHUSDT">ETHUSDT</option>
+                <option value="EURUSD">EURUSD</option>
+                <option value="GBPUSD">GBPUSD</option>
               </select>
               <select id="massDirection" class="input small">
                 <option value="BUY">BUY (شراء)</option>
                 <option value="SELL">SELL (بيع)</option>
+                <option value="random">🎲 عشوائي</option>
               </select>
-              <input id="massNote" class="input" placeholder="ملاحظة (اختياري)"/>
-              <button id="openMassTradeBtn" class="btn success">فتح صفقة جماعية</button>
+              <select id="massResult" class="input small">
+                <option value="random">🎲 عشوائي</option>
+                <option value="win">✅ ربح</option>
+                <option value="lose">❌ خسارة</option>
+              </select>
+            </div>
+            <div class="action-row" style="margin-top:8px;">
+              <input id="massLotSize" type="number" step="0.01" class="input small" placeholder="حجم اللوت" value="0.50"/>
+              <select id="massDurationUnit" class="input small">
+                <option value="hours">ساعات</option>
+                <option value="minutes">دقائق</option>
+                <option value="seconds">ثواني</option>
+              </select>
+              <input id="massDuration" type="number" class="input small" placeholder="المدة" value="1"/>
+              <select id="massSpeed" class="input small">
+                <option value="normal">عادي</option>
+                <option value="fast">⚡ سريع</option>
+                <option value="turbo">🚀 تيربو</option>
+              </select>
+            </div>
+            <div class="action-row" style="margin-top:8px;">
+              <input id="massNote" class="input" placeholder="ملاحظة (اختياري)" style="flex:2;"/>
+              <button id="openMassTradeBtn" class="btn success" style="flex:1;">🚀 فتح صفقة جماعية</button>
             </div>
           </div>
         </div>
