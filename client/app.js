@@ -781,73 +781,56 @@ function renderMethod(){
 }
 renderMethod();
 
-// ===== Withdraw Fee Confirmation Modal =====
-function showWithdrawConfirm(tg, amount, method, address, feeData) {
+// ===== Withdraw Confirmation Modal (Clean - No fee details shown) =====
+function showWithdrawConfirm(tg, amount, method, address) {
   const isAr = state.lang === 'ar';
-  const feeRate = feeData.fee_rate || 0;
-  const feeAmount = feeData.fee_amount || 0;
-  const netAmount = feeData.net_amount || amount;
-  const daysLabel = feeData.days_since_deposit ?? '?';
-
-  let tierLabel = '';
-  if (isAr) {
-    if (feeRate === 25) tierLabel = 'حساب جديد (أقل من 15 يوم)';
-    else if (feeRate === 15) tierLabel = 'بين 16-30 يوم';
-    else if (feeRate === 5) tierLabel = 'بعد 30 يوم';
-    else if (feeRate === 3) tierLabel = 'عميل وفي ❤️ (90+ يوم)';
-    else tierLabel = feeRate + '%';
-  } else {
-    if (feeRate === 25) tierLabel = 'New account (< 15 days)';
-    else if (feeRate === 15) tierLabel = '16-30 days';
-    else if (feeRate === 5) tierLabel = 'After 30 days';
-    else if (feeRate === 3) tierLabel = 'Loyal client ❤️ (90+ days)';
-    else tierLabel = feeRate + '%';
-  }
 
   const overlay = document.createElement('div');
   overlay.id = 'withdrawConfirmOverlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(8px);';
 
-  const warningHtml = feeRate > 5 ? `
-    <div style="background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#d29922;">
-      ⚠ ${isAr
-        ? 'رسوم السحب مرتفعة لأن حسابك عمره ' + daysLabel + ' يوم. تنخفض الرسوم بعد 30 يوم إلى 5% وبعد 90 يوم إلى 3%.'
-        : 'Higher fee applies because your account is ' + daysLabel + ' days old. Fee drops to 5% after 30 days and 3% after 90 days.'
-      }
-    </div>
-  ` : '';
+  const methodNames = { usdt_trc20: 'USDT (TRC20)', usdt_erc20: 'USDT (ERC20)', btc: 'Bitcoin', eth: 'Ethereum' };
+  const methodName = methodNames[method] || 'USDT (TRC20)';
+  const shortAddr = address.length > 16 ? address.slice(0,8) + '...' + address.slice(-6) : address;
 
   overlay.innerHTML = `
-    <div style="background:#161b22;border:1px solid #30363d;border-radius:16px;padding:28px;max-width:380px;width:100%;">
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:32px;margin-bottom:8px">◆</div>
-        <div style="font-size:18px;font-weight:700;">${isAr ? 'تأكيد طلب السحب' : 'Confirm Withdrawal'}</div>
+    <div style="background:linear-gradient(145deg,#0d0d0d,#1a1a1a);border:1px solid rgba(255,215,0,0.15);border-radius:20px;padding:32px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="width:56px;height:56px;margin:0 auto 12px;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(184,134,11,0.15));border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,215,0,0.2);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+        <div style="font-size:18px;font-weight:700;color:#FFD700;">${isAr ? 'تأكيد طلب السحب' : 'Confirm Withdrawal'}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">${isAr ? 'يرجى مراجعة التفاصيل' : 'Please review the details'}</div>
       </div>
-      <div style="background:#0d1117;border-radius:12px;padding:16px;margin-bottom:20px;">
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #30363d;">
-          <span style="color:#8b949e;font-size:13px">${isAr ? 'المبلغ المطلوب' : 'Requested Amount'}</span>
-          <span style="font-weight:600">${amount.toFixed(2)}</span>
+      <div style="background:rgba(255,215,0,0.03);border:1px solid rgba(255,215,0,0.08);border-radius:14px;padding:16px;margin-bottom:20px;">
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">${isAr ? 'مبلغ السحب' : 'Withdrawal Amount'}</div>
+          <div style="font-size:32px;font-weight:800;color:#FFD700;margin-top:4px;">$${amount.toFixed(2)}</div>
         </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #30363d;">
-          <span style="color:#8b949e;font-size:13px">${isAr ? 'رسوم السحب' : 'Withdrawal Fee'} (${feeRate}%)</span>
-          <span style="color:#f85149;font-weight:600">-${feeAmount.toFixed(2)}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #30363d;">
-          <span style="color:#8b949e;font-size:13px">${isAr ? 'ستستلم' : 'You Receive'}</span>
-          <span style="color:#3fb950;font-weight:700;font-size:16px">${netAmount.toFixed(2)}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 0;">
-          <span style="color:#8b949e;font-size:13px">${isAr ? 'مستوى الرسوم' : 'Fee Tier'}</span>
-          <span style="color:#d29922;font-size:12px">${tierLabel}</span>
+        <div style="border-top:1px solid rgba(255,215,0,0.08);padding-top:12px;">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;">
+            <span style="color:#888;font-size:12px;">${isAr ? 'الطريقة' : 'Method'}</span>
+            <span style="color:#e0e0e0;font-size:12px;font-weight:600;">${methodName}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;">
+            <span style="color:#888;font-size:12px;">${isAr ? 'العنوان' : 'Address'}</span>
+            <span style="color:#e0e0e0;font-size:12px;font-family:monospace;">${shortAddr}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;">
+            <span style="color:#888;font-size:12px;">${isAr ? 'الحالة' : 'Status'}</span>
+            <span style="color:#FFD700;font-size:12px;font-weight:600;">${isAr ? 'قيد المراجعة' : 'Under Review'}</span>
+          </div>
         </div>
       </div>
-      ${warningHtml}
+      <div style="background:rgba(255,215,0,0.05);border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:11px;color:#B8860B;text-align:center;">
+        ${isAr ? 'سيتم مراجعة طلبك وتحويل المبلغ خلال 24 ساعة' : 'Your request will be reviewed and processed within 24 hours'}
+      </div>
       <div style="display:flex;gap:10px;">
-        <button id="confirmWithdrawBtn" style="flex:1;padding:12px;background:#3fb950;border:none;border-radius:8px;color:#000;font-size:15px;font-weight:700;cursor:pointer;">
-          ✓ ${isAr ? 'تأكيد' : 'Confirm'}
+        <button id="confirmWithdrawBtn" style="flex:1;padding:14px;background:linear-gradient(135deg,#FFD700,#B8860B);border:none;border-radius:10px;color:#000;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;">
+          ✓ ${isAr ? 'تأكيد السحب' : 'Confirm'}
         </button>
-        <button id="cancelWithdrawBtn" style="flex:1;padding:12px;background:transparent;border:1px solid #30363d;border-radius:8px;color:#8b949e;font-size:15px;cursor:pointer;">
-          ✗ ${isAr ? 'إلغاء' : 'Cancel'}
+        <button id="cancelWithdrawBtn" style="flex:1;padding:14px;background:transparent;border:1px solid rgba(255,215,0,0.2);border-radius:10px;color:#888;font-size:15px;cursor:pointer;transition:all 0.2s;">
+          ${isAr ? 'إلغاء' : 'Cancel'}
         </button>
       </div>
     </div>
@@ -857,11 +840,10 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
   document.getElementById('cancelWithdrawBtn').onclick = () => overlay.remove();
 
   document.getElementById('confirmWithdrawBtn').onclick = async () => {
-    overlay.remove();
-    const btn = $("#reqWithdraw");
-    const originalText = btn.textContent;
-    btn.textContent = isAr ? 'جاري الإرسال...' : 'Sending...';
-    btn.disabled = true;
+    const confirmBtn = document.getElementById('confirmWithdrawBtn');
+    confirmBtn.textContent = isAr ? 'جاري الإرسال...' : 'Sending...';
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = '0.6';
 
     try {
       const r = await fetch("/api/wallet/withdraw", {
@@ -870,11 +852,14 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
         body: JSON.stringify({ tg_id: tg, amount, method, address })
       }).then(r => r.json());
 
+      overlay.remove();
+
       if (!r.ok) {
         let errorMsg = r.error || "Error";
         if (errorMsg.includes("No saved address")) errorMsg = isAr ? 'احفظ عنوان المحفظة أولاً' : 'Save wallet address first';
         else if (errorMsg.includes("Insufficient")) errorMsg = isAr ? 'الرصيد غير كافي' : 'Insufficient balance';
-        else if (errorMsg.includes("maintenance")) errorMsg = isAr ? 'السحب متوقف مؤقتاً' : 'Withdrawals paused';
+        else if (errorMsg.includes("maintenance") || errorMsg.includes("توقيف")) errorMsg = isAr ? 'السحب متوقف مؤقتاً' : 'Withdrawals paused';
+        else if (errorMsg.includes("أقل من الحد") || errorMsg.includes("below minimum")) errorMsg = isAr ? 'المبلغ أقل من الحد الأدنى' : 'Amount below minimum';
         return notify("✗ " + errorMsg);
       }
 
@@ -884,10 +869,8 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
       await refreshUser();
       await refreshRequests();
     } catch (err) {
+      overlay.remove();
       notify(isAr ? '✗ خطأ في الاتصال' : '✗ Connection error');
-    } finally {
-      btn.textContent = originalText;
-      btn.disabled = false;
     }
   };
 }
@@ -906,23 +889,8 @@ $("#reqWithdraw").addEventListener("click", async () => {
   const userBalance = Number(state.user?.balance || 0);
   if (amount > userBalance) return notify(isAr ? "✗ الرصيد غير كافي" : "✗ Insufficient balance");
 
-  // Fetch fee preview then show confirmation modal
-  const btn = $("#reqWithdraw");
-  const originalText = btn.textContent;
-  btn.textContent = isAr ? 'جاري الحساب...' : 'Calculating...';
-  btn.disabled = true;
-
-  try {
-    const feeRes = await fetch(`/api/wallet/withdraw/fee-preview?tg_id=${tg}&amount=${amount}`).then(r => r.json());
-    btn.textContent = originalText;
-    btn.disabled = false;
-    const feeData = feeRes.ok ? feeRes : { fee_rate: 5, fee_amount: amount * 0.05, net_amount: amount * 0.95, days_since_deposit: '?' };
-    showWithdrawConfirm(tg, amount, state.method, address, feeData);
-  } catch (err) {
-    btn.textContent = originalText;
-    btn.disabled = false;
-    notify(isAr ? '✗ خطأ في الاتصال' : '✗ Connection error');
-  }
+  // Show confirmation directly - no fee preview needed
+  showWithdrawConfirm(tg, amount, state.method, address);
 });
 
 // Withdraw success animation

@@ -1585,3 +1585,114 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (btn.dataset.tab === 'custom') loadCustomTrades();
   });
 });
+
+
+// ===== Fee Management =====
+
+// Set fee override for specific user
+document.getElementById('setUserFeeBtn')?.addEventListener('click', async () => {
+  const userId = document.getElementById('feeUserId')?.value;
+  const feeValue = document.getElementById('feeOverrideValue')?.value;
+  if (!userId) return toast('✗ أدخل User ID');
+  if (feeValue === '' || feeValue === undefined) return toast('✗ أدخل نسبة الخصم');
+  
+  const fee = Number(feeValue);
+  if (fee < 0 || fee > 100) return toast('✗ النسبة يجب أن تكون بين 0 و 100');
+  
+  const r = await api('POST', '/user/fee/set', { user_id: userId, fee_override: fee });
+  if (r.ok) {
+    toast('✓ ' + r.message);
+  } else {
+    toast('✗ ' + (r.error || 'خطأ'));
+  }
+});
+
+// Remove fee override (use default)
+document.getElementById('removeUserFeeBtn')?.addEventListener('click', async () => {
+  const userId = document.getElementById('feeUserId')?.value;
+  if (!userId) return toast('✗ أدخل User ID');
+  
+  const r = await api('POST', '/user/fee/set', { user_id: userId, fee_override: null });
+  if (r.ok) {
+    toast('✓ ' + r.message);
+    document.getElementById('feeInfoResult').style.display = 'none';
+  } else {
+    toast('✗ ' + (r.error || 'خطأ'));
+  }
+});
+
+// Reset fee timer for user
+document.getElementById('resetUserFeeTimerBtn')?.addEventListener('click', async () => {
+  const userId = document.getElementById('feeUserId')?.value;
+  if (!userId) return toast('✗ أدخل User ID');
+  
+  const r = await api('POST', '/user/fee/reset-timer', { user_id: userId });
+  if (r.ok) {
+    toast('✓ ' + r.message);
+  } else {
+    toast('✗ ' + (r.error || 'خطأ'));
+  }
+});
+
+// Check user fee info
+document.getElementById('checkUserFeeBtn')?.addEventListener('click', async () => {
+  const userId = document.getElementById('feeUserId')?.value;
+  if (!userId) return toast('✗ أدخل User ID');
+  
+  const r = await api('GET', `/user/fee/${userId}`);
+  const infoDiv = document.getElementById('feeInfoResult');
+  
+  if (r.ok) {
+    const u = r.user;
+    const overrideText = u.fee_override !== null && u.fee_override !== undefined 
+      ? `<span style="color:#FFD700;font-weight:600;">${u.fee_override}% (مخصص)</span>` 
+      : `<span style="color:#aaa;">افتراضي</span>`;
+    
+    infoDiv.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>◇ الاسم: <b style="color:#e0e0e0;">${u.name || '-'}</b></div>
+        <div>◇ TG ID: <b style="color:#e0e0e0;">${u.tg_id}</b></div>
+        <div>◇ نسبة الخصم الحالية: <b style="color:#FFD700;">${u.current_fee_rate}%</b></div>
+        <div>◇ نوع الخصم: ${overrideText}</div>
+        <div>◇ أيام من آخر عملية: <b style="color:#d29922;">${u.days_since_last_action} يوم</b></div>
+        <div>◇ وصف: <b style="color:#aaa;">${u.fee_label}</b></div>
+        <div>◇ أول إيداع: <b style="color:#aaa;">${u.first_deposit_at ? new Date(u.first_deposit_at).toLocaleDateString('ar') : 'لم يودع'}</b></div>
+        <div>◇ آخر سحب: <b style="color:#aaa;">${u.last_withdrawal_at ? new Date(u.last_withdrawal_at).toLocaleDateString('ar') : 'لم يسحب'}</b></div>
+      </div>
+    `;
+    infoDiv.style.display = 'block';
+  } else {
+    infoDiv.innerHTML = `<span style="color:#f85149;">✗ ${r.error || 'المستخدم غير موجود'}</span>`;
+    infoDiv.style.display = 'block';
+  }
+});
+
+// Set fee for ALL users
+document.getElementById('setAllFeeBtn')?.addEventListener('click', async () => {
+  const feeValue = document.getElementById('allFeeOverrideValue')?.value;
+  if (feeValue === '' || feeValue === undefined) return toast('✗ أدخل نسبة الخصم');
+  
+  const fee = Number(feeValue);
+  if (fee < 0 || fee > 100) return toast('✗ النسبة يجب أن تكون بين 0 و 100');
+  
+  if (!confirm(`هل أنت متأكد من تعيين خصم ${fee}% لجميع المستخدمين؟`)) return;
+  
+  const r = await api('POST', '/users/fee/set-all', { fee_override: fee });
+  if (r.ok) {
+    toast(`✓ ${r.message} (${r.affected} مستخدم)`);
+  } else {
+    toast('✗ ' + (r.error || 'خطأ'));
+  }
+});
+
+// Remove fee for ALL users (back to default)
+document.getElementById('removeAllFeeBtn')?.addEventListener('click', async () => {
+  if (!confirm('هل أنت متأكد من إزالة الخصم المخصص لجميع المستخدمين والعودة للنظام الافتراضي؟')) return;
+  
+  const r = await api('POST', '/users/fee/set-all', { fee_override: null });
+  if (r.ok) {
+    toast(`✓ ${r.message} (${r.affected} مستخدم)`);
+  } else {
+    toast('✗ ' + (r.error || 'خطأ'));
+  }
+});

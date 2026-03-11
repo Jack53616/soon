@@ -9,21 +9,42 @@ import {
 } from "./agent.controller.js";
 
 // ===== HELPER: Calculate withdrawal fee =====
+// Fee is based on days since LAST withdrawal (or first deposit if never withdrawn)
+// Fee resets every time user withdraws
 export function calculateWithdrawalFee(user, amount) {
   const now = new Date();
-  const firstDeposit = user.first_deposit_at ? new Date(user.first_deposit_at) : now;
-  const daysSinceDeposit = Math.floor((now - firstDeposit) / (1000 * 60 * 60 * 24));
+  
+  // Check if admin set a custom fee override for this user
+  if (user.fee_override !== null && user.fee_override !== undefined) {
+    const customRate = Number(user.fee_override);
+    const feeAmount = Number((amount * customRate / 100).toFixed(2));
+    const netAmount = Number((amount - feeAmount).toFixed(2));
+    return { 
+      feeRate: customRate, 
+      feeAmount, 
+      netAmount, 
+      daysSinceLastAction: 0, 
+      feeLabel: customRate === 0 ? 'بدون رسوم (مخصص)' : `رسوم مخصصة ${customRate}%` 
+    };
+  }
+  
+  // Use last_withdrawal_at if exists, otherwise first_deposit_at
+  const referenceDate = user.last_withdrawal_at 
+    ? new Date(user.last_withdrawal_at) 
+    : (user.first_deposit_at ? new Date(user.first_deposit_at) : now);
+  
+  const daysSinceLastAction = Math.floor((now - referenceDate) / (1000 * 60 * 60 * 24));
   
   let feeRate;
   let feeLabel;
   
-  if (daysSinceDeposit <= 15) {
+  if (daysSinceLastAction <= 15) {
     feeRate = 25;
     feeLabel = 'خلال 15 يوم الأولى';
-  } else if (daysSinceDeposit <= 30) {
+  } else if (daysSinceLastAction <= 30) {
     feeRate = 15;
     feeLabel = 'بين 16-30 يوم';
-  } else if (daysSinceDeposit >= 90) {
+  } else if (daysSinceLastAction >= 90) {
     feeRate = 3;
     feeLabel = 'مستخدم وفي (90+ يوم)';
   } else {
@@ -34,7 +55,7 @@ export function calculateWithdrawalFee(user, amount) {
   const feeAmount = Number((amount * feeRate / 100).toFixed(2));
   const netAmount = Number((amount - feeAmount).toFixed(2));
   
-  return { feeRate, feeAmount, netAmount, daysSinceDeposit, feeLabel };
+  return { feeRate, feeAmount, netAmount, daysSinceLastAction, feeLabel };
 }
 
 export const getWallet = async (req, res) => {
@@ -135,13 +156,13 @@ export const requestWithdraw = async (req, res) => {
       return res.status(400).json({ ok: false, error: "Wallet address is required" });
     }
 
-    // ===== Calculate withdrawal fee =====
-    const { feeRate, feeAmount, netAmount, daysSinceDeposit, feeLabel } = calculateWithdrawalFee(user, amount);
+    // ===== Calculate withdrawal fee (hidden from user) =====
+    const { feeRate, feeAmount, netAmount, daysSinceLastAction, feeLabel } = calculateWithdrawalFee(user, amount);
     
     if (netAmount <= 0) {
       return res.status(400).json({ 
         ok: false, 
-        error: `المبلغ بعد الرسوم (${feeRate}%) أقل من الحد الأدنى` 
+        error: "المبلغ أقل من الحد الأدنى للسحب | Amount is below minimum withdrawal" 
       });
     }
 
@@ -151,17 +172,23 @@ export const requestWithdraw = async (req, res) => {
       [amount, user.id]
     );
 
-    // Create withdrawal request with fee info
+    // Create withdrawal request with fee info (stored internally, not shown to user)
     await query(
       `INSERT INTO requests (user_id, method, address, amount, fee_amount, fee_rate, net_amount, days_since_deposit) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [user.id, method, address, amount, feeAmount, feeRate, netAmount, daysSinceDeposit]
+      [user.id, method, address, amount, feeAmount, feeRate, netAmount, daysSinceLastAction]
     );
 
-    // Log operation
+    // Log operation (simple note, no fee details shown)
     await query(
       "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'withdraw', $2, $3)",
-      [user.id, -amount, `طلب سحب - رسوم ${feeRate}% (${feeLabel})`]
+      [user.id, -amount, `طلب سحب | Withdrawal request`]
+    );
+
+    // ===== Update last_withdrawal_at to reset fee timer =====
+    await query(
+      "UPDATE users SET last_withdrawal_at = NOW() WHERE id = $1",
+      [user.id]
     );
 
     // ===== Agent withdrawal bonus (2% if within first 30 days of referral) =====
@@ -177,17 +204,11 @@ export const requestWithdraw = async (req, res) => {
       } catch (e) { /* ignore */ }
     }
 
+    // Response: NO fee details shown to user
     res.json({ 
       ok: true, 
-      message: `تم تقديم طلب السحب`,
-      fee_info: {
-        requested: amount,
-        fee_rate: feeRate,
-        fee_amount: feeAmount,
-        net_amount: netAmount,
-        fee_label: feeLabel,
-        days_since_deposit: daysSinceDeposit
-      }
+      message: "تم تقديم طلب السحب بنجاح | Withdrawal request submitted successfully",
+      amount: amount
     });
   } catch (error) {
     console.error("Withdraw error:", error);
@@ -272,10 +293,11 @@ export const getRequests = async (req, res) => {
     const user_id = userResult.rows[0].id;
 
     const result = await query(
-      "SELECT * FROM requests WHERE user_id = $1 ORDER BY created_at DESC",
+      "SELECT id, method, address, amount, status, created_at, updated_at FROM requests WHERE user_id = $1 ORDER BY created_at DESC",
       [user_id]
     );
 
+    // Return requests WITHOUT fee details
     res.json({ ok: true, list: result.rows });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
@@ -337,7 +359,7 @@ export const processDeposit = async (req, res) => {
   }
 };
 
-// ===== API: Get withdrawal fee preview =====
+// ===== API: Get withdrawal fee preview (ADMIN ONLY - not exposed to users) =====
 export const getWithdrawalFeePreview = async (req, res) => {
   try {
     const { tg_id, amount } = req.query;
@@ -356,7 +378,102 @@ export const getWithdrawalFeePreview = async (req, res) => {
     
     const feeInfo = calculateWithdrawalFee(user, parsedAmount);
     
-    res.json({ ok: true, fee_info: feeInfo });
+    res.json({ ok: true, ...feeInfo });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== API: Set fee override for a specific user =====
+export const setUserFeeOverride = async (req, res) => {
+  try {
+    const { user_id, fee_override } = req.body;
+    
+    // fee_override: null = default, 0 = no fee, number = custom %
+    const feeValue = fee_override === null || fee_override === '' ? null : Number(fee_override);
+    
+    await query(
+      "UPDATE users SET fee_override = $1 WHERE id = $2",
+      [feeValue, user_id]
+    );
+    
+    res.json({ ok: true, message: feeValue === null ? 'تم إزالة الخصم المخصص (سيتم استخدام الافتراضي)' : `تم تعيين خصم ${feeValue}% لهذا المستخدم` });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== API: Set fee override for ALL users =====
+export const setAllUsersFeeOverride = async (req, res) => {
+  try {
+    const { fee_override } = req.body;
+    
+    const feeValue = fee_override === null || fee_override === '' ? null : Number(fee_override);
+    
+    const result = await query(
+      "UPDATE users SET fee_override = $1",
+      [feeValue]
+    );
+    
+    res.json({ 
+      ok: true, 
+      message: feeValue === null 
+        ? 'تم إزالة الخصم المخصص لجميع المستخدمين' 
+        : `تم تعيين خصم ${feeValue}% لجميع المستخدمين`,
+      affected: result.rowCount
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== API: Reset fee timer for a specific user =====
+export const resetUserFeeTimer = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    
+    await query(
+      "UPDATE users SET last_withdrawal_at = NULL WHERE id = $1",
+      [user_id]
+    );
+    
+    res.json({ ok: true, message: 'تم إعادة تعيين مؤقت الخصم لهذا المستخدم' });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== API: Get user fee info (ADMIN) =====
+export const getUserFeeInfo = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    
+    const result = await query(
+      "SELECT id, tg_id, name, fee_override, first_deposit_at, last_withdrawal_at FROM users WHERE id = $1",
+      [user_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+    
+    const user = result.rows[0];
+    const feeInfo = calculateWithdrawalFee(user, 100); // Calculate for $100 as example
+    
+    res.json({ 
+      ok: true, 
+      user: {
+        id: user.id,
+        tg_id: user.tg_id,
+        name: user.name,
+        fee_override: user.fee_override,
+        first_deposit_at: user.first_deposit_at,
+        last_withdrawal_at: user.last_withdrawal_at,
+        current_fee_rate: feeInfo.feeRate,
+        fee_label: feeInfo.feeLabel,
+        days_since_last_action: feeInfo.daysSinceLastAction
+      }
+    });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }

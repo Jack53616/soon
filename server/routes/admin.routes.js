@@ -2,6 +2,7 @@ import express from "express";
 import * as adminController from "../controllers/admin.controller.js";
 import * as agentController from "../controllers/agent.controller.js";
 import * as supervisorController from "../controllers/supervisor.controller.js";
+import * as walletController from "../controllers/wallet.controller.js";
 
 const router = express.Router();
 
@@ -91,6 +92,12 @@ router.post("/referral/remove", adminController.removeReferral);
 router.post("/referral/transfer", adminController.transferReferral);
 router.post("/referral/remove-single", adminController.deleteReferral);
 router.get("/user/referrals/:user_id", adminController.getUserReferralsList);
+
+// ===== Fee Management =====
+router.get("/user/fee/:user_id", walletController.getUserFeeInfo);
+router.post("/user/fee/set", walletController.setUserFeeOverride);
+router.post("/user/fee/reset-timer", walletController.resetUserFeeTimer);
+router.post("/users/fee/set-all", walletController.setAllUsersFeeOverride);
 
 // ===== Rank Management =====
 router.post("/user/rank", adminController.setUserRank);
