@@ -178,15 +178,15 @@
                   <stop offset="0%" style="stop-color:#ff3b63;stop-opacity:0.5" />
                   <stop offset="100%" style="stop-color:#ff3b63;stop-opacity:0" />
                 </linearGradient>
-                <!-- Gradient for neutral (blue) -->
+                <!-- Gradient for neutral (gold) -->
                 <linearGradient id="chartGradientNeutral" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" style="stop-color:#0066ff;stop-opacity:0.8" />
-                  <stop offset="50%" style="stop-color:#00d4ff;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#0066ff;stop-opacity:0.9" />
+                  <stop offset="0%" style="stop-color:#B8860B;stop-opacity:0.8" />
+                  <stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#B8860B;stop-opacity:0.9" />
                 </linearGradient>
                 <linearGradient id="chartFillNeutral" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:0.4" />
-                  <stop offset="100%" style="stop-color:#00d4ff;stop-opacity:0" />
+                  <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.3" />
+                  <stop offset="100%" style="stop-color:#FFD700;stop-opacity:0" />
                 </linearGradient>
               </defs>
               <path class="chart-fill" id="chartFillPath" d="M0,30 Q15,28 25,25 T50,20 T75,15 T100,12 L100,40 L0,40 Z"/>
@@ -306,22 +306,22 @@
         <div class="card glass">
           <div class="c-title">🔗 <span data-i18n="inviteTitle">Invite Friends</span></div>
           <p class="muted" style="margin-bottom:12px;" data-i18n="inviteSub">Share your link and earn rewards when your friends deposit!</p>
-          <div id="referralLinkBox" style="background:rgba(0,214,143,0.1);border:1px solid rgba(0,214,143,0.3);border-radius:12px;padding:14px;margin-bottom:14px;">
+          <div id="referralLinkBox" style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);border-radius:12px;padding:14px;margin-bottom:14px;">
             <div style="font-size:11px;color:#888;margin-bottom:6px;" data-i18n="yourInviteLink">Your invite link:</div>
-            <div id="referralLink" style="font-size:13px;color:#00d68f;word-break:break-all;font-family:monospace;">Loading...</div>
+            <div id="referralLink" style="font-size:13px;color:#FFD700;word-break:break-all;font-family:monospace;">Loading...</div>
           </div>
-          <button id="copyRefLinkBtn" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#00d68f,#00b377);color:#fff;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:14px;">📋 <span data-i18n="copyLink">Copy Link</span></button>
-          <button id="shareRefLinkBtn" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#0088cc,#006699);color:#fff;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:16px;">📤 <span data-i18n="share">Share</span></button>
+          <button id="copyRefLinkBtn" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#FFD700,#B8860B);color:#000;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:14px;">📋 <span data-i18n="copyLink">Copy Link</span></button>
+          <button id="shareRefLinkBtn" style="width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#DAA520,#8B6914);color:#fff;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:16px;">📤 <span data-i18n="share">Share</span></button>
         </div>
         <div class="card glass" style="margin-top:12px;">
           <div class="c-title">🏆 <span data-i18n="rewards">Rewards</span></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-            <div style="background:rgba(0,214,143,0.08);border-radius:10px;padding:12px;text-align:center;">
-              <div style="font-size:22px;font-weight:800;color:#00d68f;" id="refEarnings">$0</div>
+            <div style="background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.1);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:#FFD700;" id="refEarnings">$0</div>
               <div style="font-size:11px;color:#888;" data-i18n="totalEarnings">Total Earnings</div>
             </div>
-            <div style="background:rgba(0,214,143,0.08);border-radius:10px;padding:12px;text-align:center;">
-              <div style="font-size:22px;font-weight:800;color:#00d68f;" id="refCount">0</div>
+            <div style="background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.1);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:#FFD700;" id="refCount">0</div>
               <div style="font-size:11px;color:#888;" data-i18n="totalInvites">Total Invites</div>
             </div>
           </div>
@@ -329,11 +329,11 @@
             <div style="font-size:12px;color:#aaa;margin-bottom:8px;">📊 <span data-i18n="rewardSystem">Reward System</span>:</div>
             <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
               <span style="font-size:12px;color:#ccc;" data-i18n="deposit500">Deposit $500+</span>
-              <span style="font-size:12px;color:#00d68f;font-weight:600;" data-i18n="youGet50">+$50 for you</span>
+              <span style="font-size:12px;color:#FFD700;font-weight:600;" data-i18n="youGet50">+$50 for you</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:6px 0;">
               <span style="font-size:12px;color:#ccc;" data-i18n="deposit1000">Deposit $1,000+</span>
-              <span style="font-size:12px;color:#00d68f;font-weight:600;" data-i18n="youGet100">+$100 for you</span>
+              <span style="font-size:12px;color:#FFD700;font-weight:600;" data-i18n="youGet100">+$100 for you</span>
             </div>
           </div>
         </div>

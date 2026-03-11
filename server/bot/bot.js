@@ -311,22 +311,28 @@ Contact support if you believe this is an error.`, {
     }
   }
 
-  // Normal welcome message
-  const welcomeCaption = `👋 *Welcome to QL Trading AI, ${name}!*
-  
-🚀 Your smart trading wallet is ready.
-🤖 The smart trading bot that works automatically for you.
-💰 Just deposit funds and watch profits added to your wallet.
-📊 Track balance, trades, and withdrawals inside your wallet.
-🕒 24/7 support via WhatsApp or Telegram.
+  // Normal welcome message - Gold Theme
+  const welcomeCaption = `✦ *Welcome to QL Trading AI, ${name}!* ✦
 
-👋 *أهلاً بك في QL Trading AI*
-🤖 البوت الذكي الذي يعمل تلقائياً لإدارة تداولاتك.
-💰 كل ما عليك هو الإيداع وانتظر الأرباح تُضاف تلقائياً.
-📊 تابع رصيدك، صفقاتك، وطلبات السحب من داخل المحفظة.
-🕒 دعم 24/7 عبر واتساب أو تيليجرام.
+━━━━━━━━━━━━━━━━━━━━
 
-👇 *Click below to access your dashboard:*`;
+◆ Your premium trading wallet is ready
+◆ Smart AI bot works 24/7 for you
+◆ Deposit & watch profits grow
+◆ Track everything in your wallet
+
+━━━━━━━━━━━━━━━━━━━━
+
+✦ *أهلاً بك في QL Trading AI* ✦
+
+◆ محفظتك الذكية جاهزة
+◆ بوت ذكي يعمل 24/7 لأجلك
+◆ أودع وراقب أرباحك تنمو
+◆ تابع كل شيء من محفظتك
+
+━━━━━━━━━━━━━━━━━━━━
+
+👇 *اضغط لفتح المحفظة | Open Wallet*`;
 
   const photoUrl = `${process.env.WEBAPP_URL}/public/bot_welcome.jpg`;
   
@@ -336,8 +342,8 @@ Contact support if you believe this is an error.`, {
       parse_mode: "Markdown",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "📱 Open Wallet | فتح المحفظة", web_app: { url: process.env.WEBAPP_URL } }],
-          [{ text: "💬 Support | الدعم الفني", url: "https://t.me/QL_Support" }]
+          [{ text: "✦ فتح المحفظة | Open Wallet ✦", web_app: { url: process.env.WEBAPP_URL } }],
+          [{ text: "◆ الدعم الفني | Support ◆", url: "https://t.me/QL_Support" }]
         ]
       }
     });
@@ -345,7 +351,7 @@ Contact support if you believe this is an error.`, {
     bot.sendMessage(chatId, welcomeCaption, {
       parse_mode: "Markdown",
       reply_markup: {
-        inline_keyboard: [[{ text: "📱 Open Wallet | فتح المحفظة", web_app: { url: process.env.WEBAPP_URL } }]]
+          inline_keyboard: [[{ text: "✦ فتح المحفظة | Open Wallet ✦", web_app: { url: process.env.WEBAPP_URL } }]]
       }
     });
   }
@@ -526,7 +532,7 @@ bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (amount > 0) await processReferralBonusBot(tg, amount);
   
   bot.sendMessage(msg.chat.id, `✅ Balance updated for tg:${tg} by ${amount}`);
-  bot.sendMessage(tg, `💳 تم الإيداع في حسابك: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`).catch(()=>{});
+  bot.sendMessage(tg, `✦ *تم الإيداع في حسابك* ✦\n\n◆ المبلغ: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`, { parse_mode: 'Markdown' }).catch(()=>{});
 });
 
 // حذف رصيد (بدون إشعار)
@@ -622,29 +628,29 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
     [u.id, symbol, direction, target, durationSec]
   );
   
-  bot.sendMessage(msg.chat.id, `✅ Started Smart Trade #${tr.rows[0].id}
-👤 User: ${tg}
-⏱ Duration: ${hours}h
-🎯 Target: ${target >= 0 ? '+' : ''}$${target}
-📉 Direction: ${direction}
+  bot.sendMessage(msg.chat.id, `✦ *Smart Trade Started*
 
-⚠️ *Note:* The target PnL is hidden from the user in the app.`);
+◆ Trade #${tr.rows[0].id}
+◆ User: ${tg}
+◆ Duration: ${hours}h
+◆ Target: ${target >= 0 ? '+' : ''}$${target}
+◆ Direction: ${direction}
 
-  // Send notification to user
-  bot.sendMessage(tg, `🚀 *تم تفعيل صفقة ذكية جديدة*
+⚠️ _Target PnL is hidden from user_`, { parse_mode: 'Markdown' });
 
-🔸 *الرمز:* XAUUSD (الذهب)
-⏱ *المدة:* ${hours} ساعة
-📊 *الحالة:* نشطة ومراقبة
+  // Send notification to user - Gold Theme
+  bot.sendMessage(tg, `✦ *تم تفعيل صفقة ذكية جديدة* ✦
 
-💡 _تابع محفظتك للتحديثات المباشرة._
+━━━━━━━━━━━━━━━━━━━━
+◆ *الرمز:* XAUUSD (الذهب)
+◆ *المدة:* ${hours} ساعة
+◆ *الحالة:* نشطة ومراقبة
+━━━━━━━━━━━━━━━━━━━━
 
----
-
-🚀 *New Smart Trade Activated*
-🔸 *Symbol:* XAUUSD (Gold)
-⏱ *Duration:* ${hours} Hours
-📊 *Status:* Active & Monitored`, { parse_mode: "Markdown" }).catch(()=>{});
+✦ *New Smart Trade Activated* ✦
+◆ *Symbol:* XAUUSD (Gold)
+◆ *Duration:* ${hours} Hours
+◆ *Status:* Active & Monitored`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 // تعيين إحصائيات مخصصة
@@ -703,7 +709,7 @@ bot.onText(/^\/close_trade\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   
   const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [tr.user_id]).then(r => r.rows[0]);
   bot.sendMessage(msg.chat.id, `✅ Closed trade #${tradeId} PnL ${pnl}`);
-  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `🔔 *Trade Closed*\n${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}\n💰 Balance: $${Number(tg.balance).toFixed(2)}`, { parse_mode: "Markdown" }).catch(()=>{});
+  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `✦ *تم إغلاق الصفقة | Trade Closed* ✦\n\n━━━━━━━━━━━━━━━━━━━━\n${pnl >= 0 ? "◆ ربح | Profit" : "◆ خسارة | Loss"}: ${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}\n◆ الرصيد | Balance: $${Number(tg.balance).toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 // setdaily
@@ -795,7 +801,7 @@ bot.onText(/^\/approve_withdraw\s+(\d+)$/, async (msg, m) => {
   await q(`UPDATE users SET frozen_balance = GREATEST(0, COALESCE(frozen_balance, 0) - $1) WHERE id=$2`, [r0.amount, r0.user_id]);
   const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]);
   bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} approved ($${Number(r0.amount).toFixed(2)})`);
-  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `💸 *تمت الموافقة على طلب السحب*\n\n📋 رقم الطلب: #${id}\n💰 المبلغ: $${Number(r0.amount).toFixed(2)}\n\n✅ سيتم تحويل المبلغ قريباً.`, { parse_mode: "Markdown" }).catch(()=>{});
+  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `✦ *تمت الموافقة على طلب السحب* ✦\n\n━━━━━━━━━━━━━━━━━━━━\n◆ رقم الطلب: #${id}\n◆ المبلغ: $${Number(r0.amount).toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━\n\n✅ سيتم تحويل المبلغ قريباً.`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
@@ -809,7 +815,7 @@ bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
   await q(`UPDATE users SET balance = balance + $1, frozen_balance = GREATEST(0, COALESCE(frozen_balance, 0) - $1) WHERE id=$2`, [r0.amount, r0.user_id]);
   const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]);
   bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} rejected - $${Number(r0.amount).toFixed(2)} returned to balance`);
-  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `❌ *تم رفض طلب السحب*\n\n📋 رقم الطلب: #${id}\n💰 المبلغ: $${Number(r0.amount).toFixed(2)}\n📝 السبب: ${reason}\n\n💵 تم إرجاع المبلغ لرصيدك.`, { parse_mode: "Markdown" }).catch(()=>{});
+  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `✦ *تم رفض طلب السحب* ✦\n\n━━━━━━━━━━━━━━━━━━━━\n◆ رقم الطلب: #${id}\n◆ المبلغ: $${Number(r0.amount).toFixed(2)}\n◆ السبب: ${reason}\n━━━━━━━━━━━━━━━━━━━━\n\n◆ تم إرجاع المبلغ لرصيدك.`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 // broadcast / notify
