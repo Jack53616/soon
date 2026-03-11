@@ -14,9 +14,9 @@ const { Pool } = pkg;
 
 dotenv.config();
 const startedAt = new Date().toISOString();
-console.log("🟢 Starting QL Trading AI Server...", startedAt);
-console.log("📦 DATABASE_URL =", process.env.DATABASE_URL ? "loaded" : "❌ missing");
-console.log("🤖 BOT_TOKEN =", process.env.BOT_TOKEN ? "loaded" : "❌ missing");
+console.log("◆ Starting QL Trading AI Server...", startedAt);
+console.log("◆ DATABASE_URL =", process.env.DATABASE_URL ? "loaded" : "✗ missing");
+console.log("◈ BOT_TOKEN =", process.env.BOT_TOKEN ? "loaded" : "✗ missing");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,7 +30,7 @@ const {
 } = process.env;
 
 if (!DATABASE_URL) {
-  console.error("❌ DATABASE_URL missing");
+  console.error("✗ DATABASE_URL missing");
   process.exit(1);
 }
 
@@ -382,7 +382,7 @@ app.post("/api/token", (req, res) => {
 
 // ==================== ACTIVATE ====================
 app.post("/api/activate", async (req, res) => {
-  console.log("🔑 Activation request:", req?.body?.key, req?.body?.tg_id);
+  console.log("◆ Activation request:", req?.body?.key, req?.body?.tg_id);
   try {
     const body = req.body || {};
     const submittedKey = body.key;
@@ -465,7 +465,7 @@ app.post("/api/activate", async (req, res) => {
     console.log(`✅ User activated: ${user.name || "unknown"} (${tgId})`);
     res.json({ ok: true, user });
   } catch (e) {
-    console.error("❌ Activation error:", e.message);
+    console.error("✗ Activation error:", e.message);
     res.json({ ok: false, error: e.message });
   }
 });
@@ -558,7 +558,7 @@ app.post("/api/withdraw", async (req, res) => {
     if (process.env.ADMIN_ID) {
       bot.sendMessage(
         process.env.ADMIN_ID,
-        `💸 New Withdraw Request:\nUser: ${user.name} (ID: ${user.id})\nAmount: $${amount}\nMethod: ${method}\nAddress: ${address}`
+        `◆ New Withdraw Request:\nUser: ${user.name} (ID: ${user.id})\nAmount: $${amount}\nMethod: ${method}\nAddress: ${address}`
       ).catch(() => {});
     }
 
@@ -599,5 +599,5 @@ app.post("/api/methods", async (req, res) => {
 
 // ==================== START SERVER ====================
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`✦ Server running on port ${PORT}`);
 });

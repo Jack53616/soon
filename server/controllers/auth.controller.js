@@ -55,18 +55,18 @@ async function processReferralBonus(tgId, depositAmount) {
 
       // Notify referrer
       try {
-        await bot.sendMessage(Number(referral.referrer_tg_id), `🎉 *مكافأة الدعوة!*
+        await bot.sendMessage(Number(referral.referrer_tg_id), `✦ *مكافأة الدعوة!*
 
-💰 حصلت على *$${bonusAmount}* كمكافأة دعوة!
-👤 صديقك قام بإيداع $${depositAmount}
+◆ حصلت على *$${bonusAmount}* كمكافأة دعوة!
+◆ صديقك قام بإيداع $${depositAmount}
 
-💵 تم إضافة المبلغ لرصيدك تلقائياً.
+◆ تم إضافة المبلغ لرصيدك تلقائياً.
 
 ---
 
-🎉 *Referral Bonus!*
-💰 You earned *$${bonusAmount}* referral bonus!
-👤 Your friend deposited $${depositAmount}`, { parse_mode: "Markdown" });
+✦ *Referral Bonus!*
+◆ You earned *$${bonusAmount}* referral bonus!
+◆ Your friend deposited $${depositAmount}`, { parse_mode: "Markdown" });
       } catch (err) { /* ignore */ }
     }
   } catch (error) {

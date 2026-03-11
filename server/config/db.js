@@ -17,8 +17,8 @@ const dbUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith("p
   ? process.env.DATABASE_URL 
   : CORRECT_DB_URL;
 
-console.log("🔌 Connecting to database...");
-console.log("🎯 Target Host:", dbUrl.split("@")[1].split("/")[0]);
+console.log("◆ Connecting to database...");
+console.log("◇ Target Host:", dbUrl.split("@")[1].split("/")[0]);
 
 const pool = new Pool({
   connectionString: dbUrl,
@@ -33,7 +33,7 @@ pool.on("connect", () => {
 });
 
 pool.on("error", (err) => {
-  console.error("❌ PostgreSQL connection error:", err);
+  console.error("✗ PostgreSQL connection error:", err);
 });
 
 export const query = async (text, params = []) => {
@@ -46,7 +46,7 @@ export const query = async (text, params = []) => {
     }
     return res;
   } catch (error) {
-    console.error("❌ Query error:", error.message);
+    console.error("✗ Query error:", error.message);
     throw error;
   }
 };

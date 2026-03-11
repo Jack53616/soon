@@ -467,7 +467,7 @@ async function closeCustomTrade({ trade, currentPrice, pnl, elapsed }) {
       try {
         await bot.sendMessage(
           u.rows[0].tg_id,
-          `🔔 *تم إغلاق الصفقة الإضافية*\n${pnl >= 0 ? "🟢 ربح" : "🔴 خسارة"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n💰 الرصيد: $${Number(u.rows[0].balance).toFixed(2)}\n\n🔔 *Extra Trade Closed*\n${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n💰 Balance: $${Number(u.rows[0].balance).toFixed(2)}`,
+          `◆ *تم إغلاق الصفقة الإضافية*\n${pnl >= 0 ? "◆ ربح" : "◆ خسارة"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n◆ الرصيد: $${Number(u.rows[0].balance).toFixed(2)}\n\n◆ *Extra Trade Closed*\n${pnl >= 0 ? "◆ Profit" : "◆ Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n◆ Balance: $${Number(u.rows[0].balance).toFixed(2)}`,
           { parse_mode: "Markdown" }
         );
       } catch (msgErr) {}
@@ -534,7 +534,7 @@ async function closeRegularTrade({ trade, currentPrice, pnl, closeReason, elapse
       try {
         await bot.sendMessage(
           u.rows[0].tg_id,
-          `🔔 *تم إغلاق الصفقة*\n${pnl >= 0 ? "🟢 ربح" : "🔴 خسارة"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n💰 الرصيد: $${Number(u.rows[0].balance).toFixed(2)}\n\n🔔 *Trade Closed*\n${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n💰 Balance: $${Number(u.rows[0].balance).toFixed(2)}`,
+          `◆ *تم إغلاق الصفقة*\n${pnl >= 0 ? "◆ ربح" : "◆ خسارة"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n◆ الرصيد: $${Number(u.rows[0].balance).toFixed(2)}\n\n◆ *Trade Closed*\n${pnl >= 0 ? "◆ Profit" : "◆ Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n◆ Balance: $${Number(u.rows[0].balance).toFixed(2)}`,
           { parse_mode: "Markdown" }
         );
       } catch (msgErr) {
@@ -611,7 +611,7 @@ async function closeMassTradeUserTrade({ trade, currentPrice, pnl, elapsed }) {
       try {
         await bot.sendMessage(
           u.rows[0].tg_id,
-          `🔔 *تم إغلاق الصفقة*\n${pnl >= 0 ? "🟢 ربح" : "🔴 خسارة"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n💰 الرصيد: $${Number(u.rows[0].balance).toFixed(2)}\n\n🔔 *Trade Closed*\n${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n💰 Balance: $${Number(u.rows[0].balance).toFixed(2)}`,
+          `◆ *تم إغلاق الصفقة*\n${pnl >= 0 ? "◆ ربح" : "◆ خسارة"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n◆ الرصيد: $${Number(u.rows[0].balance).toFixed(2)}\n\n◆ *Trade Closed*\n${pnl >= 0 ? "◆ Profit" : "◆ Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n◆ Balance: $${Number(u.rows[0].balance).toFixed(2)}`,
           { parse_mode: "Markdown" }
         );
       } catch (msgErr) {
@@ -630,7 +630,7 @@ async function closeMassTradeUserTrade({ trade, currentPrice, pnl, elapsed }) {
         "UPDATE mass_trades SET status = 'closed', closed_at = NOW() WHERE id = $1 AND status = 'open'",
         [trade.mass_trade_id]
       );
-      console.log(`✅ Mass trade #${trade.mass_trade_id} fully closed (all user trades done)`);
+      console.log(`✓ Mass trade #${trade.mass_trade_id} fully closed (all user trades done)`);
     }
   } catch (err) {
     console.error("Close mass trade user trade error:", err.message);
@@ -672,7 +672,7 @@ async function createDailyScheduledTrades() {
           [direction, schedule.note, usersCount.rows[0].count, schedule.time, today, entryPrice]
         );
 
-        console.log(`📅 Created scheduled mass trade for ${today} at ${schedule.time}`);
+        console.log(`◆ Created scheduled mass trade for ${today} at ${schedule.time}`);
       }
     }
   } catch (err) {
@@ -696,7 +696,7 @@ async function checkScheduler() {
     lastScheduleCheck = today;
 
     await createDailyScheduledTrades();
-    console.log(`📅 Daily schedule check completed for ${today}`);
+    console.log(`◆ Daily schedule check completed for ${today}`);
   } catch (err) {
     console.error("Scheduler check error:", err.message);
   }
@@ -737,7 +737,7 @@ async function autoActivateReadyTrades() {
       if (currentHour > schedHour || (currentHour === schedHour && currentMinute >= schedMin)) {
         if (activatingTrades.has(massTrade.id)) continue;
         
-        console.log(`🚀 Auto-activating ready mass trade #${massTrade.id} (scheduled: ${scheduledTime}, now: ${currentTimeStr})`);
+        console.log(`✦ Auto-activating ready mass trade #${massTrade.id} (scheduled: ${scheduledTime}, now: ${currentTimeStr})`);
         activatingTrades.add(massTrade.id);
         
         try {
@@ -815,22 +815,22 @@ async function autoActivateMassTrade(massTrade) {
 
     if (user.tg_id) {
       try {
-        await bot.sendMessage(Number(user.tg_id), `🚀 *البوت دخل صفقة جديدة!*
+        await bot.sendMessage(Number(user.tg_id), `✦ *البوت دخل صفقة جديدة!*
 
-🔸 *الرمز:* ${massTrade.symbol || 'XAUUSD'}
-📊 *الاتجاه:* ${direction}
-⏱ *المدة:* ${Math.round(durationSeconds / 60)} دقيقة
+◆ *الرمز:* ${massTrade.symbol || 'XAUUSD'}
+◈ *الاتجاه:* ${direction}
+◆ *المدة:* ${Math.round(durationSeconds / 60)} دقيقة
 
-📱 يمكنك المراقبة من خيار *صفقاتي*
+◆ يمكنك المراقبة من خيار *صفقاتي*
 
 ---
 
-🚀 *Bot entered a new trade!*
-🔸 *Symbol:* ${massTrade.symbol || 'XAUUSD'}
-📊 *Direction:* ${direction}
-⏱ *Duration:* ${Math.round(durationSeconds / 60)} min
+✦ *Bot entered a new trade!*
+◆ *Symbol:* ${massTrade.symbol || 'XAUUSD'}
+◈ *Direction:* ${direction}
+◆ *Duration:* ${Math.round(durationSeconds / 60)} min
 
-📱 Monitor from *My Trades*`, { parse_mode: "Markdown" });
+◆ Monitor from *My Trades*`, { parse_mode: "Markdown" });
       } catch (err) {}
     }
 
@@ -838,7 +838,7 @@ async function autoActivateMassTrade(massTrade) {
   }
 
   await query("UPDATE mass_trades SET participants_count = $1 WHERE id = $2", [totalCreated, mass_trade_id]);
-  console.log(`✅ Auto-activated mass trade #${mass_trade_id}: ${totalCreated} user trades created with ${percentage}%`);
+  console.log(`✓ Auto-activated mass trade #${mass_trade_id}: ${totalCreated} user trades created with ${percentage}%`);
 }
 
 /* =========================
@@ -870,5 +870,5 @@ export const startTradingEngine = () => {
   checkScheduler();
   autoActivateReadyTrades();
   
-  console.log("🤖 Trading Engine Started (v5.0 - Random Direction + Speed Modes + Custom Trades + Referral Commission + Persistent Prices)");
+  console.log("◈ Trading Engine Started (v5.0 - Random Direction + Speed Modes + Custom Trades + Referral Commission + Persistent Prices)");
 };

@@ -11,7 +11,7 @@ const { Pool } = pkg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-console.log("🤖 Telegram bot initialized via webhook mode");
+console.log("◈ Telegram bot initialized via webhook mode");
 
 const { BOT_TOKEN, ADMIN_ID } = process.env;
 
@@ -24,7 +24,7 @@ const DATABASE_URL = process.env.DATABASE_URL && process.env.DATABASE_URL.starts
 if (!BOT_TOKEN) { console.error("BOT_TOKEN missing"); process.exit(1); }
 
 const bot = new TelegramBot(BOT_TOKEN);
-console.log("✅ Connected to PostgreSQL via", (DATABASE_URL||"").split("@").pop());
+console.log("✓ Connected to PostgreSQL via", (DATABASE_URL||"").split("@").pop());
 
 // Force SSL for Render/Neon databases
 const sslConfig = { rejectUnauthorized: false };
@@ -197,17 +197,17 @@ const isAdmin = (msg) => Number(msg?.from?.id) === Number(ADMIN_ID);
 
 // رسالة ترحيب خارج الويب
 bot.onText(/^\/start$/, (msg) => {
-  const t = `👋 Welcome to QL Trading AI
-🤖 The smart trading bot that works automatically for you.
-💰 Just deposit funds and watch profits added to your wallet.
-📊 Track balance, trades, and withdrawals inside your wallet.
-🕒 24/7 support via WhatsApp or Telegram.
+  const t = `✦ Welcome to QL Trading AI
+◈ The smart trading bot that works automatically for you.
+◆ Just deposit funds and watch profits added to your wallet.
+◈ Track balance, trades, and withdrawals inside your wallet.
+◆ 24/7 support via WhatsApp or Telegram.
 
-👋 أهلاً بك في QL Trading AI
-🤖 البوت الذكي الذي يعمل تلقائياً لإدارة تداولاتك.
-💰 كل ما عليك هو الإيداع وانتظر الأرباح تُضاف تلقائياً.
-📊 تابع رصيدك، صفقاتك، وطلبات السحب من داخل المحفظة.
-🕒 دعم 24/7 عبر واتساب أو تيليجرام.`;
+✦ أهلاً بك في QL Trading AI
+◈ البوت الذكي الذي يعمل تلقائياً لإدارة تداولاتك.
+◆ كل ما عليك هو الإيداع وانتظر الأرباح تُضاف تلقائياً.
+◈ تابع رصيدك، صفقاتك، وطلبات السحب من داخل المحفظة.
+◆ دعم 24/7 عبر واتساب أو تيليجرام.`;
   bot.sendMessage(msg.chat.id, t);
 });
 
@@ -215,7 +215,7 @@ bot.onText(/^\/start$/, (msg) => {
 bot.onText(/^\/help$/, (msg) => {
   if (!isAdmin(msg)) return;
   bot.sendMessage(msg.chat.id, `
-🛠 Admin Commands
+⚙ Admin Commands
 /create_key <KEY> <DAYS>
 /addbalance <tg_id> <amount>
 /open_trade <tg_id> <symbol>
@@ -232,12 +232,12 @@ bot.onText(/^\/help$/, (msg) => {
 bot.onText(/^\/create_key\s+(\S+)(?:\s+(\d+))?$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const key = cleanKey(m[1]); const days = Number(m[2] || 30);
-  if (!key) return bot.sendMessage(msg.chat.id, "❌ Invalid key format");
+  if (!key) return bot.sendMessage(msg.chat.id, "✗ Invalid key format");
   try {
     await q(`INSERT INTO subscription_keys (key_code, days) VALUES ($1,$2)`, [key, days]);
-    console.log("🧩 New key created:", key, days, "days");
-    bot.sendMessage(msg.chat.id, `✅ Key created: ${key} (${days}d)`);
-  } catch (e) { bot.sendMessage(msg.chat.id, `❌ ${e.message}`); }
+    console.log("◆ New key created:", key, days, "days");
+    bot.sendMessage(msg.chat.id, `✓ Key created: ${key} (${days}d)`);
+  } catch (e) { bot.sendMessage(msg.chat.id, `✗ ${e.message}`); }
 });
 
 // إيداع/خصم رصيد
@@ -248,9 +248,9 @@ bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [amount, u.id]);
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'manual admin op')`, [u.id, amount]);
-  bot.sendMessage(msg.chat.id, `✅ Balance updated for tg:${tg} by ${amount}`);
+  bot.sendMessage(msg.chat.id, `✓ Balance updated for tg:${tg} by ${amount}`);
   // إشعار للمستخدم بدون ذكر أدمن
-  bot.sendMessage(tg, `💳 تم الإيداع في حسابك: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`).catch(()=>{});
+  bot.sendMessage(tg, `◆ تم الإيداع في حسابك: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`).catch(()=>{});
 });
 
 // فتح صفقة
@@ -260,8 +260,8 @@ bot.onText(/^\/open_trade\s+(\d+)\s+(\S+)$/, async (msg, m) => {
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   const tr = await q(`INSERT INTO trades (user_id, symbol, status) VALUES ($1,$2,'open') RETURNING *`, [u.id, symbol]).then(r => r.rows[0]);
-  bot.sendMessage(msg.chat.id, `✅ Opened trade #${tr.id} on ${symbol} for ${tg}`);
-  bot.sendMessage(tg, `📈 تم فتح صفقة على ${symbol} لحسابك.`).catch(()=>{});
+  bot.sendMessage(msg.chat.id, `✓ Opened trade #${tr.id} on ${symbol} for ${tg}`);
+  bot.sendMessage(tg, `◈ تم فتح صفقة على ${symbol} لحسابك.`).catch(()=>{});
 });
 
 // إغلاق صفقة
@@ -275,8 +275,8 @@ bot.onText(/^\/close_trade\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   else await q(`UPDATE users SET losses = losses + $1 WHERE id=$2`, [Math.abs(pnl), tr.user_id]);
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'pnl',$2,'close trade')`, [tr.user_id, pnl]);
   const tg = await q(`SELECT tg_id FROM users WHERE id=$1`, [tr.user_id]).then(r => r.rows[0]?.tg_id);
-  bot.sendMessage(msg.chat.id, `✅ Closed trade #${tradeId} PnL ${pnl}`);
-  if (tg) bot.sendMessage(Number(tg), `✅ تم إغلاق الصفقة. النتيجة: ${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}`).catch(()=>{});
+  bot.sendMessage(msg.chat.id, `✓ Closed trade #${tradeId} PnL ${pnl}`);
+  if (tg) bot.sendMessage(Number(tg), `✓ تم إغلاق الصفقة. النتيجة: ${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}`).catch(()=>{});
 });
 
 // setdaily (تحريك تدريجي للرصيد حتى الهدف)
@@ -286,8 +286,8 @@ bot.onText(/^\/setdaily\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   await q(`INSERT INTO daily_targets (user_id, target, active) VALUES ($1,$2,TRUE)`, [u.id, target]);
-  bot.sendMessage(msg.chat.id, `🚀 setdaily started for tg:${tg} target ${target}`);
-  bot.sendMessage(tg, `🚀 تم بدء صفقة يومية (الهدف ${target>=0?'+':'-'}$${Math.abs(target)}).`);
+  bot.sendMessage(msg.chat.id, `✦ setdaily started for tg:${tg} target ${target}`);
+  bot.sendMessage(tg, `✦ تم بدء صفقة يومية (الهدف ${target>=0?'+':'-'}$${Math.abs(target)}).`);
   // التحريك التدريجي (سيرفر فقط — الويب يعرض الحركة)
   // هنا فقط تسجّل الهدف؛ الويب سيقوم بالـ animation حسب الهدف.
 });
@@ -301,8 +301,8 @@ bot.onText(/^\/approve_withdraw\s+(\d+)$/, async (msg, m) => {
   if (r0.status !== "pending") return bot.sendMessage(msg.chat.id, "Not pending");
   await q(`UPDATE requests SET status='approved', updated_at=NOW() WHERE id=$1`, [id]);
   const tg = await q(`SELECT tg_id FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]?.tg_id);
-  bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} approved`);
-  if (tg) bot.sendMessage(Number(tg), `💸 تمت الموافقة على طلب السحب #${id} بقيمة $${Number(r0.amount).toFixed(2)}.`).catch(()=>{});
+  bot.sendMessage(msg.chat.id, `✓ Withdraw #${id} approved`);
+  if (tg) bot.sendMessage(Number(tg), `◆ تمت الموافقة على طلب السحب #${id} بقيمة $${Number(r0.amount).toFixed(2)}.`).catch(()=>{});
 });
 
 bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
@@ -315,8 +315,8 @@ bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
   // نرجع الرصيد
   await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [r0.amount, r0.user_id]);
   const tg = await q(`SELECT tg_id FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]?.tg_id);
-  bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} rejected`);
-  if (tg) bot.sendMessage(Number(tg), `❌ تم رفض طلب السحب #${id}. السبب: ${reason}`).catch(()=>{});
+  bot.sendMessage(msg.chat.id, `✓ Withdraw #${id} rejected`);
+  if (tg) bot.sendMessage(Number(tg), `✗ تم رفض طلب السحب #${id}. السبب: ${reason}`).catch(()=>{});
 });
 
 // broadcast / notify
@@ -328,14 +328,14 @@ bot.onText(/^\/broadcast\s+all\s+([\s\S]+)$/, async (msg, m) => {
   for (const row of list.rows) {
     try { await bot.sendMessage(Number(row.tg_id), text); ok++; } catch {}
   }
-  bot.sendMessage(msg.chat.id, `🚀 Broadcast sent to ${ok} users.`);
+  bot.sendMessage(msg.chat.id, `✦ Broadcast sent to ${ok} users.`);
 });
 
 bot.onText(/^\/notify\s+(\d+)\s+([\s\S]+)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]); const text = m[2];
-  try { await bot.sendMessage(tg, text); bot.sendMessage(msg.chat.id, "✅ Sent."); }
-  catch (e) { bot.sendMessage(msg.chat.id, "❌ " + e.message); }
+  try { await bot.sendMessage(tg, text); bot.sendMessage(msg.chat.id, "✓ Sent."); }
+  catch (e) { bot.sendMessage(msg.chat.id, "✗ " + e.message); }
 });
 
 export default bot;

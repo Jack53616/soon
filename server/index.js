@@ -191,8 +191,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 app.listen(PORT, async () => {
-  console.log(`🟢 QL Trading AI Server started on port ${PORT}`);
-  console.log(`📅 ${new Date().toISOString()}`);
+  console.log(`◆ QL Trading AI Server started on port ${PORT}`);
+  console.log(`◆ ${new Date().toISOString()}`);
   
   // Set webhook (disable polling to avoid conflicts)
   if (process.env.WEBHOOK_URL && process.env.BOT_TOKEN) {
@@ -206,13 +206,13 @@ app.listen(PORT, async () => {
       await bot.setWebHook(webhookUrl);
       console.log(`✅ Telegram webhook set to: ${webhookUrl}`);
     } catch (error) {
-      console.error("❌ Failed to set webhook:", error.message);
+      console.error("✗ Failed to set webhook:", error.message);
     }
   }
 
   // Start trading engine
   startTradingEngine();
-  console.log("🤖 Trading engine started with real Binance prices");
+  console.log("◈ Trading engine started with real Binance prices");
   
   // Start keep-alive service for Render
   startKeepAlive();
@@ -232,7 +232,7 @@ function startKeepAlive() {
       }
     }, 14 * 60 * 1000); // Ping every 14 minutes (Render free tier sleeps after 15 min)
     
-    console.log('🔄 Keep-alive service started (14 min intervals)');
+    console.log('◇ Keep-alive service started (14 min intervals)');
   }
 }
 

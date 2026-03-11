@@ -181,7 +181,7 @@
 <!-- Login Screen -->
 <div id="loginScreen">
   <div class="login-box">
-    <h2>🔐 لوحة المشرف</h2>
+    <h2>◆ لوحة المشرف</h2>
     <p>Supervisor Panel — Limited Access</p>
     <div class="form-group">
       <label>اسم المستخدم</label>
@@ -199,7 +199,7 @@
 <!-- Main Panel -->
 <div id="mainPanel">
   <div class="topbar">
-    <h1>🛡️ لوحة المشرف</h1>
+    <h1>◆ لوحة المشرف</h1>
     <div style="display:flex;align-items:center;gap:16px;">
       <span class="sv-info" id="svNameDisplay"></span>
       <button class="logout-btn" onclick="doLogout()">خروج</button>
@@ -207,12 +207,12 @@
   </div>
 
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchTab('dashboard')">📊 الرئيسية</button>
-    <button class="nav-tab" onclick="switchTab('users')">👥 المستخدمون</button>
-    <button class="nav-tab" onclick="switchTab('trades')">📈 الصفقات المفتوحة</button>
-    <button class="nav-tab" onclick="switchTab('deposits')">💰 الإيداعات</button>
-    <button class="nav-tab" onclick="switchTab('withdrawals')">💸 السحوبات المعتمدة</button>
-    <button class="nav-tab" onclick="switchTab('keys')">🔑 مفاتيح الاشتراك</button>
+    <button class="nav-tab active" onclick="switchTab('dashboard')">◈ الرئيسية</button>
+    <button class="nav-tab" onclick="switchTab('users')">◆ المستخدمون</button>
+    <button class="nav-tab" onclick="switchTab('trades')">◈ الصفقات المفتوحة</button>
+    <button class="nav-tab" onclick="switchTab('deposits')">◆ الإيداعات</button>
+    <button class="nav-tab" onclick="switchTab('withdrawals')">◆ السحوبات المعتمدة</button>
+    <button class="nav-tab" onclick="switchTab('keys')">◆ مفاتيح الاشتراك</button>
   </div>
 
   <div class="content">
@@ -226,8 +226,8 @@
     <!-- Users -->
     <div class="tab-panel" id="tab-users">
       <div class="section-title">
-        👥 جميع المستخدمين
-        <button class="refresh-btn" onclick="loadUsers()">🔄 تحديث</button>
+        ◆ جميع المستخدمين
+        <button class="refresh-btn" onclick="loadUsers()">◇ تحديث</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -250,8 +250,8 @@
     <!-- Open Trades -->
     <div class="tab-panel" id="tab-trades">
       <div class="section-title">
-        📈 الصفقات المفتوحة حالياً
-        <button class="refresh-btn" onclick="loadTrades()">🔄 تحديث</button>
+        ◈ الصفقات المفتوحة حالياً
+        <button class="refresh-btn" onclick="loadTrades()">◇ تحديث</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -274,8 +274,8 @@
     <!-- Deposits -->
     <div class="tab-panel" id="tab-deposits">
       <div class="section-title">
-        💰 جميع الإيداعات
-        <button class="refresh-btn" onclick="loadDeposits()">🔄 تحديث</button>
+        ◆ جميع الإيداعات
+        <button class="refresh-btn" onclick="loadDeposits()">◇ تحديث</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -296,8 +296,8 @@
     <!-- Approved Withdrawals -->
     <div class="tab-panel" id="tab-withdrawals">
       <div class="section-title">
-        💸 السحوبات المعتمدة فقط
-        <button class="refresh-btn" onclick="loadWithdrawals()">🔄 تحديث</button>
+        ◆ السحوبات المعتمدة فقط
+        <button class="refresh-btn" onclick="loadWithdrawals()">◇ تحديث</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -319,7 +319,7 @@
     <!-- Keys -->
     <div class="tab-panel" id="tab-keys">
       <div class="key-gen-box">
-        <h3>🔑 إنشاء مفاتيح اشتراك شهري</h3>
+        <h3>◆ إنشاء مفاتيح اشتراك شهري</h3>
         <div class="info">
           ⚠️ يمكنك إنشاء مفاتيح اشتراك شهري فقط (30 يوم). لا يمكن إنشاء مفاتيح أسبوعية أو مدى الحياة.
         </div>
@@ -381,7 +381,7 @@ async function doLogin() {
 function showPanel() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainPanel').style.display = 'block';
-  document.getElementById('svNameDisplay').textContent = `👤 ${svName || 'مشرف'}`;
+  document.getElementById('svNameDisplay').textContent = `◆ ${svName || 'مشرف'}`;
   loadDashboard();
 }
 
@@ -548,7 +548,7 @@ async function generateKeys() {
   });
 
   if (!data || !data.ok) {
-    container.innerHTML = `<div style="color:var(--red);margin-top:12px">❌ ${data?.error || 'خطأ'}</div>`;
+    container.innerHTML = `<div style="color:var(--red);margin-top:12px">✗ ${data?.error || 'خطأ'}</div>`;
     return;
   }
 

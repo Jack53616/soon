@@ -565,7 +565,7 @@ gateBtn?.addEventListener("click", async ()=>{
     hydrateUser(r.user);
     unlockGate();
     $("#g-key").value = "";
-    if(r.reused){ notify("🔓 Session restored"); }
+    if(r.reused){ notify("✦ Session restored"); }
     const opened = await openApp(r.user);
     localStorage.setItem("activated", "yes");
 
@@ -810,7 +810,7 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
 
   const warningHtml = feeRate > 5 ? `
     <div style="background:rgba(210,153,34,0.1);border:1px solid rgba(210,153,34,0.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#d29922;">
-      ⚠️ ${isAr
+      ⚠ ${isAr
         ? 'رسوم السحب مرتفعة لأن حسابك عمره ' + daysLabel + ' يوم. تنخفض الرسوم بعد 30 يوم إلى 5% وبعد 90 يوم إلى 3%.'
         : 'Higher fee applies because your account is ' + daysLabel + ' days old. Fee drops to 5% after 30 days and 3% after 90 days.'
       }
@@ -820,7 +820,7 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
   overlay.innerHTML = `
     <div style="background:#161b22;border:1px solid #30363d;border-radius:16px;padding:28px;max-width:380px;width:100%;">
       <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:32px;margin-bottom:8px">💸</div>
+        <div style="font-size:32px;margin-bottom:8px">◆</div>
         <div style="font-size:18px;font-weight:700;">${isAr ? 'تأكيد طلب السحب' : 'Confirm Withdrawal'}</div>
       </div>
       <div style="background:#0d1117;border-radius:12px;padding:16px;margin-bottom:20px;">
@@ -844,10 +844,10 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
       ${warningHtml}
       <div style="display:flex;gap:10px;">
         <button id="confirmWithdrawBtn" style="flex:1;padding:12px;background:#3fb950;border:none;border-radius:8px;color:#000;font-size:15px;font-weight:700;cursor:pointer;">
-          ✅ ${isAr ? 'تأكيد' : 'Confirm'}
+          ✓ ${isAr ? 'تأكيد' : 'Confirm'}
         </button>
         <button id="cancelWithdrawBtn" style="flex:1;padding:12px;background:transparent;border:1px solid #30363d;border-radius:8px;color:#8b949e;font-size:15px;cursor:pointer;">
-          ❌ ${isAr ? 'إلغاء' : 'Cancel'}
+          ✗ ${isAr ? 'إلغاء' : 'Cancel'}
         </button>
       </div>
     </div>
@@ -875,7 +875,7 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
         if (errorMsg.includes("No saved address")) errorMsg = isAr ? 'احفظ عنوان المحفظة أولاً' : 'Save wallet address first';
         else if (errorMsg.includes("Insufficient")) errorMsg = isAr ? 'الرصيد غير كافي' : 'Insufficient balance';
         else if (errorMsg.includes("maintenance")) errorMsg = isAr ? 'السحب متوقف مؤقتاً' : 'Withdrawals paused';
-        return notify("❌ " + errorMsg);
+        return notify("✗ " + errorMsg);
       }
 
       showWithdrawSuccess(amount);
@@ -884,7 +884,7 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
       await refreshUser();
       await refreshRequests();
     } catch (err) {
-      notify(isAr ? '❌ خطأ في الاتصال' : '❌ Connection error');
+      notify(isAr ? '✗ خطأ في الاتصال' : '✗ Connection error');
     } finally {
       btn.textContent = originalText;
       btn.disabled = false;
@@ -898,13 +898,13 @@ $("#reqWithdraw").addEventListener("click", async () => {
   const address = $("#withdrawAddr")?.value?.trim() || '';
   const isAr = state.lang === 'ar';
 
-  if (!address) return notify(isAr ? "❌ أدخل عنوان المحفظة" : "❌ Enter wallet address");
-  if (address.length < 26 || address.length > 64) return notify(isAr ? "❌ عنوان المحفظة غير صحيح (26-64 حرف)" : "❌ Invalid wallet address (26-64 characters)");
-  if (!/^[a-zA-Z0-9]+$/.test(address)) return notify(isAr ? "❌ عنوان المحفظة يجب أن يحتوي على أحرف وأرقام فقط" : "❌ Address must contain only letters and numbers");
-  if (amount <= 0) return notify(isAr ? "❌ أدخل مبلغ صحيح" : "❌ Enter valid amount");
+  if (!address) return notify(isAr ? "✗ أدخل عنوان المحفظة" : "✗ Enter wallet address");
+  if (address.length < 26 || address.length > 64) return notify(isAr ? "✗ عنوان المحفظة غير صحيح (26-64 حرف)" : "✗ Invalid wallet address (26-64 characters)");
+  if (!/^[a-zA-Z0-9]+$/.test(address)) return notify(isAr ? "✗ عنوان المحفظة يجب أن يحتوي على أحرف وأرقام فقط" : "✗ Address must contain only letters and numbers");
+  if (amount <= 0) return notify(isAr ? "✗ أدخل مبلغ صحيح" : "✗ Enter valid amount");
 
   const userBalance = Number(state.user?.balance || 0);
-  if (amount > userBalance) return notify(isAr ? "❌ الرصيد غير كافي" : "❌ Insufficient balance");
+  if (amount > userBalance) return notify(isAr ? "✗ الرصيد غير كافي" : "✗ Insufficient balance");
 
   // Fetch fee preview then show confirmation modal
   const btn = $("#reqWithdraw");
@@ -921,7 +921,7 @@ $("#reqWithdraw").addEventListener("click", async () => {
   } catch (err) {
     btn.textContent = originalText;
     btn.disabled = false;
-    notify(isAr ? '❌ خطأ في الاتصال' : '❌ Connection error');
+    notify(isAr ? '✗ خطأ في الاتصال' : '✗ Connection error');
   }
 });
 
@@ -1146,7 +1146,7 @@ async function refreshRequests(){
         ${req.status === 'pending' ? `
           <div class="w-actions">
             <button class="btn-cancel" data-id="${req.id}">
-              ${state.lang === 'ar' ? '❌ إلغاء الطلب' : '❌ Cancel Request'}
+              ${state.lang === 'ar' ? '✗ إلغاء الطلب' : '✗ Cancel Request'}
             </button>
           </div>
         ` : ''}
@@ -1166,7 +1166,7 @@ async function refreshRequests(){
             headers:{"Content-Type":"application/json"}, 
             body:JSON.stringify({tg_id:tg, id: Number(id)})
           });
-          notify(state.lang === 'ar' ? '✅ تم إلغاء الطلب' : '✅ Request cancelled');
+          notify(state.lang === 'ar' ? '✓ تم إلغاء الطلب' : '✓ Request cancelled');
           refreshRequests(); 
           refreshUser();
         }
@@ -1176,7 +1176,7 @@ async function refreshRequests(){
     const emptyText = state.lang === 'ar' ? 'لا توجد طلبات سحب' : 'No withdrawal requests';
     box.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">💳</div>
+        <div class="empty-state-icon">◆</div>
         <div class="empty-state-text">${emptyText}</div>
       </div>
     `;
@@ -1242,8 +1242,8 @@ async function loadStats(){
             const pnl = Number(trade.pnl);
             const color = pnl >= 0 ? "#9df09d" : "#ff8899";
             const date = new Date(trade.closed_at).toLocaleDateString();
-            const reason = trade.close_reason === 'auto_expire' ? '✅ مكتمل' 
-              : trade.close_reason === 'admin_close' ? '🔒 إداري' 
+            const reason = trade.close_reason === 'auto_expire' ? '✓ مكتمل' 
+              : trade.close_reason === 'admin_close' ? '◆ إداري' 
               : trade.close_reason === 'user_close' ? '✋ يدوي'
               : trade.close_reason || '';
             
@@ -1283,7 +1283,7 @@ function startFeed(){
   
   const once = ()=>{
     if(!isMarketOpen()){
-      push(`📅 ${t('marketClosed')}`);
+      push(`◆ ${t('marketClosed')}`);
       return;
     }
     
@@ -1298,16 +1298,16 @@ function startFeed(){
       // Profit (30%)
       const v = 20+Math.floor(Math.random()*120);
       const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
-      push(`💰 ${name} ربح ${v}$ من صفقة ${m}`);
+      push(`◆ ${name} ربح ${v}$ من صفقة ${m}`);
     } else if(r < 0.75){
       // Loss (20%) - NEW
       const v = 10+Math.floor(Math.random()*80);
       const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
-      push(`🔻 ${name} خسر ${v}$ في صفقة ${m}`);
+      push(`◆ ${name} خسر ${v}$ في صفقة ${m}`);
     } else {
       // New Deposit (25%)
       const v = 150+Math.floor(Math.random()*400);
-      push(`🎉 مستخدم جديد انضم وأودع ${v}$`);
+      push(`✦ مستخدم جديد انضم وأودع ${v}$`);
     }
   };
   
@@ -1371,10 +1371,10 @@ async function loadTrades(forceRedraw = false){
           let tradeLabel = '';
           let labelColor = '#3d8bff';
           if (isMassTrade) {
-            tradeLabel = state.lang === 'ar' ? '🤖 صفقة البوت' : '🤖 Bot Trade';
+            tradeLabel = state.lang === 'ar' ? '◈ صفقة البوت' : '◈ Bot Trade';
             labelColor = '#3d8bff';
           } else if (isCustomTrade) {
-            tradeLabel = state.lang === 'ar' ? '🎯 صفقة إضافية' : '🎯 Extra Trade';
+            tradeLabel = state.lang === 'ar' ? '◇ صفقة إضافية' : '◇ Extra Trade';
             labelColor = '#a371f7';
           }
           
@@ -1382,7 +1382,7 @@ async function loadTrades(forceRedraw = false){
           const speed = trade.speed || 'normal';
           let speedIcon = '';
           if (speed === 'fast') speedIcon = '⚡';
-          else if (speed === 'turbo') speedIcon = '🚀';
+          else if (speed === 'turbo') speedIcon = '»';
           
           const progressPercent = Math.min(100, Math.round((elapsed / duration) * 100));
           const progressColor = pnl >= 0 ? '#00d68f' : '#ff3b63';
@@ -1398,8 +1398,8 @@ async function loadTrades(forceRedraw = false){
                     ${tradeLabel ? `<span style="font-size:10px; background:rgba(0,102,255,0.15); color:${labelColor}; padding:2px 6px; border-radius:10px;">${tradeLabel}</span>` : ''}
                   </div>
                   <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-                    <small class="trade-timer" style="opacity:0.6">⏱ ${timeStr}</small>
-                    <small class="trade-price" style="opacity:0.5;">💰 $${Number(trade.current_price || 0).toFixed(2)}</small>
+                    <small class="trade-timer" style="opacity:0.6">◆ ${timeStr}</small>
+                    <small class="trade-price" style="opacity:0.5;">◆ $${Number(trade.current_price || 0).toFixed(2)}</small>
                   </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
@@ -1434,17 +1434,17 @@ async function loadTrades(forceRedraw = false){
                   body: JSON.stringify({ tg_id: tg, trade_id: tradeId, trade_type: tradeType })
                 }).then(r=>r.json());
                 if(r.ok){
-                  const closedMsg = state.lang === 'ar' ? `✅ تم إغلاق الصفقة: ${r.pnl >= 0 ? '+' : ''}$${Number(r.pnl).toFixed(2)}` : `✅ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${Number(r.pnl).toFixed(2)}`;
+                  const closedMsg = state.lang === 'ar' ? `✓ تم إغلاق الصفقة: ${r.pnl >= 0 ? '+' : ''}$${Number(r.pnl).toFixed(2)}` : `✓ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${Number(r.pnl).toFixed(2)}`;
                   notify(closedMsg);
                   await refreshUser();
                   await loadTrades(true);
                   await refreshOps();
                 }else{
-                  const errMsg = state.lang === 'ar' ? '❌ فشل إغلاق الصفقة' : '❌ Failed to close trade';
+                  const errMsg = state.lang === 'ar' ? '✗ فشل إغلاق الصفقة' : '✗ Failed to close trade';
                   notify(r.error || errMsg);
                 }
               }catch(err){
-                notify(state.lang === 'ar' ? '❌ خطأ في الاتصال' : '❌ Connection error');
+                notify(state.lang === 'ar' ? '✗ خطأ في الاتصال' : '✗ Connection error');
               }
             }
           });
@@ -1472,7 +1472,7 @@ async function loadTrades(forceRedraw = false){
           // Update current price
           const priceEl = card.querySelector('.trade-price');
           if (priceEl) {
-            priceEl.textContent = `💰 $${Number(trade.current_price || 0).toFixed(2)}`;
+            priceEl.textContent = `◆ $${Number(trade.current_price || 0).toFixed(2)}`;
           }
           
           // Update timer
@@ -1485,7 +1485,7 @@ async function loadTrades(forceRedraw = false){
           const seconds = remaining % 60;
           const timeStr = remaining > 0 ? `${hours}h ${minutes}m ${seconds}s` : (state.lang === 'ar' ? 'جاري الإغلاق...' : 'Closing...');
           const timerEl = card.querySelector('.trade-timer');
-          if (timerEl) timerEl.textContent = `⏱ ${timeStr}`;
+          if (timerEl) timerEl.textContent = `◆ ${timeStr}`;
           
           // Update progress bar
           const progressPercent = Math.min(100, Math.round((elapsed / duration) * 100));
@@ -1533,7 +1533,7 @@ async function loadTrades(forceRedraw = false){
 }
 
 $("#saveSLTP").onclick = ()=>{
-  notify(state.lang === 'ar' ? "✅ تم حفظ وقف الخسارة/جني الربح" : "✅ SL/TP saved");
+  notify(state.lang === 'ar' ? "✓ تم حفظ وقف الخسارة/جني الربح" : "✓ SL/TP saved");
 };
 
 function notify(msg){
@@ -1611,12 +1611,12 @@ async function loadReferralInfo() {
       if (listEl && r.referrals && r.referrals.length > 0) {
         const locale = state.lang === 'ar' ? 'ar' : (state.lang === 'tr' ? 'tr' : (state.lang === 'de' ? 'de' : 'en'));
         listEl.innerHTML = r.referrals.map(ref => {
-          const statusIcon = ref.status === 'credited' ? '✅' : '⏳';
+          const statusIcon = ref.status === 'credited' ? '✓' : '◇';
           const statusText = ref.status === 'credited' ? `+$${ref.bonus_amount}` : t('waitingDeposit');
           const name = ref.referred_name || `User ${String(ref.referred_tg_id).slice(-4)}`;
           return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
             <div>
-              <div style="font-size:13px;color:#eee;">👤 ${name}</div>
+              <div style="font-size:13px;color:#eee;">◆ ${name}</div>
               <div style="font-size:11px;color:#666;">${new Date(ref.created_at).toLocaleDateString(locale)}</div>
             </div>
             <div style="font-size:12px;color:${ref.status === 'credited' ? '#00d68f' : '#f0ad4e'};font-weight:600;">${statusIcon} ${statusText}</div>
@@ -1641,7 +1641,7 @@ $("#copyRefLinkBtn")?.addEventListener("click", () => {
     navigator.clipboard?.writeText(link).then(() => {
       const btn = $("#copyRefLinkBtn");
       const orig = btn.innerHTML;
-      btn.innerHTML = `✅ ${t('copied')}`;
+      btn.innerHTML = `✓ ${t('copied')}`;
       btn.style.background = '#00b377';
       setTimeout(() => { btn.innerHTML = orig; btn.style.background = 'linear-gradient(135deg,#00d68f,#00b377)'; }, 2000);
     }).catch(() => {
@@ -1653,8 +1653,8 @@ $("#copyRefLinkBtn")?.addEventListener("click", () => {
       document.execCommand('copy');
       document.body.removeChild(ta);
       const btn = $("#copyRefLinkBtn");
-      btn.innerHTML = `✅ ${t('copied')}`;
-      setTimeout(() => { btn.innerHTML = `📋 <span>${t('copyLink')}</span>`; }, 2000);
+      btn.innerHTML = `✓ ${t('copied')}`;
+      setTimeout(() => { btn.innerHTML = `◆ <span>${t('copyLink')}</span>`; }, 2000);
     });
   }
 });
@@ -1664,13 +1664,13 @@ $("#shareRefLinkBtn")?.addEventListener("click", () => {
   const link = window.__refLink || $("#referralLink")?.textContent;
   if (link && link !== 'Loading...') {
     const shareTexts = {
-      ar: '💰 انضم لمنصة QL Trading AI وابدأ التداول الذكي!',
-      en: '💰 Join QL Trading AI and start smart trading!',
-      tr: '💰 QL Trading AI\'ye katıl ve akıllı ticarete başla!',
-      de: '💰 Tritt QL Trading AI bei und starte smartes Trading!'
+      ar: '◆ انضم لمنصة QL Trading AI وابدأ التداول الذكي!',
+      en: '◆ Join QL Trading AI and start smart trading!',
+      tr: '◆ QL Trading AI\'ye katıl ve akıllı ticarete başla!',
+      de: '◆ Tritt QL Trading AI bei und starte smartes Trading!'
     };
     const shareMsg = shareTexts[state.lang] || shareTexts.en;
-    const shareText = `${shareMsg}\n\n🚀 ${link}`;
+    const shareText = `${shareMsg}\n\n» ${link}`;
     if (TWA?.openTelegramLink) {
       TWA.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareMsg)}`);
     } else if (navigator.share) {
@@ -1863,7 +1863,7 @@ $("#shareRefLinkBtn")?.addEventListener("click", () => {
   function setCountryDisplay(code) {
     const el = document.getElementById('spCountryDisplay');
     if (!el) return;
-    if (!code) { el.textContent = '🏳️'; return; }
+    if (!code) { el.textContent = '◆'; return; }
     const c = COUNTRIES.find(x => x.code === code);
     if (c) {
       const isAr = (state.lang === 'ar');

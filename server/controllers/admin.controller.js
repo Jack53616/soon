@@ -268,27 +268,27 @@ export const addTrade = async (req, res) => {
       durationText = `${durationSeconds} ثانية`;
       durationTextEn = `${durationSeconds} Seconds`;
     }
-    const speedText = tradeSpeed === 'turbo' ? '🚀 تيربو' : (tradeSpeed === 'fast' ? '⚡ سريع' : '📊 عادي');
-    const speedTextEn = tradeSpeed === 'turbo' ? '🚀 Turbo' : (tradeSpeed === 'fast' ? '⚡ Fast' : '📊 Normal');
+    const speedText = tradeSpeed === 'turbo' ? '✦ تيربو' : (tradeSpeed === 'fast' ? '⚡ سريع' : '◈ عادي');
+    const speedTextEn = tradeSpeed === 'turbo' ? '✦ Turbo' : (tradeSpeed === 'fast' ? '⚡ Fast' : '◈ Normal');
 
     if (user.tg_id) {
       try {
-        await bot.sendMessage(Number(user.tg_id), `🚀 *تم تفعيل صفقة ذكية جديدة*
+        await bot.sendMessage(Number(user.tg_id), `✦ *تم تفعيل صفقة ذكية جديدة*
 
-🔸 *الرمز:* XAUUSD (الذهب)
-⏱ *المدة:* ${durationText}
+◆ *الرمز:* XAUUSD (الذهب)
+◆ *المدة:* ${durationText}
 ${speedText}
-📊 *الحالة:* نشطة ومراقبة
+◈ *الحالة:* نشطة ومراقبة
 
-💡 _تابع محفظتك للتحديثات المباشرة._
+◆ _تابع محفظتك للتحديثات المباشرة._
 
 ---
 
-🚀 *New Smart Trade Activated*
-🔸 *Symbol:* XAUUSD (Gold)
-⏱ *Duration:* ${durationTextEn}
+✦ *New Smart Trade Activated*
+◆ *Symbol:* XAUUSD (Gold)
+◆ *Duration:* ${durationTextEn}
 ${speedTextEn}
-📊 *Status:* Active & Monitored`, { parse_mode: "Markdown" });
+◈ *Status:* Active & Monitored`, { parse_mode: "Markdown" });
       } catch (err) {
         console.log(`Failed to send trade notification to ${user.tg_id}:`, err.message);
       }
@@ -333,16 +333,16 @@ export const banUser = async (req, res) => {
       const tgId = Number(userResult.rows[0].tg_id);
       try {
         if (isBanned) {
-          await bot.sendMessage(tgId, `🚫 *تم حظر حسابك*\n\n━━━━━━━━━━━━━━━━━━━━\n📋 *السبب:* ${banReason}\n\n📩 للتواصل مع الدعم:\n━━━━━━━━━━━━━━━━━━━━\n\n🔗 *Your account has been suspended*\nReason: ${banReason}`, {
+          await bot.sendMessage(tgId, `✗ *تم حظر حسابك*\n\n━━━━━━━━━━━━━━━━━━━━\n◆ *السبب:* ${banReason}\n\n◆ للتواصل مع الدعم:\n━━━━━━━━━━━━━━━━━━━━\n\n◆ *Your account has been suspended*\nReason: ${banReason}`, {
             parse_mode: "Markdown",
             reply_markup: {
               inline_keyboard: [
-                [{ text: "📩 تواصل مع الدعم | Contact Support", url: "https://t.me/QL_Support" }]
+                [{ text: "◆ تواصل مع الدعم | Contact Support", url: "https://t.me/QL_Support" }]
               ]
             }
           });
         } else {
-          await bot.sendMessage(tgId, `✅ *تم رفع الحظر عن حسابك*\n\nيمكنك الآن استخدام المنصة بشكل طبيعي.\n\n✅ *Your account has been reactivated*\nYou can now use the platform normally.`, { parse_mode: "Markdown" });
+          await bot.sendMessage(tgId, `✓ *تم رفع الحظر عن حسابك*\n\nيمكنك الآن استخدام المنصة بشكل طبيعي.\n\n✓ *Your account has been reactivated*\nYou can now use the platform normally.`, { parse_mode: "Markdown" });
         }
       } catch (err) {
         console.log(`Failed to send ban notification to ${tgId}`);
@@ -365,7 +365,7 @@ export const unbanUser = async (req, res) => {
     const userResult = await query("SELECT tg_id FROM users WHERE id = $1", [user_id]);
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       try {
-        await bot.sendMessage(Number(userResult.rows[0].tg_id), `✅ *تم رفع الحظر عن حسابك*\n\nيمكنك الآن استخدام المنصة بشكل طبيعي.\n\n✅ *Your account has been reactivated*\nYou can now use the platform normally.`, { parse_mode: "Markdown" });
+        await bot.sendMessage(Number(userResult.rows[0].tg_id), `✓ *تم رفع الحظر عن حسابك*\n\nيمكنك الآن استخدام المنصة بشكل طبيعي.\n\n✓ *Your account has been reactivated*\nYou can now use the platform normally.`, { parse_mode: "Markdown" });
       } catch (err) { /* ignore */ }
     }
 
@@ -430,7 +430,7 @@ export const approveWithdrawal = async (req, res) => {
     const userResult = await query("SELECT tg_id FROM users WHERE id = $1", [request.user_id]);
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       try {
-        await bot.sendMessage(Number(userResult.rows[0].tg_id), `💸 تمت الموافقة على طلب السحب #${request_id} بقيمة $${Number(request.amount).toFixed(2)}.`);
+        await bot.sendMessage(Number(userResult.rows[0].tg_id), `◆ تمت الموافقة على طلب السحب #${request_id} بقيمة $${Number(request.amount).toFixed(2)}.`);
       } catch (err) { /* ignore */ }
     }
 
@@ -467,7 +467,7 @@ export const rejectWithdrawal = async (req, res) => {
     const userResult = await query("SELECT tg_id FROM users WHERE id = $1", [request.user_id]);
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       try {
-        await bot.sendMessage(Number(userResult.rows[0].tg_id), `❌ تم رفض طلب السحب #${request_id}. السبب: ${reason || 'Rejected by admin'}`);
+        await bot.sendMessage(Number(userResult.rows[0].tg_id), `✗ تم رفض طلب السحب #${request_id}. السبب: ${reason || 'Rejected by admin'}`);
       } catch (err) { /* ignore */ }
     }
 
@@ -555,7 +555,7 @@ export const closeTrade = async (req, res) => {
     if (userResult.rows.length > 0 && userResult.rows[0].tg_id) {
       try {
         const user = userResult.rows[0];
-        await bot.sendMessage(Number(user.tg_id), `🔔 *Trade Closed*\n${pnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n💰 Balance: $${Number(user.balance).toFixed(2)}`, { parse_mode: "Markdown" });
+        await bot.sendMessage(Number(user.tg_id), `◆ *Trade Closed*\n${pnl >= 0 ? "◆ Profit" : "◆ Loss"}: ${pnl >= 0 ? "+" : ""}$${Math.abs(pnl).toFixed(2)}\n◆ Balance: $${Number(user.balance).toFixed(2)}`, { parse_mode: "Markdown" });
       } catch (err) { /* ignore */ }
     }
 
@@ -666,7 +666,7 @@ export const broadcast = async (req, res) => {
 
     for (const user of users.rows) {
       try {
-        const fullMessage = title ? `📢 *${title}*\n\n${message}` : `📢 ${message}`;
+        const fullMessage = title ? `◆ *${title}*\n\n${message}` : `◆ ${message}`;
         await bot.sendMessage(Number(user.tg_id), fullMessage, { parse_mode: "Markdown" });
         sent++;
       } catch (err) {
@@ -975,22 +975,22 @@ export const activateMassTrade = async (req, res) => {
       // Send Telegram notification
       if (user.tg_id) {
         try {
-          await bot.sendMessage(Number(user.tg_id), `🚀 *البوت دخل صفقة جديدة!*
+          await bot.sendMessage(Number(user.tg_id), `✦ *البوت دخل صفقة جديدة!*
 
-🔸 *الرمز:* ${massTrade.symbol || 'XAUUSD'}
-📊 *الاتجاه:* ${direction}
-⏱ *المدة:* ${Math.round(durationSeconds / 60)} دقيقة
+◆ *الرمز:* ${massTrade.symbol || 'XAUUSD'}
+◈ *الاتجاه:* ${direction}
+◆ *المدة:* ${Math.round(durationSeconds / 60)} دقيقة
 
-📱 يمكنك المراقبة من خيار *صفقاتي*
+◆ يمكنك المراقبة من خيار *صفقاتي*
 
 ---
 
-🚀 *Bot entered a new trade!*
-🔸 *Symbol:* ${massTrade.symbol || 'XAUUSD'}
-📊 *Direction:* ${direction}
-⏱ *Duration:* ${Math.round(durationSeconds / 60)} min
+✦ *Bot entered a new trade!*
+◆ *Symbol:* ${massTrade.symbol || 'XAUUSD'}
+◈ *Direction:* ${direction}
+◆ *Duration:* ${Math.round(durationSeconds / 60)} min
 
-📱 Monitor from *My Trades*`, { parse_mode: "Markdown" });
+◆ Monitor from *My Trades*`, { parse_mode: "Markdown" });
         } catch (err) { /* ignore */ }
       }
 
@@ -1076,7 +1076,7 @@ export const closeMassTrade = async (req, res) => {
 
         if (user.tg_id) {
           try {
-            await bot.sendMessage(Number(user.tg_id), `🔔 *تم إغلاق الصفقة*\n${pnlAmount >= 0 ? "🟢 ربح" : "🔴 خسارة"}: ${pnlAmount >= 0 ? "+" : ""}$${Math.abs(pnlAmount).toFixed(2)} (${appliedPercentage >= 0 ? '+' : ''}${appliedPercentage}%)\n💰 الرصيد: $${balanceAfter.toFixed(2)}\n\n🔔 *Trade Closed*\n${pnlAmount >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${pnlAmount >= 0 ? "+" : ""}$${Math.abs(pnlAmount).toFixed(2)}\n💰 Balance: $${balanceAfter.toFixed(2)}`, { parse_mode: "Markdown" });
+            await bot.sendMessage(Number(user.tg_id), `◆ *تم إغلاق الصفقة*\n${pnlAmount >= 0 ? "◆ ربح" : "◆ خسارة"}: ${pnlAmount >= 0 ? "+" : ""}$${Math.abs(pnlAmount).toFixed(2)} (${appliedPercentage >= 0 ? '+' : ''}${appliedPercentage}%)\n◆ الرصيد: $${balanceAfter.toFixed(2)}\n\n◆ *Trade Closed*\n${pnlAmount >= 0 ? "◆ Profit" : "◆ Loss"}: ${pnlAmount >= 0 ? "+" : ""}$${Math.abs(pnlAmount).toFixed(2)}\n◆ Balance: $${balanceAfter.toFixed(2)}`, { parse_mode: "Markdown" });
           } catch (err) { /* ignore */ }
         }
 
@@ -1152,7 +1152,7 @@ export const closeMassTrade = async (req, res) => {
         // Send notification
         if (ut.tg_id) {
           try {
-            await bot.sendMessage(Number(ut.tg_id), `🔔 *تم إغلاق الصفقة*\n${finalPnl >= 0 ? "🟢 ربح" : "🔴 خسارة"}: ${finalPnl >= 0 ? "+" : ""}$${Math.abs(finalPnl).toFixed(2)}\n💰 الرصيد: $${balanceAfter.toFixed(2)}\n\n🔔 *Trade Closed*\n${finalPnl >= 0 ? "🟢 Profit" : "🔴 Loss"}: ${finalPnl >= 0 ? "+" : ""}$${Math.abs(finalPnl).toFixed(2)}\n💰 Balance: $${balanceAfter.toFixed(2)}`, { parse_mode: "Markdown" });
+            await bot.sendMessage(Number(ut.tg_id), `◆ *تم إغلاق الصفقة*\n${finalPnl >= 0 ? "◆ ربح" : "◆ خسارة"}: ${finalPnl >= 0 ? "+" : ""}$${Math.abs(finalPnl).toFixed(2)}\n◆ الرصيد: $${balanceAfter.toFixed(2)}\n\n◆ *Trade Closed*\n${finalPnl >= 0 ? "◆ Profit" : "◆ Loss"}: ${finalPnl >= 0 ? "+" : ""}$${Math.abs(finalPnl).toFixed(2)}\n◆ Balance: $${balanceAfter.toFixed(2)}`, { parse_mode: "Markdown" });
           } catch (err) { /* ignore */ }
         }
 
@@ -1454,25 +1454,25 @@ export const openCustomTrade = async (req, res) => {
             ? `${Math.round(durationSeconds / 3600)} hour(s)` 
             : `${Math.round(durationSeconds / 60)} min`;
 
-          await bot.sendMessage(Number(user.tg_id), `🎯 *صفقة إضافية!*
+          await bot.sendMessage(Number(user.tg_id), `◇ *صفقة إضافية!*
 
-🔸 *الرمز:* ${tradeSymbol}
-📊 *الاتجاه:* ${tradeDirection}
-⏱ *المدة:* ${durationLabel}
+◆ *الرمز:* ${tradeSymbol}
+◈ *الاتجاه:* ${tradeDirection}
+◆ *المدة:* ${durationLabel}
 ⚡ *السرعة:* ${tradeSpeed === 'turbo' ? 'سريعة جداً' : tradeSpeed === 'fast' ? 'سريعة' : 'عادية'}
 
-📱 تابع من خيار *صفقاتي*
+◆ تابع من خيار *صفقاتي*
 
 ---
 
-🎯 *Extra Trade!*
+◇ *Extra Trade!*
 
-🔸 *Symbol:* ${tradeSymbol}
-📊 *Direction:* ${tradeDirection}
-⏱ *Duration:* ${durationLabelEn}
+◆ *Symbol:* ${tradeSymbol}
+◈ *Direction:* ${tradeDirection}
+◆ *Duration:* ${durationLabelEn}
 ⚡ *Speed:* ${tradeSpeed}
 
-📱 Monitor from *My Trades*`, { parse_mode: "Markdown" });
+◆ Monitor from *My Trades*`, { parse_mode: "Markdown" });
         } catch (err) { /* ignore */ }
       }
     }
@@ -1586,7 +1586,7 @@ export const deleteUser = async (req, res) => {
     // Notify via Telegram
     if (user.tg_id) {
       try {
-        await bot.sendMessage(Number(user.tg_id), `⚠️ تم حذف حسابك.\n\n⚠️ Your account has been deleted.`);
+        await bot.sendMessage(Number(user.tg_id), `⚠ تم حذف حسابك.\n\n⚠ Your account has been deleted.`);
       } catch (err) { /* ignore */ }
     }
 
