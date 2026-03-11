@@ -78,6 +78,25 @@ router.get("/extra-trade-users", adminController.getExtraTradeUsers);
 router.post("/extra-trade-user/add", adminController.addExtraTradeUser);
 router.post("/extra-trade-user/remove", adminController.removeExtraTradeUser);
 
+// ===== Custom Trades (Admin opens for specific users) =====
+router.get("/custom-trades", adminController.getCustomTrades);
+router.post("/custom-trade/open", adminController.openCustomTrade);
+router.post("/custom-trade/close/:id", adminController.closeCustomTrade);
+
+// ===== Delete User =====
+router.post("/user/delete", adminController.deleteUser);
+
+// ===== Manage Referrals =====
+router.post("/referral/remove", adminController.removeReferral);
+router.post("/referral/transfer", adminController.transferReferral);
+router.post("/referral/remove-single", adminController.deleteReferral);
+router.get("/user/referrals/:user_id", adminController.getUserReferralsList);
+
+// ===== Rank Management =====
+router.post("/user/rank", adminController.setUserRank);
+router.post("/user/rank/bulk", adminController.bulkSetUserRank);
+router.get("/referral-commissions", adminController.getReferralCommissionStats);
+
 // ===== Agent System =====
 router.get("/agents", agentController.getAllAgents);
 router.post("/agent/promote", agentController.promoteToAgent);

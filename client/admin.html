@@ -43,6 +43,7 @@
       <button class="tab-btn" data-tab="wd">💸 السحوبات</button>
       <button class="tab-btn" data-tab="tr">📊 الصفقات</button>
       <button class="tab-btn" data-tab="mass">🎯 صفقات جماعية</button>
+      <button class="tab-btn" data-tab="custom">🎨 صفقات مخصصة</button>
       <button class="tab-btn" data-tab="referrals">🔗 الدعوات</button>
       <button class="tab-btn" data-tab="settings">⚙️ الإعدادات</button>
     </nav>
@@ -176,9 +177,20 @@
             <h4>📈 إضافة صفقة</h4>
             <div class="action-row">
               <input id="tradePnl" type="number" class="input small" placeholder="الربح/الخسارة"/>
-              <input id="tradeHours" type="number" class="input small" placeholder="المدة (ساعات)"/>
+              <select id="tradeDurationUnit" class="input small">
+                <option value="hours">ساعات</option>
+                <option value="minutes">دقائق</option>
+                <option value="seconds">ثواني</option>
+              </select>
+              <input id="tradeHours" type="number" class="input small" placeholder="المدة"/>
+              <select id="tradeSpeed" class="input small">
+                <option value="normal">عادي</option>
+                <option value="fast">⚡ سريع</option>
+                <option value="turbo">🚀 تيربو</option>
+              </select>
               <button id="addTradeBtn" class="btn">إضافة صفقة</button>
             </div>
+            <p style="color: var(--muted); font-size: 11px; margin-top: 6px;">عادي: تذبذب طبيعي | سريع: تذبذب سريع ×2 | تيربو: تذبذب سريع جداً ×4</p>
           </div>
 
           <div class="action-section">
@@ -191,12 +203,38 @@
           </div>
 
           <div class="action-section">
-            <h4>🗑️ إجراءات أخرى</h4>
+            <h4>🏅 تعديل الرتبة</h4>
+            <div class="action-row">
+              <input id="customRankInput" type="text" class="input small" placeholder="الرتبة المخصصة (مثل: وكيل ذهبي)" style="flex:1;"/>
+              <button id="setRankBtn" class="btn" style="background:#a371f7;color:#fff;">تعيين رتبة</button>
+              <button id="resetRankBtn" class="btn" style="background:rgba(255,255,255,0.1);">إعادة تعيين</button>
+            </div>
+            <p style="color: var(--muted); font-size: 12px; margin-top: 6px;">الرتبة التلقائية: عضو (0-4 دعوات) → وكيل (5+ دعوات). الرتبة المخصصة تتجاوز التلقائية.</p>
+          </div>
+
+          <div class="action-section">
+            <h4>🔗 إدارة الإحالات</h4>
+            <div class="action-row">
+              <button id="viewReferralsBtn" class="btn" style="background:rgba(88,166,255,0.2);border:1px solid #58a6ff;">👥 عرض المحالين</button>
+              <button id="removeReferrerBtn" class="btn warning">❌ إزالة المُحيل</button>
+            </div>
+            <div class="action-row" style="margin-top:8px;">
+              <input id="transferRefToId" type="number" class="input small" placeholder="نقل إلى User ID"/>
+              <button id="transferReferralBtn" class="btn" style="background:rgba(163,113,247,0.2);border:1px solid #a371f7;">🔄 نقل الإحالة</button>
+            </div>
+            <div id="userReferralsList" class="hidden" style="margin-top:12px;"></div>
+          </div>
+
+          <div class="action-section">
+            <h4>🚧 إجراءات أخرى</h4>
             <div class="action-row">
               <button id="clearHistoryBtn" class="btn warning">تصفير السجل</button>
               <button id="clearWithdrawalsBtn" class="btn warning">تصفير طلبات السحب</button>
               <button id="resetWithdrawnBtn" class="btn warning">تصفير إجمالي المسحوب</button>
               <button id="clearTradesBtn" class="btn warning">حذف الصفقات</button>
+            </div>
+            <div class="action-row" style="margin-top:8px;">
+              <button id="deleteUserBtn" class="btn danger" style="flex:1;">🗑️ حذف الحساب نهائياً</button>
             </div>
           </div>
         </div>
@@ -386,6 +424,74 @@
               <div id="userTradesTable" class="table-container"></div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Custom Trades Tab -->
+      <section id="tab-custom" class="tab-content">
+        <div class="card glass" style="border: 2px solid rgba(163,113,247,0.3);">
+          <div class="card-header">
+            <h3>🎨 فتح صفقة مخصصة لأشخاص محددين</h3>
+          </div>
+          <div class="action-section">
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
+              افتح صفقة لمستخدمين محددين. الصفقة تظهر عندهم مباشرة مع إشعار تيليجرام.
+            </p>
+            <div class="action-row">
+              <input id="customUserIds" class="input" placeholder="Telegram IDs (مفصولة بفاصلة)" style="flex:2;"/>
+            </div>
+            <div class="action-row" style="margin-top:8px;">
+              <select id="customSymbol" class="input small">
+                <option value="XAUUSD">XAUUSD (ذهب)</option>
+                <option value="BTCUSDT">BTCUSDT</option>
+                <option value="ETHUSDT">ETHUSDT</option>
+                <option value="EURUSD">EURUSD</option>
+                <option value="GBPUSD">GBPUSD</option>
+              </select>
+              <select id="customDirection" class="input small">
+                <option value="BUY">BUY (شراء)</option>
+                <option value="SELL">SELL (بيع)</option>
+                <option value="random">🎲 عشوائي</option>
+              </select>
+              <select id="customResult" class="input small">
+                <option value="random">🎲 عشوائي</option>
+                <option value="win">✅ ربح</option>
+                <option value="lose">❌ خسارة</option>
+              </select>
+            </div>
+            <div class="action-row" style="margin-top:8px;">
+              <input id="customLotSize" type="number" step="0.01" class="input small" placeholder="حجم اللوت" value="0.50"/>
+              <select id="customDurationUnit" class="input small">
+                <option value="hours">ساعات</option>
+                <option value="minutes">دقائق</option>
+                <option value="seconds">ثواني</option>
+              </select>
+              <input id="customDuration" type="number" class="input small" placeholder="المدة" value="1"/>
+              <select id="customSpeed" class="input small">
+                <option value="normal">عادي</option>
+                <option value="fast">⚡ سريع</option>
+                <option value="turbo">🚀 تيربو</option>
+              </select>
+            </div>
+            <div class="action-row" style="margin-top:8px;">
+              <label style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;">
+                <input id="customCanClose" type="checkbox" checked/> السماح للمستخدم بإغلاق الصفقة
+              </label>
+              <button id="openCustomTradeBtn" class="btn success" style="flex:1;">🚀 فتح الصفقة المخصصة</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass">
+          <div class="card-header">
+            <h3>📋 سجل الصفقات المخصصة</h3>
+            <div class="filter-btns">
+              <button class="filter-btn active" data-filter="open" data-target="custom">مفتوحة</button>
+              <button class="filter-btn" data-filter="closed" data-target="custom">مغلقة</button>
+              <button class="filter-btn" data-filter="all" data-target="custom">الكل</button>
+            </div>
+          </div>
+          <div id="customTradesList" class="table-container"></div>
         </div>
       </section>
 

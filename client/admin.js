@@ -315,9 +315,18 @@ $('#extendSubBtn')?.addEventListener('click', async () => {
 $('#addTradeBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;
   const pnl = Number($('#tradePnl').value);
-  const hours = Number($('#tradeHours').value) || 1;
-  if (pnl === undefined || pnl === null) return toast('أدخل الربح/الخسارة');
-  const r = await api('/api/admin/user/trade', 'POST', { user_id: state.currentUser.id, target_pnl: pnl, duration_hours: hours });
+  const durationValue = Number($('#tradeHours').value) || 1;
+  const durationUnit = $('#tradeDurationUnit')?.value || 'hours';
+  const speed = $('#tradeSpeed')?.value || 'normal';
+  if (pnl === undefined || pnl === null || isNaN(pnl)) return toast('أدخل الربح/الخسارة');
+  
+  // Convert duration to hours for API
+  let duration_hours;
+  if (durationUnit === 'minutes') duration_hours = durationValue / 60;
+  else if (durationUnit === 'seconds') duration_hours = durationValue / 3600;
+  else duration_hours = durationValue;
+  
+  const r = await api('/api/admin/user/trade', 'POST', { user_id: state.currentUser.id, target_pnl: pnl, duration_hours, speed });
   if (r.ok) { toast('✅ تم إضافة الصفقة (مع إشعار Telegram)'); loadTrades(); }
   else toast('❌ ' + (r.error || 'خطأ'));
 });
@@ -1274,3 +1283,239 @@ setInterval(() => {
     loadTodayScheduled();
   }
 }, 30000);
+
+
+// ========== DELETE USER ==========
+$('#deleteUserBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  const userId = state.currentUser.id;
+  const userName = state.currentUser.name || state.currentUser.tg_id;
+  if (!confirm(`⚠️ هل أنت متأكد من حذف حساب "${userName}" نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه!`)) return;
+  if (!confirm('⚠️ تأكيد نهائي: سيتم حذف جميع بيانات المستخدم بما في ذلك الصفقات والسحوبات والسجل.')) return;
+  
+  const r = await api('/api/admin/user/delete', 'POST', { user_id: userId });
+  if (r.ok) {
+    toast('✅ تم حذف الحساب نهائياً');
+    $('#userDetails').classList.add('hidden');
+    state.currentUser = null;
+    loadUsers();
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+// ========== SET CUSTOM RANK ==========
+$('#setRankBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  const rank = $('#customRankInput')?.value?.trim();
+  if (!rank) return toast('أدخل الرتبة المطلوبة');
+  
+  const r = await api('/api/admin/user/rank', 'POST', { user_id: state.currentUser.id, custom_rank: rank });
+  if (r.ok) {
+    toast(`✅ تم تعيين الرتبة: ${rank}`);
+    viewUser(state.currentUser.id);
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+$('#resetRankBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  if (!confirm('هل تريد إعادة الرتبة للتلقائية؟')) return;
+  
+  const r = await api('/api/admin/user/rank', 'POST', { user_id: state.currentUser.id, custom_rank: null });
+  if (r.ok) {
+    toast('✅ تم إعادة الرتبة للتلقائية');
+    $('#customRankInput').value = '';
+    viewUser(state.currentUser.id);
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+// ========== REFERRAL MANAGEMENT ==========
+$('#viewReferralsBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  const listEl = $('#userReferralsList');
+  if (!listEl) return;
+  
+  const r = await api(`/api/admin/user/referrals/${state.currentUser.id}`);
+  if (r.ok) {
+    listEl.classList.remove('hidden');
+    if (r.referrals && r.referrals.length > 0) {
+      listEl.innerHTML = `
+        <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">👥 المحالين (${r.referrals.length}):</div>
+        ${r.referrals.map(ref => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(255,255,255,0.03);border-radius:6px;margin-bottom:4px;">
+            <div>
+              <span style="color:#eee;">${ref.name || 'غير معروف'}</span>
+              <span style="color:#666;font-size:11px;margin-right:8px;">TG: ${ref.tg_id}</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-small danger" onclick="removeReferral(${ref.id}, ${state.currentUser.id})">حذف</button>
+            </div>
+          </div>
+        `).join('')}
+      `;
+    } else {
+      listEl.innerHTML = '<div style="text-align:center;padding:12px;color:#666;">لا يوجد محالين</div>';
+    }
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+// Remove referrer from user
+$('#removeReferrerBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  if (!confirm('هل تريد إزالة المُحيل لهذا المستخدم؟')) return;
+  
+  const r = await api('/api/admin/referral/remove', 'POST', { user_id: state.currentUser.id });
+  if (r.ok) {
+    toast('✅ تم إزالة المُحيل');
+    viewUser(state.currentUser.id);
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+// Transfer referral
+$('#transferReferralBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return;
+  const newReferrerId = Number($('#transferRefToId')?.value);
+  if (!newReferrerId) return toast('أدخل User ID للنقل إليه');
+  if (!confirm(`هل تريد نقل إحالة هذا المستخدم إلى User ID: ${newReferrerId}؟`)) return;
+  
+  const r = await api('/api/admin/referral/transfer', 'POST', { 
+    user_id: state.currentUser.id, 
+    new_referrer_id: newReferrerId 
+  });
+  if (r.ok) {
+    toast('✅ تم نقل الإحالة بنجاح');
+    $('#transferRefToId').value = '';
+    viewUser(state.currentUser.id);
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+// Global function for removing individual referral
+window.removeReferral = async (referralId, parentUserId) => {
+  if (!confirm('هل تريد حذف هذه الإحالة؟')) return;
+  const r = await api('/api/admin/referral/remove-single', 'POST', { referral_id: referralId });
+  if (r.ok) {
+    toast('✅ تم حذف الإحالة');
+    // Refresh referrals list
+    $('#viewReferralsBtn')?.click();
+  } else toast('❌ ' + (r.error || 'خطأ'));
+};
+
+// ========== CUSTOM TRADES ==========
+$('#openCustomTradeBtn')?.addEventListener('click', async () => {
+  const userIdsStr = $('#customUserIds')?.value?.trim();
+  if (!userIdsStr) return toast('أدخل Telegram IDs');
+  
+  const tg_ids = userIdsStr.split(',').map(s => s.trim()).filter(s => s);
+  if (tg_ids.length === 0) return toast('أدخل Telegram IDs صحيحة');
+  
+  const symbol = $('#customSymbol')?.value || 'XAUUSD';
+  const direction = $('#customDirection')?.value || 'random';
+  const result = $('#customResult')?.value || 'random';
+  const lot_size = Number($('#customLotSize')?.value) || 0.50;
+  const durationValue = Number($('#customDuration')?.value) || 1;
+  const durationUnit = $('#customDurationUnit')?.value || 'hours';
+  const speed = $('#customSpeed')?.value || 'normal';
+  const can_close = $('#customCanClose')?.checked ?? true;
+  
+  // Convert duration to seconds
+  let duration_seconds;
+  if (durationUnit === 'hours') duration_seconds = durationValue * 3600;
+  else if (durationUnit === 'minutes') duration_seconds = durationValue * 60;
+  else duration_seconds = durationValue;
+  
+  if (!confirm(`هل تريد فتح صفقة مخصصة لـ ${tg_ids.length} مستخدم؟`)) return;
+  
+  const r = await api('/api/admin/custom-trade/open', 'POST', {
+    tg_ids,
+    symbol,
+    direction,
+    result,
+    lot_size,
+    duration_seconds,
+    speed,
+    can_close
+  });
+  
+  if (r.ok) {
+    toast(`✅ تم فتح ${r.created || tg_ids.length} صفقة مخصصة`);
+    loadCustomTrades();
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+// Load custom trades list
+async function loadCustomTrades(filter = 'open') {
+  const container = $('#customTradesList');
+  if (!container) return;
+  
+  const r = await api(`/api/admin/custom-trades?status=${filter}`);
+  if (!r.ok) return;
+  
+  if (!r.trades || r.trades.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">لا توجد صفقات مخصصة</div>';
+    return;
+  }
+  
+  container.innerHTML = `
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>المستخدم</th>
+          <th>الرمز</th>
+          <th>الاتجاه</th>
+          <th>السرعة</th>
+          <th>PnL</th>
+          <th>الحالة</th>
+          <th>التاريخ</th>
+          <th>إجراء</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${r.trades.map(t => {
+          const pnl = Number(t.pnl || 0);
+          const pnlColor = pnl >= 0 ? '#00d68f' : '#ff3b63';
+          const speedIcon = t.speed === 'turbo' ? '🚀' : (t.speed === 'fast' ? '⚡' : '');
+          const statusBadge = t.status === 'open' 
+            ? '<span style="color:#00d68f;">● مفتوحة</span>' 
+            : '<span style="color:#666;">● مغلقة</span>';
+          return `<tr>
+            <td>${t.id}</td>
+            <td>${t.user_name || ''} <small style="color:#666;">(${t.tg_id || t.user_id})</small></td>
+            <td>${t.symbol}</td>
+            <td style="color:${t.direction === 'BUY' ? '#00d68f' : '#ff3b63'};">${t.direction}</td>
+            <td>${speedIcon} ${t.speed || 'normal'}</td>
+            <td style="color:${pnlColor};font-weight:600;">${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)}</td>
+            <td>${statusBadge}</td>
+            <td style="font-size:11px;">${new Date(t.opened_at).toLocaleString('ar')}</td>
+            <td>${t.status === 'open' ? `<button class="btn-small danger" onclick="closeCustomTrade(${t.id})">إغلاق</button>` : ''}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// Close custom trade
+window.closeCustomTrade = async (tradeId) => {
+  if (!confirm('هل تريد إغلاق هذه الصفقة المخصصة؟')) return;
+  const r = await api(`/api/admin/custom-trade/close/${tradeId}`, 'POST');
+  if (r.ok) {
+    toast('✅ تم إغلاق الصفقة');
+    loadCustomTrades();
+  } else toast('❌ ' + (r.error || 'خطأ'));
+};
+
+// Custom trades filter buttons
+document.querySelectorAll('.filter-btn[data-target="custom"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-target="custom"]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadCustomTrades(btn.dataset.filter);
+  });
+});
+
+// Load custom trades when tab is opened
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  const origHandler = btn._clickHandler;
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'custom') loadCustomTrades();
+  });
+});

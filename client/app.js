@@ -981,20 +981,28 @@ function hydrateUser(user){
   if(spName) spName.textContent = name || "—";
   if(spEmail) spEmail.textContent = email || "—";
 
-  // ===== Rank Display (Arabic labels) =====
-  const rankMap = {
-    member:     { ar: '👤 عضو',          en: '👤 Member',      color: '#ffd700' },
-    agent:      { ar: '🤝 وكيل',          en: '🤝 Agent',       color: '#58a6ff' },
-    gold_agent: { ar: '🥇 وكيل ذهبي',    en: '🥇 Gold Agent',  color: '#ffd700' },
-    partner:    { ar: '🌟 شريك',          en: '🌟 Partner',     color: '#a371f7' }
+  // ===== Rank Display (uses display_rank from server) =====
+  const rankColorMap = {
+    'عضو': '#ffd700',
+    'وكيل': '#58a6ff',
+    'وكيل ذهبي': '#ffd700',
+    'شريك': '#a371f7',
+    'Member': '#ffd700',
+    'Agent': '#58a6ff',
+    'Gold Agent': '#ffd700',
+    'Partner': '#a371f7'
   };
-  const userRank = user.rank || (user.is_agent ? 'agent' : 'member');
-  const rankInfo = rankMap[userRank] || rankMap.member;
-  const rankText = state.lang === 'ar' ? rankInfo.ar : rankInfo.en;
+  // Server sends display_rank which handles custom_rank + referral count logic
+  const displayRank = user.display_rank || (Number(user.referral_count || 0) >= 5 ? 'وكيل' : 'عضو');
+  const rankColor = rankColorMap[displayRank] || '#58a6ff';
   const rankBadge = $("#userRankBadge");
   const spRank = $("#spUserRank");
-  if(rankBadge) rankBadge.textContent = rankText;
-  if(spRank){ spRank.textContent = rankText; spRank.style.color = rankInfo.color; }
+  if(rankBadge) rankBadge.textContent = displayRank;
+  if(spRank){ spRank.textContent = displayRank; spRank.style.color = rankColor; }
+
+  // Show referral trade commission
+  const refCommEl = $("#refTradeCommission");
+  if(refCommEl) refCommEl.textContent = `$${Number(user.referral_trade_commission || 0).toFixed(2)}`;
 
   // Update country flag
   if (window._hydrateCountryHook) window._hydrateCountryHook(user);
@@ -1296,7 +1304,8 @@ async function loadTrades(forceRedraw = false){
     let totalPnl = 0;
     
     if(r.ok && r.trades && r.trades.length > 0){
-      const currentIds = r.trades.map(t => String(t.id));
+      // Use unique keys (type_id) to distinguish between different trade types with same id
+      const currentIds = r.trades.map(t => `${t.trade_type}_${t.id}`);
       
       // Check if trade list changed (new trade added or trade closed)
       const listChanged = forceRedraw ||
@@ -1311,7 +1320,11 @@ async function loadTrades(forceRedraw = false){
         r.trades.forEach(trade=>{
           const div = document.createElement("div");
           div.className="op";
+          // Use unique key combining id + type to avoid conflicts
+          const tradeKey = `${trade.trade_type}_${trade.id}`;
           div.dataset.tradeId = trade.id;
+          div.dataset.tradeKey = tradeKey;
+          div.dataset.tradeType = trade.trade_type || 'regular';
           
           const pnl = Number(trade.pnl || 0);
           totalPnl += pnl;
@@ -1319,7 +1332,7 @@ async function loadTrades(forceRedraw = false){
           const pnlSign = pnl >= 0 ? "+" : "";
           
           const opened = new Date(trade.opened_at);
-          const duration = trade.duration_seconds || 3600;
+          const duration = Number(trade.duration_seconds || trade.mt_duration || 3600);
           const elapsed = Math.floor((Date.now() - opened.getTime()) / 1000);
           const remaining = Math.max(0, duration - elapsed);
           const hours = Math.floor(remaining / 3600);
@@ -1328,31 +1341,48 @@ async function loadTrades(forceRedraw = false){
           const timeStr = remaining > 0 ? `${hours}h ${minutes}m ${seconds}s` : (state.lang === 'ar' ? 'جاري الإغلاق...' : 'Closing...');
           
           const isMassTrade = trade.trade_type === 'mass';
-          const tradeLabel = isMassTrade ? (state.lang === 'ar' ? '🤖 صفقة البوت' : '🤖 Bot Trade') : '';
+          const isCustomTrade = trade.trade_type === 'custom';
+          let tradeLabel = '';
+          let labelColor = '#3d8bff';
+          if (isMassTrade) {
+            tradeLabel = state.lang === 'ar' ? '🤖 صفقة البوت' : '🤖 Bot Trade';
+            labelColor = '#3d8bff';
+          } else if (isCustomTrade) {
+            tradeLabel = state.lang === 'ar' ? '🎯 صفقة إضافية' : '🎯 Extra Trade';
+            labelColor = '#a371f7';
+          }
+          
+          // Speed indicator
+          const speed = trade.speed || 'normal';
+          let speedIcon = '';
+          if (speed === 'fast') speedIcon = '⚡';
+          else if (speed === 'turbo') speedIcon = '🚀';
+          
           const progressPercent = Math.min(100, Math.round((elapsed / duration) * 100));
           const progressColor = pnl >= 0 ? '#00d68f' : '#ff3b63';
+          const canClose = !isMassTrade && (trade.trade_type !== 'custom' || trade.can_close);
           
           div.innerHTML = `
             <div style="width:100%;">
               <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
                 <div style="flex:1;">
-                  <div style="display:flex; align-items:center; gap:6px;">
+                  <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span>${trade.symbol} ${trade.direction} (${trade.lot_size})</span>
-                    ${tradeLabel ? `<span style="font-size:10px; background:rgba(0,102,255,0.2); color:#3d8bff; padding:2px 6px; border-radius:10px;">${tradeLabel}</span>` : ''}
+                    ${speedIcon ? `<span style="font-size:12px;">${speedIcon}</span>` : ''}
+                    ${tradeLabel ? `<span style="font-size:10px; background:rgba(0,102,255,0.15); color:${labelColor}; padding:2px 6px; border-radius:10px;">${tradeLabel}</span>` : ''}
                   </div>
                   <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
                     <small class="trade-timer" style="opacity:0.6">⏱ ${timeStr}</small>
-                    ${!isMassTrade ? `<small class="trade-price" style="opacity:0.5;">💰 $${Number(trade.current_price || 0).toFixed(2)}</small>` : ''}
+                    <small class="trade-price" style="opacity:0.5;">💰 $${Number(trade.current_price || 0).toFixed(2)}</small>
                   </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                   <div style="text-align:right;">
                     <b class="trade-pnl" style="color:${pnlColor}; font-size:16px;">${pnlSign}$${Math.abs(pnl).toFixed(2)}</b>
                   </div>
-                  ${!isMassTrade ? `<button class="btn-close-trade" data-trade-id="${trade.id}" data-trade-type="regular" style="padding:4px 8px; font-size:12px; background:#ff4444; color:white; border:none; border-radius:4px; cursor:pointer;">✕</button>` : ''}
+                  ${canClose ? `<button class="btn-close-trade" data-trade-id="${trade.id}" data-trade-type="${trade.trade_type || 'regular'}" style="padding:4px 8px; font-size:12px; background:#ff4444; color:white; border:none; border-radius:4px; cursor:pointer;">✕</button>` : ''}
                 </div>
               </div>
-              <!-- Progress bar -->
               <div style="width:100%; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
                 <div class="trade-progress" style="width:${progressPercent}%; height:100%; background:${progressColor}; border-radius:2px; transition:width 1s linear;"></div>
               </div>
@@ -1371,9 +1401,14 @@ async function loadTrades(forceRedraw = false){
             const confirmMsg = state.lang === 'ar' ? 'هل تريد إغلاق هذه الصفقة الآن؟' : 'Close this trade now?';
             if(confirm(confirmMsg)){
               try{
-                const r = await fetch(`/api/trades/close/${tradeId}`, {method:"POST"}).then(r=>r.json());
+                const tg = state.user?.tg_id || Number(localStorage.getItem("tg"));
+                const r = await fetch(`/api/trades/close`, {
+                  method: "POST",
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ tg_id: tg, trade_id: tradeId, trade_type: tradeType })
+                }).then(r=>r.json());
                 if(r.ok){
-                  const closedMsg = state.lang === 'ar' ? `✅ تم إغلاق الصفقة: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}` : `✅ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${r.pnl.toFixed(2)}`;
+                  const closedMsg = state.lang === 'ar' ? `✅ تم إغلاق الصفقة: ${r.pnl >= 0 ? '+' : ''}$${Number(r.pnl).toFixed(2)}` : `✅ Trade closed: ${r.pnl >= 0 ? '+' : ''}$${Number(r.pnl).toFixed(2)}`;
                   notify(closedMsg);
                   await refreshUser();
                   await loadTrades(true);
@@ -1392,7 +1427,8 @@ async function loadTrades(forceRedraw = false){
       } else {
         // Smart update: only update PnL, timer, price, progress bar in-place (no flicker)
         r.trades.forEach(trade => {
-          const card = box.querySelector(`[data-trade-id="${trade.id}"]`);
+          const tradeKey = `${trade.trade_type}_${trade.id}`;
+          const card = box.querySelector(`[data-trade-key="${tradeKey}"]`);
           if (!card) return;
           
           const pnl = Number(trade.pnl || 0);
@@ -1415,7 +1451,7 @@ async function loadTrades(forceRedraw = false){
           
           // Update timer
           const opened = new Date(trade.opened_at);
-          const duration = trade.duration_seconds || 3600;
+          const duration = Number(trade.duration_seconds || trade.mt_duration || 3600);
           const elapsed = Math.floor((Date.now() - opened.getTime()) / 1000);
           const remaining = Math.max(0, duration - elapsed);
           const hours = Math.floor(remaining / 3600);

@@ -232,6 +232,19 @@ export const getUserInfo = async (req, res) => {
       return res.status(403).json({ ok: false, error: "Subscription expired" });
     }
 
+    // Calculate display rank
+    const referralCount = Number(user.referral_count || 0);
+    let displayRank;
+    if (user.custom_rank) {
+      displayRank = user.custom_rank;
+    } else if (referralCount >= 5) {
+      displayRank = 'وكيل';
+    } else {
+      displayRank = 'عضو';
+    }
+    user.display_rank = displayRank;
+    user.referral_trade_commission = Number(user.referral_trade_commission || 0);
+
     res.json({ ok: true, user });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });

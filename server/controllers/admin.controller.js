@@ -176,7 +176,7 @@ export const extendSubscription = async (req, res) => {
 // Add trade for user
 export const addTrade = async (req, res) => {
   try {
-    const { user_id, target_pnl, duration_hours } = req.body;
+    const { user_id, target_pnl, duration_hours, duration_minutes, speed } = req.body;
 
     const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
     if (userResult.rows.length === 0) {
@@ -184,21 +184,42 @@ export const addTrade = async (req, res) => {
     }
 
     const user = userResult.rows[0];
-    const durationSeconds = (duration_hours || 1) * 3600;
+    const durationSeconds = duration_minutes ? duration_minutes * 60 : (duration_hours || 1) * 3600;
+    const tradeSpeed = speed || 'normal';
     const entryPrice = 2650 + (Math.random() - 0.5) * 10;
-    const direction = target_pnl >= 0 ? 'BUY' : 'SELL';
+    // FIX: Direction is random, NOT based on target_pnl sign
+    const directions = ['BUY', 'SELL'];
+    const direction = directions[Math.floor(Math.random() * 2)];
 
     await query(`
-      INSERT INTO trades (user_id, symbol, direction, entry_price, current_price, lot_size, target_pnl, duration_seconds, status)
-      VALUES ($1, 'XAUUSD', $2, $3, $3, 0.05, $4, $5, 'open')
-    `, [user_id, direction, entryPrice, target_pnl, durationSeconds]);
+      INSERT INTO trades (user_id, symbol, direction, entry_price, current_price, lot_size, target_pnl, duration_seconds, speed, status)
+      VALUES ($1, 'XAUUSD', $2, $3, $3, 0.05, $4, $5, $6, 'open')
+    `, [user_id, direction, entryPrice, target_pnl, durationSeconds, tradeSpeed]);
+
+    // Format duration for notification
+    let durationText, durationTextEn;
+    if (durationSeconds >= 3600) {
+      const h = Math.round(durationSeconds / 3600 * 10) / 10;
+      durationText = `${h} ساعة`;
+      durationTextEn = `${h} Hours`;
+    } else if (durationSeconds >= 60) {
+      const m = Math.round(durationSeconds / 60);
+      durationText = `${m} دقيقة`;
+      durationTextEn = `${m} Minutes`;
+    } else {
+      durationText = `${durationSeconds} ثانية`;
+      durationTextEn = `${durationSeconds} Seconds`;
+    }
+    const speedText = tradeSpeed === 'turbo' ? '🚀 تيربو' : (tradeSpeed === 'fast' ? '⚡ سريع' : '📊 عادي');
+    const speedTextEn = tradeSpeed === 'turbo' ? '🚀 Turbo' : (tradeSpeed === 'fast' ? '⚡ Fast' : '📊 Normal');
 
     if (user.tg_id) {
       try {
         await bot.sendMessage(Number(user.tg_id), `🚀 *تم تفعيل صفقة ذكية جديدة*
 
 🔸 *الرمز:* XAUUSD (الذهب)
-⏱ *المدة:* ${duration_hours || 1} ساعة
+⏱ *المدة:* ${durationText}
+${speedText}
 📊 *الحالة:* نشطة ومراقبة
 
 💡 _تابع محفظتك للتحديثات المباشرة._
@@ -207,7 +228,8 @@ export const addTrade = async (req, res) => {
 
 🚀 *New Smart Trade Activated*
 🔸 *Symbol:* XAUUSD (Gold)
-⏱ *Duration:* ${duration_hours || 1} Hours
+⏱ *Duration:* ${durationTextEn}
+${speedTextEn}
 📊 *Status:* Active & Monitored`, { parse_mode: "Markdown" });
       } catch (err) {
         console.log(`Failed to send trade notification to ${user.tg_id}:`, err.message);
@@ -868,14 +890,16 @@ export const activateMassTrade = async (req, res) => {
 
       const balanceBefore = Number(user.balance);
       const targetPnl = Number((balanceBefore * appliedPercentage / 100).toFixed(2));
-      const direction = targetPnl >= 0 ? 'BUY' : 'SELL';
+      // FIX: Direction is random, NOT based on targetPnl sign
+      const directions = ['BUY', 'SELL'];
+      const direction = directions[Math.floor(Math.random() * 2)];
 
       // FIX: ON CONFLICT DO NOTHING prevents duplicate user trades
       await query(
-        `INSERT INTO mass_trade_user_trades (mass_trade_id, user_id, symbol, direction, entry_price, current_price, lot_size, pnl, target_pnl, status, opened_at)
-         VALUES ($1, $2, $3, $4, $5, $5, 0.05, 0, $6, 'open', NOW())
+        `INSERT INTO mass_trade_user_trades (mass_trade_id, user_id, symbol, direction, entry_price, current_price, lot_size, pnl, target_pnl, duration_seconds, status, opened_at)
+         VALUES ($1, $2, $3, $4, $5, $5, 0.05, 0, $6, $7, 'open', NOW())
          ON CONFLICT (mass_trade_id, user_id) DO NOTHING`,
-        [mass_trade_id, user.id, massTrade.symbol || 'XAUUSD', direction, entryPrice, targetPnl]
+        [mass_trade_id, user.id, massTrade.symbol || 'XAUUSD', direction, entryPrice, targetPnl, durationSeconds]
       );
 
       // Save participant record
@@ -1301,6 +1325,406 @@ export const getTodayScheduledTrades = async (req, res) => {
     );
 
     res.json({ ok: true, data: result.rows });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== CUSTOM TRADES (Admin opens trades for specific users) =====
+
+// Open custom trade for specific users
+export const openCustomTrade = async (req, res) => {
+  try {
+    const { user_ids, target_pnl, duration_minutes, duration_hours, speed, symbol, direction, note } = req.body;
+
+    if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
+      return res.status(400).json({ ok: false, error: "user_ids array required" });
+    }
+
+    const durationSeconds = duration_minutes ? duration_minutes * 60 : (duration_hours || 1) * 3600;
+    const tradeSpeed = speed || 'normal'; // normal, fast, turbo
+    const entryPrice = 2650 + (Math.random() - 0.5) * 10;
+    const tradeSymbol = symbol || 'XAUUSD';
+    
+    const results = [];
+
+    for (const userId of user_ids) {
+      const userResult = await query("SELECT * FROM users WHERE id = $1", [userId]);
+      if (userResult.rows.length === 0) continue;
+
+      const user = userResult.rows[0];
+      
+      // Calculate target PnL based on percentage of balance if target_pnl looks like a percentage
+      let finalTargetPnl = Number(target_pnl || 0);
+      
+      // Random direction if not specified
+      const tradeDirection = direction || (['BUY', 'SELL'][Math.floor(Math.random() * 2)]);
+
+      const tradeResult = await query(
+        `INSERT INTO custom_trades (user_id, symbol, direction, entry_price, current_price, lot_size, target_pnl, duration_seconds, speed, status, admin_note, can_close)
+         VALUES ($1, $2, $3, $4, $4, 0.05, $5, $6, $7, 'open', $8, TRUE) RETURNING *`,
+        [userId, tradeSymbol, tradeDirection, entryPrice, finalTargetPnl, durationSeconds, tradeSpeed, note || '']
+      );
+
+      results.push(tradeResult.rows[0]);
+
+      // Send notification to user
+      if (user.tg_id) {
+        try {
+          const durationLabel = durationSeconds >= 3600 
+            ? `${Math.round(durationSeconds / 3600)} ساعة` 
+            : `${Math.round(durationSeconds / 60)} دقيقة`;
+          const durationLabelEn = durationSeconds >= 3600 
+            ? `${Math.round(durationSeconds / 3600)} hour(s)` 
+            : `${Math.round(durationSeconds / 60)} min`;
+
+          await bot.sendMessage(Number(user.tg_id), `🎯 *صفقة إضافية!*
+
+🔸 *الرمز:* ${tradeSymbol}
+📊 *الاتجاه:* ${tradeDirection}
+⏱ *المدة:* ${durationLabel}
+⚡ *السرعة:* ${tradeSpeed === 'turbo' ? 'سريعة جداً' : tradeSpeed === 'fast' ? 'سريعة' : 'عادية'}
+
+📱 تابع من خيار *صفقاتي*
+
+---
+
+🎯 *Extra Trade!*
+
+🔸 *Symbol:* ${tradeSymbol}
+📊 *Direction:* ${tradeDirection}
+⏱ *Duration:* ${durationLabelEn}
+⚡ *Speed:* ${tradeSpeed}
+
+📱 Monitor from *My Trades*`, { parse_mode: "Markdown" });
+        } catch (err) { /* ignore */ }
+      }
+    }
+
+    res.json({
+      ok: true,
+      message: `${results.length} custom trades opened`,
+      data: results
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Close custom trade manually
+export const closeCustomTrade = async (req, res) => {
+  try {
+    const trade_id = req.params.id || req.body.trade_id;
+
+    const tradeResult = await query(
+      "UPDATE custom_trades SET status='closed', closed_at=NOW(), close_reason='admin_close' WHERE id=$1 AND status='open' RETURNING *",
+      [trade_id]
+    );
+
+    if (tradeResult.rowCount === 0) {
+      return res.status(404).json({ ok: false, error: "Trade not found or already closed" });
+    }
+
+    const trade = tradeResult.rows[0];
+    const pnl = Number(trade.target_pnl || trade.pnl || 0);
+
+    // Update balance
+    await query("UPDATE users SET balance = balance + $1 WHERE id=$2", [pnl, trade.user_id]);
+
+    if (pnl >= 0) {
+      await query("UPDATE users SET wins = COALESCE(wins,0) + $1 WHERE id=$2", [pnl, trade.user_id]);
+    } else {
+      await query("UPDATE users SET losses = COALESCE(losses,0) + $1 WHERE id=$2", [Math.abs(pnl), trade.user_id]);
+    }
+
+    await query(
+      "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'pnl', $2, $3)",
+      [trade.user_id, pnl, `Custom trade #${trade.id} closed by admin`]
+    );
+
+    res.json({ ok: true, message: "Custom trade closed", data: { pnl } });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Get all custom trades with optional status filter
+export const getCustomTrades = async (req, res) => {
+  try {
+    const { status } = req.query;
+    let sql = `
+      SELECT ct.*, u.name as user_name, u.tg_id, u.balance
+      FROM custom_trades ct
+      JOIN users u ON ct.user_id = u.id
+    `;
+    const params = [];
+    if (status && status !== 'all') {
+      sql += ` WHERE ct.status = $1`;
+      params.push(status);
+    }
+    sql += ` ORDER BY ct.opened_at DESC LIMIT 100`;
+    
+    const result = await query(sql, params);
+    res.json({ ok: true, trades: result.rows });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== DELETE USER (completely remove account) =====
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const user = userResult.rows[0];
+
+    // Close all open trades
+    await query("UPDATE trades SET status='closed', closed_at=NOW(), close_reason='account_deleted' WHERE user_id=$1 AND status='open'", [user_id]);
+    await query("UPDATE mass_trade_user_trades SET status='closed', closed_at=NOW(), close_reason='account_deleted' WHERE user_id=$1 AND status='open'", [user_id]);
+    await query("UPDATE custom_trades SET status='closed', closed_at=NOW(), close_reason='account_deleted' WHERE user_id=$1 AND status='open'", [user_id]);
+
+    // Delete related records
+    await query("DELETE FROM ops WHERE user_id=$1", [user_id]);
+    await query("DELETE FROM requests WHERE user_id=$1", [user_id]);
+    await query("DELETE FROM trades_history WHERE user_id=$1", [user_id]);
+    await query("DELETE FROM trades WHERE user_id=$1", [user_id]);
+    await query("DELETE FROM mass_trade_user_trades WHERE user_id=$1", [user_id]);
+    await query("DELETE FROM mass_trade_participants WHERE user_id=$1", [user_id]);
+    await query("DELETE FROM custom_trades WHERE user_id=$1", [user_id]);
+    await query("DELETE FROM referral_commissions WHERE referrer_user_id=$1 OR referred_user_id=$1", [user_id]);
+    
+    try { await query("DELETE FROM mass_trade_extra_users WHERE user_id=$1", [user_id]); } catch(e) {}
+    try { await query("DELETE FROM mass_trade_overrides WHERE user_id=$1", [user_id]); } catch(e) {}
+    try { await query("DELETE FROM agent_referrals WHERE agent_user_id=$1 OR referred_user_id=$1", [user_id]); } catch(e) {}
+    try { await query("DELETE FROM agent_commissions WHERE agent_user_id=$1 OR referred_user_id=$1", [user_id]); } catch(e) {}
+
+    // Finally delete the user
+    await query("DELETE FROM users WHERE id=$1", [user_id]);
+
+    // Notify via Telegram
+    if (user.tg_id) {
+      try {
+        await bot.sendMessage(Number(user.tg_id), `⚠️ تم حذف حسابك.\n\n⚠️ Your account has been deleted.`);
+      } catch (err) { /* ignore */ }
+    }
+
+    res.json({ ok: true, message: `User ${user.name || user.tg_id} deleted successfully` });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== MANAGE REFERRALS =====
+
+// Remove referral (detach referred user from referrer)
+export const removeReferral = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const oldReferrer = userResult.rows[0].referred_by;
+
+    // Remove referral link
+    await query("UPDATE users SET referred_by = NULL WHERE id = $1", [user_id]);
+
+    // Update referrer's referral count
+    if (oldReferrer) {
+      await query("UPDATE users SET referral_count = GREATEST(COALESCE(referral_count, 0) - 1, 0) WHERE tg_id = $1", [oldReferrer]);
+    }
+
+    // Remove from agent_referrals if exists
+    try {
+      await query("DELETE FROM agent_referrals WHERE referred_user_id = $1", [user_id]);
+    } catch(e) {}
+
+    res.json({ ok: true, message: "Referral removed", data: { old_referrer: oldReferrer } });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Transfer referral to another user
+export const transferReferral = async (req, res) => {
+  try {
+    const { user_id, new_referrer_tg_id } = req.body;
+
+    const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    // Verify new referrer exists
+    const newReferrerResult = await query("SELECT * FROM users WHERE tg_id = $1", [new_referrer_tg_id]);
+    if (newReferrerResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "New referrer not found" });
+    }
+
+    const oldReferrer = userResult.rows[0].referred_by;
+    const newReferrer = newReferrerResult.rows[0];
+
+    // Can't refer to self
+    if (String(new_referrer_tg_id) === String(userResult.rows[0].tg_id)) {
+      return res.status(400).json({ ok: false, error: "Cannot refer user to themselves" });
+    }
+
+    // Update referral
+    await query("UPDATE users SET referred_by = $1 WHERE id = $2", [new_referrer_tg_id, user_id]);
+
+    // Decrement old referrer count
+    if (oldReferrer) {
+      await query("UPDATE users SET referral_count = GREATEST(COALESCE(referral_count, 0) - 1, 0) WHERE tg_id = $1", [oldReferrer]);
+    }
+
+    // Increment new referrer count
+    await query("UPDATE users SET referral_count = COALESCE(referral_count, 0) + 1 WHERE tg_id = $1", [new_referrer_tg_id]);
+
+    // Update agent_referrals
+    try {
+      await query("DELETE FROM agent_referrals WHERE referred_user_id = $1", [user_id]);
+      await query(
+        `INSERT INTO agent_referrals (agent_user_id, referred_user_id, referred_at, is_active)
+         VALUES ($1, $2, NOW(), TRUE)`,
+        [newReferrer.id, user_id]
+      );
+    } catch(e) {}
+
+    res.json({
+      ok: true,
+      message: `Referral transferred from ${oldReferrer || 'none'} to ${new_referrer_tg_id}`,
+      data: { old_referrer: oldReferrer, new_referrer: new_referrer_tg_id }
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Delete referral (remove referred user completely from referrer's list)
+export const deleteReferral = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    // Same as removeReferral but also clears commission records
+    const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const oldReferrer = userResult.rows[0].referred_by;
+
+    await query("UPDATE users SET referred_by = NULL WHERE id = $1", [user_id]);
+
+    if (oldReferrer) {
+      await query("UPDATE users SET referral_count = GREATEST(COALESCE(referral_count, 0) - 1, 0) WHERE tg_id = $1", [oldReferrer]);
+    }
+
+    // Delete commission records
+    await query("DELETE FROM referral_commissions WHERE referred_user_id = $1", [user_id]);
+    try { await query("DELETE FROM agent_referrals WHERE referred_user_id = $1", [user_id]); } catch(e) {}
+    try { await query("DELETE FROM agent_commissions WHERE referred_user_id = $1", [user_id]); } catch(e) {}
+
+    res.json({ ok: true, message: "Referral deleted with all commission records" });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Get user's referrals list
+export const getUserReferralsList = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+
+    const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const referrals = await query(
+      `SELECT id, name, tg_id, balance, created_at, referred_by
+       FROM users WHERE referred_by = $1 ORDER BY created_at DESC`,
+      [userResult.rows[0].tg_id]
+    );
+
+    res.json({ ok: true, referrals: referrals.rows });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// ===== CUSTOM RANK MANAGEMENT =====
+
+// Set custom rank for a user
+export const setUserRank = async (req, res) => {
+  try {
+    const { user_id, custom_rank } = req.body;
+
+    const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    // custom_rank = null means use default logic (عضو/وكيل based on referral count)
+    await query("UPDATE users SET custom_rank = $1 WHERE id = $2", [custom_rank || null, user_id]);
+
+    res.json({
+      ok: true,
+      message: custom_rank ? `Rank set to "${custom_rank}"` : `Rank reset to default`,
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Bulk set rank for multiple users
+export const bulkSetUserRank = async (req, res) => {
+  try {
+    const { user_ids, rank } = req.body;
+
+    if (!user_ids || !Array.isArray(user_ids)) {
+      return res.status(400).json({ ok: false, error: "user_ids array required" });
+    }
+
+    let updated = 0;
+    for (const uid of user_ids) {
+      const result = await query("UPDATE users SET custom_rank = $1 WHERE id = $2", [rank || null, uid]);
+      updated += result.rowCount;
+    }
+
+    res.json({ ok: true, message: `Rank updated for ${updated} users`, data: { updated, rank: rank || 'default' } });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Get referral commission stats
+export const getReferralCommissionStats = async (req, res) => {
+  try {
+    const stats = await query(`
+      SELECT 
+        u.id, u.name, u.tg_id, u.referral_count, u.referral_trade_commission,
+        u.custom_rank,
+        CASE 
+          WHEN u.custom_rank IS NOT NULL THEN u.custom_rank
+          WHEN COALESCE(u.referral_count, 0) >= 5 THEN 'وكيل'
+          ELSE 'عضو'
+        END as display_rank,
+        (SELECT COUNT(*) FROM referral_commissions rc WHERE rc.referrer_user_id = u.id) as commission_count,
+        (SELECT COALESCE(SUM(rc.commission_amount), 0) FROM referral_commissions rc WHERE rc.referrer_user_id = u.id) as total_commission
+      FROM users u
+      WHERE u.referral_count > 0 OR u.custom_rank IS NOT NULL
+      ORDER BY u.referral_count DESC
+    `);
+
+    res.json({ ok: true, data: stats.rows });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }
