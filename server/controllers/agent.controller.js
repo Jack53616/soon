@@ -50,18 +50,18 @@ export async function checkAndUpgradeToAgent(userId) {
       // Notify via Telegram
       if (u.tg_id) {
         try {
-          await bot.sendMessage(Number(u.tg_id), `✦ *تهانينا! أصبحت شريكاً (Agent)!*
+          await bot.sendMessage(Number(u.tg_id), `🎉 *تهانينا! أصبحت شريكاً (Agent)!*
 
-✓ لديك الآن ${count} عملاء نشطين
-◆ عمولتك: *${getAgentCommissionRate(count)}%* من أرباح كل عميل مُحال
-◆ مدة العمولة: 30 يوم لكل عميل
-◈ كلما زاد عدد عملائك، زادت نسبتك!
+✅ لديك الآن ${count} عملاء نشطين
+💰 عمولتك: *${getAgentCommissionRate(count)}%* من أرباح كل عميل مُحال
+⏱ مدة العمولة: 30 يوم لكل عميل
+📈 كلما زاد عدد عملائك، زادت نسبتك!
 
 ---
 
-✦ *Congratulations! You are now an Agent!*
-✓ You have ${count} active clients
-◆ Commission: *${getAgentCommissionRate(count)}%* per referred client`, { parse_mode: "Markdown" });
+🎉 *Congratulations! You are now an Agent!*
+✅ You have ${count} active clients
+💰 Commission: *${getAgentCommissionRate(count)}%* per referred client`, { parse_mode: "Markdown" });
         } catch (e) { /* ignore */ }
       }
 
@@ -350,16 +350,16 @@ export async function checkLoyaltyBonuses() {
       // Notify agent
       if (ref.agent_tg_id) {
         try {
-          await bot.sendMessage(Number(ref.agent_tg_id), `✦ *مكافأة ولاء!*
+          await bot.sendMessage(Number(ref.agent_tg_id), `🏆 *مكافأة ولاء!*
 
-◆ حصلت على *$100* مكافأة ولاء
-✓ أحد عملائك المُحالين بقي نشطاً لمدة 3 أشهر!
+💰 حصلت على *$100* مكافأة ولاء
+✅ أحد عملائك المُحالين بقي نشطاً لمدة 3 أشهر!
 
 ---
 
-✦ *Loyalty Bonus!*
-◆ You earned *$100* loyalty bonus
-✓ One of your referred clients stayed active for 3 months!`, { parse_mode: "Markdown" });
+🏆 *Loyalty Bonus!*
+💰 You earned *$100* loyalty bonus
+✅ One of your referred clients stayed active for 3 months!`, { parse_mode: "Markdown" });
         } catch (e) { /* ignore */ }
       }
 

@@ -15,8 +15,8 @@ const { Pool } = pkg;
 dotenv.config();
 const startedAt = new Date().toISOString();
 console.log("◆ Starting QL Trading AI Server...", startedAt);
-console.log("◆ DATABASE_URL =", process.env.DATABASE_URL ? "loaded" : "✗ missing");
-console.log("◈ BOT_TOKEN =", process.env.BOT_TOKEN ? "loaded" : "✗ missing");
+console.log("📦 DATABASE_URL =", process.env.DATABASE_URL ? "loaded" : "❌ missing");
+console.log("🤖 BOT_TOKEN =", process.env.BOT_TOKEN ? "loaded" : "❌ missing");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,7 +30,7 @@ const {
 } = process.env;
 
 if (!DATABASE_URL) {
-  console.error("✗ DATABASE_URL missing");
+  console.error("❌ DATABASE_URL missing");
   process.exit(1);
 }
 
@@ -465,7 +465,7 @@ app.post("/api/activate", async (req, res) => {
     console.log(`✅ User activated: ${user.name || "unknown"} (${tgId})`);
     res.json({ ok: true, user });
   } catch (e) {
-    console.error("✗ Activation error:", e.message);
+    console.error("❌ Activation error:", e.message);
     res.json({ ok: false, error: e.message });
   }
 });

@@ -12,7 +12,7 @@ const { Pool } = pkg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-console.log("◈ Telegram bot initialized via webhook mode");
+console.log("🚀 Telegram bot initialized via webhook mode");
 
 const { BOT_TOKEN, ADMIN_ID } = process.env;
 
@@ -25,7 +25,7 @@ const DATABASE_URL = process.env.DATABASE_URL && process.env.DATABASE_URL.starts
 if (!BOT_TOKEN) { console.error("BOT_TOKEN missing"); process.exit(1); }
 
 const bot = new TelegramBot(BOT_TOKEN);
-console.log("✓ Connected to PostgreSQL via", (DATABASE_URL||"").split("@").pop());
+console.log("✅ Connected to PostgreSQL via", (DATABASE_URL||"").split("@").pop());
 
 // Force SSL for Render/Neon databases
 const sslConfig = { rejectUnauthorized: false };
@@ -231,7 +231,7 @@ async function processReferralBonusBot(tgId, depositAmount) {
         [referrer.id, bonusAmount, `Referral bonus: user ${tgId} deposited $${depositAmount}`]
       );
       try {
-        await bot.sendMessage(Number(referral.referrer_tg_id), `✦ *مكافأة الدعوة!*\n\n◆ حصلت على *$${bonusAmount}* كمكافأة دعوة!\n◆ صديقك قام بإيداع $${depositAmount}\n\n◆ تم إضافة المبلغ لرصيدك تلقائياً.`, { parse_mode: "Markdown" });
+        await bot.sendMessage(Number(referral.referrer_tg_id), `🏆 *مكافأة الدعوة!*\n\n🎁 حصلت على *$${bonusAmount}* كمكافأة دعوة!\n🤝 صديقك قام بإيداع $${depositAmount}\n\n💎 تم إضافة المبلغ لرصيدك تلقائياً.`, { parse_mode: "Markdown" });
       } catch (err) { /* ignore */ }
     }
   } catch (error) {
@@ -260,28 +260,28 @@ bot.onText(/^\/start(.*)$/, async (msg, match) => {
     const userCheck = await q(`SELECT * FROM users WHERE tg_id=$1`, [tgId]);
     if (userCheck.rows.length > 0 && userCheck.rows[0].is_banned) {
       const banReason = userCheck.rows[0].ban_reason || 'مخالفة شروط الاستخدام';
-      return bot.sendMessage(chatId, `✗ *حسابك محظور*
+      return bot.sendMessage(chatId, `⛔ *حسابك محظور*
 
 ━━━━━━━━━━━━━━━━━━━━
-✗ *تم حظر حسابك من استخدام المنصة*
+❌ *تم حظر حسابك من استخدام المنصة*
 
-◆ *سبب الحظر:*
+🔸 *سبب الحظر:*
 ${banReason}
 
-◆ *تاريخ الحظر:* ${userCheck.rows[0].banned_at ? new Date(userCheck.rows[0].banned_at).toLocaleDateString('ar') : 'غير محدد'}
+🔸 *تاريخ الحظر:* ${userCheck.rows[0].banned_at ? new Date(userCheck.rows[0].banned_at).toLocaleDateString('ar') : 'غير محدد'}
 
 ━━━━━━━━━━━━━━━━━━━━
 
-◆ إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع فريق الدعم:
+💬 إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع فريق الدعم:
 
-◆ *Your account has been suspended*
+⛔ *Your account has been suspended*
 Reason: ${banReason}
 
 Contact support if you believe this is an error.`, {
         parse_mode: "Markdown",
         reply_markup: {
           inline_keyboard: [
-            [{ text: "◆ تواصل مع الدعم | Contact Support", url: "https://t.me/QL_Support" }]
+            [{ text: "💬 تواصل مع الدعم | Contact Support", url: "https://t.me/QL_Support" }]
           ]
         }
       });
@@ -332,7 +332,7 @@ Contact support if you believe this is an error.`, {
 
 ━━━━━━━━━━━━━━━━━━━━
 
-◆ *اضغط لفتح المحفظة | Open Wallet*`;
+⬇️ *اضغط لفتح المحفظة | Open Wallet*`;
 
   const photoUrl = `${process.env.WEBAPP_URL}/public/bot_welcome.jpg`;
   
@@ -372,9 +372,9 @@ function getRankLabel(rank) {
 bot.onText(/^\/help$/, (msg) => {
   if (!isAdmin(msg)) return;
   bot.sendMessage(msg.chat.id, `
-⚙ *Admin Dashboard v3.1*
+⚙️ *Admin Dashboard v3.1*
 
-◆ *User Management*
+👥 *User Management*
 \`/addbalance <tg_id> <amount>\` - Add/Deduct balance
 \`/silentadd <tg_id> <amount>\` - Silent Add (No notify)
 \`/removebalance <tg_id> <amount>\` - Silent deduct (Max to 0)
@@ -384,33 +384,33 @@ bot.onText(/^\/help$/, (msg) => {
 \`/resetstats <tg_id>\` - Reset manual stats
 \`/create_key <KEY> <DAYS>\` - Create subscription key
 
-◆ *Rank Management*
+🎖️ *Rank Management*
 \`/setrank <tg_id> <rank>\` - Set user rank
   Ranks: member | agent | gold_agent | partner
 \`/clearrank <tg_id>\` - Reset to member
 \`/userinfo <tg_id>\` - View user rank & info
 
-◈ *Trading Operations*
+📊 *Trading Operations*
 \`/open <tg_id> <hours> <target>\` - Open smart trade
 \`/close_trade <trade_id> <pnl>\` - Force close trade
 \`/setdaily <tg_id> <amount>\` - Set daily profit target
 
-✗ *Ban Management*
+⛔ *Ban Management*
 \`/ban <tg_id> <reason>\` - Ban user with reason
 \`/unban <tg_id>\` - Unban user
 
-◆ *Withdrawals*
+💰 *Withdrawals*
 \`/approve_withdraw <id>\` - Approve request
 \`/reject_withdraw <id> <reason>\` - Reject request
 \`/stopwithdraw\` - إيقاف السحب (صيانة)
 \`/startwithdraw\` - تشغيل السحب
 \`/withdrawstatus\` - حالة السحب
 
-◆ *Communication*
+📣 *Communication*
 \`/broadcast all <message>\` - Send to all users
 \`/notify <tg_id> <message>\` - Send private message
 
-◆ *Referral System*
+🤝 *Referral System*
 \`/refstats\` - View referral statistics
   `.trim(), { parse_mode: "Markdown" });
 });
@@ -423,11 +423,11 @@ bot.onText(/^\/setrank\s+(\d+)\s+(\S+)$/, async (msg, m) => {
   const allowedRanks = ['member', 'agent', 'gold_agent', 'partner'];
 
   if (!allowedRanks.includes(rank)) {
-    return bot.sendMessage(msg.chat.id, `✗ رتبة غير صحيحة.\nالرتب المتاحة: ${allowedRanks.join(' | ')}`);
+    return bot.sendMessage(msg.chat.id, `❌ رتبة غير صحيحة.\nالرتب المتاحة: ${allowedRanks.join(' | ')}`);
   }
 
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
-  if (!u) return bot.sendMessage(msg.chat.id, '✗ المستخدم غير موجود');
+  if (!u) return bot.sendMessage(msg.chat.id, '❌ المستخدم غير موجود');
 
   const isAgent = ['agent', 'gold_agent', 'partner'].includes(rank);
   const oldRank = u.rank || 'member';
@@ -440,11 +440,11 @@ bot.onText(/^\/setrank\s+(\d+)\s+(\S+)$/, async (msg, m) => {
   const rankAr = getRankLabel(rank);
   const oldRankAr = getRankLabel(oldRank);
 
-  bot.sendMessage(msg.chat.id, `✓ تم تغيير رتبة المستخدم\n\n◆ tg_id: ${tg}\n◆ الاسم: ${u.name || u.first_name || '—'}\n◆ من: ${oldRankAr} ← إلى: ${rankAr}`);
+  bot.sendMessage(msg.chat.id, `✅ تم تغيير رتبة المستخدم\n\n👤 tg_id: ${tg}\n📛 الاسم: ${u.name || u.first_name || '—'}\n🏅 من: ${oldRankAr} ← إلى: ${rankAr}`);
 
   // Notify user
   try {
-    await bot.sendMessage(tg, `◆ *تم تحديث رتبتك*\n\nرتبتك الجديدة: *${rankAr}*`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(tg, `🏅 *تم تحديث رتبتك*\n\nرتبتك الجديدة: *${rankAr}*`, { parse_mode: 'Markdown' });
   } catch (e) { /* ignore */ }
 });
 
@@ -454,7 +454,7 @@ bot.onText(/^\/clearrank\s+(\d+)$/, async (msg, m) => {
   const tg = Number(m[1]);
 
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
-  if (!u) return bot.sendMessage(msg.chat.id, '✗ المستخدم غير موجود');
+  if (!u) return bot.sendMessage(msg.chat.id, '❌ المستخدم غير موجود');
 
   const oldRank = u.rank || 'member';
 
@@ -463,7 +463,7 @@ bot.onText(/^\/clearrank\s+(\d+)$/, async (msg, m) => {
     [tg]
   );
 
-  bot.sendMessage(msg.chat.id, `✓ تم إرجاع رتبة المستخدم إلى عضو\n\n◆ tg_id: ${tg}\n◆ الاسم: ${u.name || u.first_name || '—'}\n◆ من: ${getRankLabel(oldRank)} ← إلى: عضو`);
+  bot.sendMessage(msg.chat.id, `✅ تم إرجاع رتبة المستخدم إلى عضو\n\n👤 tg_id: ${tg}\n📛 الاسم: ${u.name || u.first_name || '—'}\n🏅 من: ${getRankLabel(oldRank)} ← إلى: عضو`);
 });
 
 // ===== /userinfo <tg_id> =====
@@ -472,7 +472,7 @@ bot.onText(/^\/userinfo\s+(\d+)$/, async (msg, m) => {
   const tg = Number(m[1]);
 
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
-  if (!u) return bot.sendMessage(msg.chat.id, '✗ المستخدم غير موجود');
+  if (!u) return bot.sendMessage(msg.chat.id, '❌ المستخدم غير موجود');
 
   const rank = u.rank || 'member';
   const rankAr = getRankLabel(rank);
@@ -491,19 +491,19 @@ bot.onText(/^\/userinfo\s+(\d+)$/, async (msg, m) => {
     else feeRate = '5%';
   }
 
-  bot.sendMessage(msg.chat.id, `◆ *معلومات المستخدم*\n\n◆ tg_id: ${tg}\n◆ الاسم: ${u.name || u.first_name || '—'}\n◆ الرتبة: ${rankAr}\n◆ الرصيد: $${balance}\n◆ أول إيداع: ${firstDeposit}${daysSince !== null ? ` (${daysSince} يوم)` : ''}\n◆ رسوم السحب: ${feeRate}\n✓ الحالة: ${u.is_banned ? '✗ محظور' : 'نشط'}`, { parse_mode: 'Markdown' });
+  bot.sendMessage(msg.chat.id, `👤 *معلومات المستخدم*\n\n🆔 tg_id: ${tg}\n📛 الاسم: ${u.name || u.first_name || '—'}\n🏅 الرتبة: ${rankAr}\n💰 الرصيد: $${balance}\n📅 أول إيداع: ${firstDeposit}${daysSince !== null ? ` (${daysSince} يوم)` : ''}\n💸 رسوم السحب: ${feeRate}\n✅ الحالة: ${u.is_banned ? '🚫 محظور' : 'نشط'}`, { parse_mode: 'Markdown' });
 });
 
 // إنشاء مفتاح
 bot.onText(/^\/create_key\s+(\S+)(?:\s+(\d+))?$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const key = cleanKey(m[1]); const days = Number(m[2] || 30);
-  if (!key) return bot.sendMessage(msg.chat.id, "✗ Invalid key format");
+  if (!key) return bot.sendMessage(msg.chat.id, "❌ Invalid key format");
   try {
     await q(`INSERT INTO subscription_keys (key_code, days) VALUES ($1,$2)`, [key, days]);
-    console.log("◆ New key created:", key, days, "days");
-    bot.sendMessage(msg.chat.id, `✓ Key created: ${key} (${days}d)`);
-  } catch (e) { bot.sendMessage(msg.chat.id, `✗ ${e.message}`); }
+    console.log("🧩 New key created:", key, days, "days");
+    bot.sendMessage(msg.chat.id, `✅ Key created: ${key} (${days}d)`);
+  } catch (e) { bot.sendMessage(msg.chat.id, `❌ ${e.message}`); }
 });
 
 // إيداع رصيد (صامت - بدون إشعار)
@@ -516,7 +516,7 @@ bot.onText(/^\/silentadd\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   await q(`UPDATE users SET balance = balance + $1 WHERE id=$2`, [amount, u.id]);
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'silent admin deposit')`, [u.id, amount]);
   
-  bot.sendMessage(msg.chat.id, `✓ Silently added $${amount} to tg:${tg}. New Balance: $${Number(u.balance) + amount}`);
+  bot.sendMessage(msg.chat.id, `✅ Silently added $${amount} to tg:${tg}. New Balance: $${Number(u.balance) + amount}`);
 });
 
 // إيداع/خصم رصيد (عادي)
@@ -531,7 +531,7 @@ bot.onText(/^\/addbalance\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   // Process referral bonus for positive deposits
   if (amount > 0) await processReferralBonusBot(tg, amount);
   
-  bot.sendMessage(msg.chat.id, `✓ Balance updated for tg:${tg} by ${amount}`);
+  bot.sendMessage(msg.chat.id, `✅ Balance updated for tg:${tg} by ${amount}`);
   bot.sendMessage(tg, `✦ *تم الإيداع في حسابك* ✦\n\n◆ المبلغ: ${amount>0?'+':'-'}$${Math.abs(amount).toFixed(2)}`, { parse_mode: 'Markdown' }).catch(()=>{});
 });
 
@@ -546,13 +546,13 @@ bot.onText(/^\/removebalance\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   const actualDeduct = Math.min(amount, currentBalance);
   
   if (actualDeduct <= 0) {
-    return bot.sendMessage(msg.chat.id, `⚠ User balance is already 0 or negative ($${currentBalance}). Cannot deduct.`);
+    return bot.sendMessage(msg.chat.id, `⚠️ User balance is already 0 or negative ($${currentBalance}). Cannot deduct.`);
   }
 
   await q(`UPDATE users SET balance = GREATEST(0, balance - $1) WHERE id=$2`, [amount, u.id]);
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'silent balance removal')`, [u.id, -actualDeduct]);
   
-  bot.sendMessage(msg.chat.id, `✓ Silently removed $${actualDeduct} from tg:${tg}. New Balance: $${currentBalance - actualDeduct}`);
+  bot.sendMessage(msg.chat.id, `✅ Silently removed $${actualDeduct} from tg:${tg}. New Balance: $${currentBalance - actualDeduct}`);
 });
 
 // تصفير الحساب
@@ -567,7 +567,7 @@ bot.onText(/^\/zerobalance\s+(\d+)$/, async (msg, m) => {
   const adjustment = -currentBalance;
   await q(`INSERT INTO ops (user_id, type, amount, note) VALUES ($1,'admin',$2,'force zero balance')`, [u.id, adjustment]);
 
-  bot.sendMessage(msg.chat.id, `✓ Balance reset to $0 for tg:${tg} (Was: $${currentBalance})`);
+  bot.sendMessage(msg.chat.id, `✅ Balance reset to $0 for tg:${tg} (Was: $${currentBalance})`);
 });
 
 // إيداع رصيد (نقل حساب)
@@ -583,17 +583,17 @@ bot.onText(/^\/setmoney\s+(\d+)\s+(\d+(?:\.\d+)?)$/, async (msg, m) => {
   // Process referral bonus for this deposit
   await processReferralBonusBot(tg, amount);
   
-  bot.sendMessage(msg.chat.id, `✓ Account migration deposit done for tg:${tg} by ${amount}`);
+  bot.sendMessage(msg.chat.id, `✅ Account migration deposit done for tg:${tg} by ${amount}`);
   
-  bot.sendMessage(tg, `✓ *Account Linked Successfully*
+  bot.sendMessage(tg, `✅ *Account Linked Successfully*
 Your old account has been successfully linked to your new account.
-◆ *Balance Transferred:* $${amount}
+💰 *Balance Transferred:* $${amount}
 
 ---
 
-✓ *تم ربط الحساب بنجاح*
+✅ *تم ربط الحساب بنجاح*
 تم ربط حسابك القديم بحسابك الجديد بنجاح.
-◆ *الرصيد المحول:* $${amount}`).catch(()=>{});
+💰 *الرصيد المحول:* $${amount}`).catch(()=>{});
 });
 
 // فتح صفقة (القديم)
@@ -603,8 +603,8 @@ bot.onText(/^\/open_trade\s+(\d+)\s+(\S+)$/, async (msg, m) => {
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   const tr = await q(`INSERT INTO trades (user_id, symbol, status) VALUES ($1,$2,'open') RETURNING *`, [u.id, symbol]).then(r => r.rows[0]);
-  bot.sendMessage(msg.chat.id, `✓ Opened trade #${tr.id} on ${symbol} for ${tg}`);
-  bot.sendMessage(tg, `◈ تم فتح صفقة جديدة على ${symbol}.
+  bot.sendMessage(msg.chat.id, `✅ Opened trade #${tr.id} on ${symbol} for ${tg}`);
+  bot.sendMessage(tg, `📈 تم فتح صفقة جديدة على ${symbol}.
 يرجى متابعة تفاصيل الصفقة من داخل المحفظة.`).catch(()=>{});
 });
 
@@ -636,7 +636,7 @@ bot.onText(/^\/open\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/, async (msg,
 ◆ Target: ${target >= 0 ? '+' : ''}$${target}
 ◆ Direction: ${direction}
 
-⚠ _Target PnL is hidden from user_`, { parse_mode: 'Markdown' });
+⚠️ _Target PnL is hidden from user_`, { parse_mode: 'Markdown' });
 
   // Send notification to user - Gold Theme
   bot.sendMessage(tg, `✦ *تم تفعيل صفقة ذكية جديدة* ✦
@@ -665,11 +665,11 @@ bot.onText(/\/setstats\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/, async (msg,
   
   await q(`UPDATE users SET wins=$1, losses=$2 WHERE id=$3`, [wins, losses, u.id]);
   
-  bot.sendMessage(msg.chat.id, `✓ Added MANUAL stats for user ${tg}:
-◆ Extra Wins: +$${wins}
-◆ Extra Losses: +$${losses}
+  bot.sendMessage(msg.chat.id, `✅ Added MANUAL stats for user ${tg}:
+🟢 Extra Wins: +$${wins}
+🔴 Extra Losses: +$${losses}
 
-⚠ Note: These numbers are ADDED to the real trade history.
+⚠️ Note: These numbers are ADDED to the real trade history.
 Total displayed = Real Trades + These Numbers.
 Use /resetstats to clear these.`);
 });
@@ -684,7 +684,7 @@ bot.onText(/\/resetstats\s+(\d+)/, async (msg, m) => {
   
   await q(`UPDATE users SET wins=0, losses=0 WHERE id=$1`, [u.id]);
   
-  bot.sendMessage(msg.chat.id, `✓ Manual stats reset for user ${tg}.
+  bot.sendMessage(msg.chat.id, `✅ Manual stats reset for user ${tg}.
 Now showing only REAL trade history.`);
 });
 
@@ -708,7 +708,7 @@ bot.onText(/^\/close_trade\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   );
   
   const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [tr.user_id]).then(r => r.rows[0]);
-  bot.sendMessage(msg.chat.id, `✓ Closed trade #${tradeId} PnL ${pnl}`);
+  bot.sendMessage(msg.chat.id, `✅ Closed trade #${tradeId} PnL ${pnl}`);
   if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `✦ *تم إغلاق الصفقة | Trade Closed* ✦\n\n━━━━━━━━━━━━━━━━━━━━\n${pnl >= 0 ? "◆ ربح | Profit" : "◆ خسارة | Loss"}: ${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}\n◆ الرصيد | Balance: $${Number(tg.balance).toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
@@ -719,8 +719,8 @@ bot.onText(/^\/setdaily\s+(\d+)\s+(-?\d+(?:\.\d+)?)$/, async (msg, m) => {
   const u = await q(`SELECT * FROM users WHERE tg_id=$1`, [tg]).then(r => r.rows[0]);
   if (!u) return bot.sendMessage(msg.chat.id, "User not found");
   await q(`INSERT INTO daily_targets (user_id, target, active) VALUES ($1,$2,TRUE)`, [u.id, target]);
-  bot.sendMessage(msg.chat.id, `✦ setdaily started for tg:${tg} target ${target}`);
-  bot.sendMessage(tg, `✦ تم بدء صفقة يومية (الهدف ${target>=0?'+':'-'}$${Math.abs(target)}).`);
+  bot.sendMessage(msg.chat.id, `🚀 setdaily started for tg:${tg} target ${target}`);
+  bot.sendMessage(tg, `🚀 تم بدء صفقة يومية (الهدف ${target>=0?'+':'-'}$${Math.abs(target)}).`);
 });
 
 // ===== Ban Management =====
@@ -734,23 +734,23 @@ bot.onText(/^\/ban\s+(\d+)\s+([\s\S]+)$/, async (msg, m) => {
   
   await q(`UPDATE users SET is_banned = TRUE, ban_reason = $1, banned_at = NOW() WHERE tg_id = $2`, [reason, tg]);
   
-  bot.sendMessage(msg.chat.id, `✗ User ${tg} has been banned.\nReason: ${reason}`);
+  bot.sendMessage(msg.chat.id, `🚫 User ${tg} has been banned.\nReason: ${reason}`);
   
   // Notify user
-  bot.sendMessage(tg, `✗ *تم حظر حسابك*
+  bot.sendMessage(tg, `🚫 *تم حظر حسابك*
 
 ━━━━━━━━━━━━━━━━━━━━
-◆ *السبب:* ${reason}
+📋 *السبب:* ${reason}
 
-◆ للتواصل مع الدعم:
+📩 للتواصل مع الدعم:
 ━━━━━━━━━━━━━━━━━━━━
 
-◆ *Your account has been suspended*
+⛔ *Your account has been suspended*
 Reason: ${reason}`, {
     parse_mode: "Markdown",
     reply_markup: {
       inline_keyboard: [
-        [{ text: "◆ تواصل مع الدعم | Contact Support", url: "https://t.me/QL_Support" }]
+        [{ text: "💬 تواصل مع الدعم | Contact Support", url: "https://t.me/QL_Support" }]
       ]
     }
   }).catch(()=>{});
@@ -762,12 +762,12 @@ bot.onText(/^\/unban\s+(\d+)$/, async (msg, m) => {
   
   await q(`UPDATE users SET is_banned = FALSE, ban_reason = NULL, banned_at = NULL WHERE tg_id = $1`, [tg]);
   
-  bot.sendMessage(msg.chat.id, `✓ User ${tg} has been unbanned.`);
-  bot.sendMessage(tg, `✓ *تم رفع الحظر عن حسابك*
+  bot.sendMessage(msg.chat.id, `✅ User ${tg} has been unbanned.`);
+  bot.sendMessage(tg, `✅ *تم رفع الحظر عن حسابك*
 
 يمكنك الآن استخدام المنصة بشكل طبيعي.
 
-✓ *Your account has been reactivated*
+✅ *Your account has been reactivated*
 You can now use the platform normally.`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
@@ -779,13 +779,13 @@ bot.onText(/^\/refstats$/, async (msg) => {
     const creditedRefs = await q(`SELECT COUNT(*) as count, COALESCE(SUM(bonus_amount), 0) as total FROM referrals WHERE status = 'credited'`);
     const pendingRefs = await q(`SELECT COUNT(*) as count FROM referrals WHERE status = 'pending'`);
     
-    bot.sendMessage(msg.chat.id, `◈ *Referral Statistics*
+    bot.sendMessage(msg.chat.id, `📊 *Referral Statistics*
 
-◆ Total Referrals: ${totalRefs.rows[0].count}
-✓ Credited: ${creditedRefs.rows[0].count} ($${Number(creditedRefs.rows[0].total).toFixed(2)})
-◇ Pending: ${pendingRefs.rows[0].count}`, { parse_mode: "Markdown" });
+📌 Total Referrals: ${totalRefs.rows[0].count}
+✅ Credited: ${creditedRefs.rows[0].count} ($${Number(creditedRefs.rows[0].total).toFixed(2)})
+⏳ Pending: ${pendingRefs.rows[0].count}`, { parse_mode: "Markdown" });
   } catch(e) {
-    bot.sendMessage(msg.chat.id, `✗ Error: ${e.message}`);
+    bot.sendMessage(msg.chat.id, `❌ Error: ${e.message}`);
   }
 });
 
@@ -800,8 +800,8 @@ bot.onText(/^\/approve_withdraw\s+(\d+)$/, async (msg, m) => {
   // Release frozen balance
   await q(`UPDATE users SET frozen_balance = GREATEST(0, COALESCE(frozen_balance, 0) - $1) WHERE id=$2`, [r0.amount, r0.user_id]);
   const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]);
-  bot.sendMessage(msg.chat.id, `✓ Withdraw #${id} approved ($${Number(r0.amount).toFixed(2)})`);
-  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `✦ *تمت الموافقة على طلب السحب* ✦\n\n━━━━━━━━━━━━━━━━━━━━\n◆ رقم الطلب: #${id}\n◆ المبلغ: $${Number(r0.amount).toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━\n\n✓ سيتم تحويل المبلغ قريباً.`, { parse_mode: "Markdown" }).catch(()=>{});
+  bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} approved ($${Number(r0.amount).toFixed(2)})`);
+  if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `✦ *تمت الموافقة على طلب السحب* ✦\n\n━━━━━━━━━━━━━━━━━━━━\n◆ رقم الطلب: #${id}\n◆ المبلغ: $${Number(r0.amount).toFixed(2)}\n━━━━━━━━━━━━━━━━━━━━\n\n✅ سيتم تحويل المبلغ قريباً.`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
 bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
@@ -814,7 +814,7 @@ bot.onText(/^\/reject_withdraw\s+(\d+)\s+(.+)$/, async (msg, m) => {
   // Return frozen balance to available balance
   await q(`UPDATE users SET balance = balance + $1, frozen_balance = GREATEST(0, COALESCE(frozen_balance, 0) - $1) WHERE id=$2`, [r0.amount, r0.user_id]);
   const tg = await q(`SELECT tg_id, balance FROM users WHERE id=$1`, [r0.user_id]).then(r => r.rows[0]);
-  bot.sendMessage(msg.chat.id, `✓ Withdraw #${id} rejected - $${Number(r0.amount).toFixed(2)} returned to balance`);
+  bot.sendMessage(msg.chat.id, `✅ Withdraw #${id} rejected - $${Number(r0.amount).toFixed(2)} returned to balance`);
   if (tg?.tg_id) bot.sendMessage(Number(tg.tg_id), `✦ *تم رفض طلب السحب* ✦\n\n━━━━━━━━━━━━━━━━━━━━\n◆ رقم الطلب: #${id}\n◆ المبلغ: $${Number(r0.amount).toFixed(2)}\n◆ السبب: ${reason}\n━━━━━━━━━━━━━━━━━━━━\n\n◆ تم إرجاع المبلغ لرصيدك.`, { parse_mode: "Markdown" }).catch(()=>{});
 });
 
@@ -827,14 +827,14 @@ bot.onText(/^\/broadcast\s+all\s+([\s\S]+)$/, async (msg, m) => {
   for (const row of list.rows) {
     try { await bot.sendMessage(Number(row.tg_id), text); ok++; } catch {}
   }
-  bot.sendMessage(msg.chat.id, `✦ Broadcast sent to ${ok} users.`);
+  bot.sendMessage(msg.chat.id, `📣 Broadcast sent to ${ok} users.`);
 });
 
 bot.onText(/^\/notify\s+(\d+)\s+([\s\S]+)$/, async (msg, m) => {
   if (!isAdmin(msg)) return;
   const tg = Number(m[1]); const text = m[2];
-  try { await bot.sendMessage(tg, text); bot.sendMessage(msg.chat.id, "✓ Sent."); }
-  catch (e) { bot.sendMessage(msg.chat.id, "✗ " + e.message); }
+  try { await bot.sendMessage(tg, text); bot.sendMessage(msg.chat.id, "✅ Sent."); }
+  catch (e) { bot.sendMessage(msg.chat.id, "❌ " + e.message); }
 });
 
 // ===== أوامر التحكم بالسحب =====
@@ -843,9 +843,9 @@ bot.onText(/^\/stopwithdraw$/, async (msg) => {
   try {
     await q(`INSERT INTO settings (key, value) VALUES ('withdrawal_enabled', 'false') 
              ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
-    bot.sendMessage(msg.chat.id, `✗ *تم إيقاف السحب*\n\n⚠ جميع طلبات السحب الجديدة ستُرفض تلقائياً.\n◆ الرسالة للمستخدمين: "تم توقيف السحب مؤقتاً بسبب الصيانة"\n\n✓ لإعادة تفعيل السحب استخدم: /startwithdraw`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `⏸️ *تم إيقاف السحب*\n\n⚠️ جميع طلبات السحب الجديدة ستُرفض تلقائياً.\n💬 الرسالة للمستخدمين: "تم توقيف السحب مؤقتاً بسبب الصيانة"\n\n✅ لإعادة تفعيل السحب استخدم: /startwithdraw`, { parse_mode: "Markdown" });
   } catch (e) {
-    bot.sendMessage(msg.chat.id, "✗ Error: " + e.message);
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
   }
 });
 
@@ -854,9 +854,9 @@ bot.onText(/^\/startwithdraw$/, async (msg) => {
   try {
     await q(`INSERT INTO settings (key, value) VALUES ('withdrawal_enabled', 'true') 
              ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
-    bot.sendMessage(msg.chat.id, `✓ *تم تفعيل السحب*\n\n◆ المستخدمون يمكنهم الآن طلب السحب بشكل طبيعي.`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `✅ *تم تفعيل السحب*\n\n💸 المستخدمون يمكنهم الآن طلب السحب بشكل طبيعي.`, { parse_mode: "Markdown" });
   } catch (e) {
-    bot.sendMessage(msg.chat.id, "✗ Error: " + e.message);
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
   }
 });
 
@@ -865,9 +865,9 @@ bot.onText(/^\/withdrawstatus$/, async (msg) => {
   try {
     const result = await q(`SELECT value FROM settings WHERE key = 'withdrawal_enabled'`);
     const enabled = result.rows.length === 0 || result.rows[0].value !== 'false';
-    bot.sendMessage(msg.chat.id, `◈ *حالة السحب*\n\nالسحب: ${enabled ? '✓ مفعّل' : '✗ متوقف'}\n\n${enabled ? '◆ لإيقاف السحب: /stopwithdraw' : '◆ لتفعيل السحب: /startwithdraw'}`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `📊 *حالة السحب*\n\nالسحب: ${enabled ? '✅ مفعّل' : '🛑 متوقف'}\n\n${enabled ? '🔴 لإيقاف السحب: /stopwithdraw' : '🟢 لتفعيل السحب: /startwithdraw'}`, { parse_mode: "Markdown" });
   } catch (e) {
-    bot.sendMessage(msg.chat.id, "✗ Error: " + e.message);
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
   }
 });
 
@@ -877,9 +877,9 @@ bot.onText(/^\/maintenance$/, async (msg) => {
   try {
     await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'true') 
              ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
-    bot.sendMessage(msg.chat.id, `⚙ *تم تفعيل وضع الصيانة*\n\n⚠ المستخدمون سيرون شاشة الصيانة عند فتح التطبيق.\n\n✓ لإنهاء الصيانة: /endmaintenance`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `🔧 *تم تفعيل وضع الصيانة*\n\n⚠️ المستخدمون سيرون شاشة الصيانة عند فتح التطبيق.\n\n✅ لإنهاء الصيانة: /endmaintenance`, { parse_mode: "Markdown" });
   } catch (e) {
-    bot.sendMessage(msg.chat.id, "✗ Error: " + e.message);
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
   }
 });
 
@@ -888,9 +888,9 @@ bot.onText(/^\/endmaintenance$/, async (msg) => {
   try {
     await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'false') 
              ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
-    bot.sendMessage(msg.chat.id, `✓ *تم إنهاء وضع الصيانة*\n\n✦ التطبيق يعمل بشكل طبيعي الآن.`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `✅ *تم إنهاء وضع الصيانة*\n\n🚀 التطبيق يعمل بشكل طبيعي الآن.`, { parse_mode: "Markdown" });
   } catch (e) {
-    bot.sendMessage(msg.chat.id, "✗ Error: " + e.message);
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
   }
 });
 
@@ -899,9 +899,9 @@ bot.onText(/^\/maintenancestatus$/, async (msg) => {
   try {
     const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_mode'`);
     const enabled = result.rows.length > 0 && result.rows[0].value === 'true';
-    bot.sendMessage(msg.chat.id, `◈ *حالة الصيانة*\n\nالصيانة: ${enabled ? '⚙ مفعّلة' : '✓ غير مفعّلة'}\n\n${enabled ? '✓ لإنهاء الصيانة: /endmaintenance' : '⚙ لتفعيل الصيانة: /maintenance'}`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `📊 *حالة الصيانة*\n\nالصيانة: ${enabled ? '🔧 مفعّلة' : '✅ غير مفعّلة'}\n\n${enabled ? '✅ لإنهاء الصيانة: /endmaintenance' : '🔧 لتفعيل الصيانة: /maintenance'}`, { parse_mode: "Markdown" });
   } catch (e) {
-    bot.sendMessage(msg.chat.id, "✗ Error: " + e.message);
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
   }
 });
 
@@ -912,9 +912,9 @@ bot.onText(/^\/stopbot$/, async (msg) => {
              ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
     await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'true') 
              ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
-    bot.sendMessage(msg.chat.id, `✗ *تم إيقاف البوت*\n\n⚠ البوت متوقف عن العمل والمستخدمون سيرون شاشة الصيانة.\n\n✓ لتشغيل البوت: /startbot`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `⏹️ *تم إيقاف البوت*\n\n⚠️ البوت متوقف عن العمل والمستخدمون سيرون شاشة الصيانة.\n\n✅ لتشغيل البوت: /startbot`, { parse_mode: "Markdown" });
   } catch (e) {
-    bot.sendMessage(msg.chat.id, "✗ Error: " + e.message);
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
   }
 });
 
@@ -925,9 +925,9 @@ bot.onText(/^\/startbot$/, async (msg) => {
              ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
     await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'false') 
              ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
-    bot.sendMessage(msg.chat.id, `✓ *تم تشغيل البوت*\n\n✦ البوت يعمل بشكل طبيعي الآن.`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `✅ *تم تشغيل البوت*\n\n🚀 البوت يعمل بشكل طبيعي الآن.`, { parse_mode: "Markdown" });
   } catch (e) {
-    bot.sendMessage(msg.chat.id, "✗ Error: " + e.message);
+    bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
   }
 });
 

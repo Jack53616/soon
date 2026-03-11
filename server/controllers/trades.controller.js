@@ -266,7 +266,7 @@ export const closeTradeById = async (req, res) => {
     if (userResult2.rows.length > 0) {
       const user = userResult2.rows[0];
       try {
-        await bot.sendMessage(user.tg_id, `◆ *تم إغلاق الصفقة*\n${pnl >= 0 ? '◆ ربح' : '◆ خسارة'}: ${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)}\n◆ الرصيد: $${Number(user.balance).toFixed(2)}`, { parse_mode: "Markdown" });
+        await bot.sendMessage(user.tg_id, `🔔 *تم إغلاق الصفقة*\n${pnl >= 0 ? '🟢 ربح' : '🔴 خسارة'}: ${pnl >= 0 ? '+' : ''}$${Math.abs(pnl).toFixed(2)}\n💰 الرصيد: $${Number(user.balance).toFixed(2)}`, { parse_mode: "Markdown" });
       } catch (err) {}
     }
 

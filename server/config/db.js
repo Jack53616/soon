@@ -33,7 +33,7 @@ pool.on("connect", () => {
 });
 
 pool.on("error", (err) => {
-  console.error("✗ PostgreSQL connection error:", err);
+  console.error("❌ PostgreSQL connection error:", err);
 });
 
 export const query = async (text, params = []) => {
@@ -46,7 +46,7 @@ export const query = async (text, params = []) => {
     }
     return res;
   } catch (error) {
-    console.error("✗ Query error:", error.message);
+    console.error("❌ Query error:", error.message);
     throw error;
   }
 };

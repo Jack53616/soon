@@ -16,7 +16,7 @@
   <section id="login" class="login-screen">
     <div class="login-card glass">
       <div class="login-header">
-        <h1>◆ لوحة الإدارة</h1>
+        <h1>🔐 لوحة الإدارة</h1>
         <p>Admin Panel</p>
       </div>
       <div class="login-form">
@@ -30,22 +30,22 @@
   <!-- Main Panel -->
   <section id="panel" class="hidden">
     <header class="top-bar glass">
-      <h1>⚙ لوحة إدارة QL Trading v3.1</h1>
+      <h1>🎛️ لوحة إدارة QL Trading v3.1</h1>
       <div class="header-actions">
-        <span id="adminStatus" class="status-badge">◆ متصل</span>
+        <span id="adminStatus" class="status-badge">🟢 متصل</span>
         <button id="logoutBtn" class="btn-small">خروج</button>
       </div>
     </header>
 
     <nav class="tabs glass">
-      <button class="tab-btn active" data-tab="dash">◆ لوحة التحكم</button>
-      <button class="tab-btn" data-tab="users">◆ المستخدمون</button>
-      <button class="tab-btn" data-tab="wd">◆ السحوبات</button>
-      <button class="tab-btn" data-tab="tr">◈ الصفقات</button>
-      <button class="tab-btn" data-tab="mass">◇ صفقات جماعية</button>
-      <button class="tab-btn" data-tab="custom">◇ صفقات مخصصة</button>
-      <button class="tab-btn" data-tab="referrals">◆ الدعوات</button>
-      <button class="tab-btn" data-tab="settings">⚙ الإعدادات</button>
+      <button class="tab-btn active" data-tab="dash">🏠 لوحة التحكم</button>
+      <button class="tab-btn" data-tab="users">👥 المستخدمون</button>
+      <button class="tab-btn" data-tab="wd">💸 السحوبات</button>
+      <button class="tab-btn" data-tab="tr">📊 الصفقات</button>
+      <button class="tab-btn" data-tab="mass">🎯 صفقات جماعية</button>
+      <button class="tab-btn" data-tab="custom">🎨 صفقات مخصصة</button>
+      <button class="tab-btn" data-tab="referrals">🔗 الدعوات</button>
+      <button class="tab-btn" data-tab="settings">⚙️ الإعدادات</button>
     </nav>
 
     <main class="content">
@@ -53,28 +53,28 @@
       <section id="tab-dash" class="tab-content active">
         <div class="kpi-grid">
           <div class="kpi-card glass">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">👥</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-users">0</span>
               <span class="kpi-label">مستخدمون</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">💰</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-dep">$0</span>
               <span class="kpi-label">إجمالي الإيداعات</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">💸</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-wd">$0</span>
               <span class="kpi-label">إجمالي السحوبات</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">◈</div>
+            <div class="kpi-icon">📈</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-open">0</span>
               <span class="kpi-label">صفقات مفتوحة</span>
@@ -85,28 +85,28 @@
         <!-- Today's Performance (auto-resets daily) -->
         <div class="kpi-grid" style="margin-top: 16px;">
           <div class="kpi-card glass" style="border: 1px solid rgba(0,214,143,0.3);">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">📋</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-today-net" style="color:#00d68f;">$0</span>
               <span class="kpi-label">صافي اليوم</span>
             </div>
           </div>
           <div class="kpi-card glass" style="border: 1px solid rgba(0,214,143,0.3);">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">🟢</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-today-profit" style="color:#00d68f;">$0</span>
               <span class="kpi-label">أرباح اليوم</span>
             </div>
           </div>
           <div class="kpi-card glass" style="border: 1px solid rgba(255,59,99,0.3);">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">🔴</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-today-loss" style="color:#ff3b63;">$0</span>
               <span class="kpi-label">خسائر اليوم</span>
             </div>
           </div>
           <div class="kpi-card glass" style="border: 1px solid rgba(88,166,255,0.3);">
-            <div class="kpi-icon">◈</div>
+            <div class="kpi-icon">📊</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-today-trades">0</span>
               <span class="kpi-label">صفقات اليوم</span>
@@ -117,28 +117,28 @@
         <!-- Monthly & All-Time Stats -->
         <div class="kpi-grid" style="margin-top: 16px;">
           <div class="kpi-card glass">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">🗓️</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-month-net">$0</span>
               <span class="kpi-label">صافي الشهر</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">✦</div>
+            <div class="kpi-icon">🌟</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-alltime-net">$0</span>
               <span class="kpi-label">صافي الكل</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">👤</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-active-today">0</span>
               <span class="kpi-label">نشطون اليوم</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">◇</div>
+            <div class="kpi-icon">🔄</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-pending-wd">0</span>
               <span class="kpi-label">سحوبات معلقة</span>
@@ -148,7 +148,7 @@
 
         <div class="card glass" style="margin-top: 16px;">
           <div class="card-header">
-            <h3>◆ آخر النشاط</h3>
+            <h3>📋 آخر النشاط</h3>
           </div>
           <div id="recent" class="table-container"></div>
         </div>
@@ -158,7 +158,7 @@
       <section id="tab-users" class="tab-content">
         <div class="card glass">
           <div class="card-header">
-            <h3>◆ البحث عن مستخدم</h3>
+            <h3>🔍 البحث عن مستخدم</h3>
           </div>
           <div class="search-box">
             <input id="searchInput" class="input" placeholder="ابحث بالاسم أو Telegram ID"/>
@@ -169,7 +169,7 @@
         <!-- User Details Card (Hidden by default) -->
         <div id="userDetails" class="card glass hidden">
           <div class="card-header">
-            <h3>◆ تفاصيل المستخدم</h3>
+            <h3>👤 تفاصيل المستخدم</h3>
             <button id="closeUserDetails" class="btn-small">✕</button>
           </div>
           <div class="user-info">
@@ -220,7 +220,7 @@
           </div>
 
           <div class="action-section">
-            <h4>◆ إدارة الرصيد</h4>
+            <h4>💰 إدارة الرصيد</h4>
             <div class="action-row">
               <input id="balanceAmount" type="number" class="input small" placeholder="المبلغ"/>
               <button id="addBalanceBtn" class="btn success">+ إضافة</button>
@@ -230,7 +230,7 @@
           </div>
 
           <div class="action-section">
-            <h4>◆ تمديد الاشتراك</h4>
+            <h4>📅 تمديد الاشتراك</h4>
             <div class="action-row">
               <input id="subDays" type="number" class="input small" placeholder="عدد الأيام"/>
               <button id="extendSubBtn" class="btn">تمديد</button>
@@ -238,7 +238,7 @@
           </div>
 
           <div class="action-section">
-            <h4>◈ إضافة صفقة</h4>
+            <h4>📈 إضافة صفقة</h4>
             <div class="action-row">
               <input id="tradePnl" type="number" class="input small" placeholder="الربح/الخسارة"/>
               <select id="tradeDurationUnit" class="input small">
@@ -250,7 +250,7 @@
               <select id="tradeSpeed" class="input small">
                 <option value="normal">عادي</option>
                 <option value="fast">⚡ سريع</option>
-                <option value="turbo">✦ تيربو</option>
+                <option value="turbo">🚀 تيربو</option>
               </select>
               <button id="addTradeBtn" class="btn">إضافة صفقة</button>
             </div>
@@ -258,7 +258,7 @@
           </div>
 
           <div class="action-section">
-            <h4>✗ حظر المستخدم</h4>
+            <h4>🚫 حظر المستخدم</h4>
             <div class="action-row">
               <input id="banReason" class="input" placeholder="سبب الحظر..."/>
               <button id="banUserBtn" class="btn danger">حظر</button>
@@ -267,7 +267,7 @@
           </div>
 
           <div class="action-section">
-            <h4>◆ تعديل الرتبة</h4>
+            <h4>🏅 تعديل الرتبة</h4>
             <div class="action-row">
               <input id="customRankInput" type="text" class="input small" placeholder="الرتبة المخصصة (مثل: وكيل ذهبي)" style="flex:1;"/>
               <button id="setRankBtn" class="btn" style="background:#a371f7;color:#fff;">تعيين رتبة</button>
@@ -277,17 +277,17 @@
           </div>
 
           <div class="action-section">
-            <h4>◆ إدارة الإحالات</h4>
+            <h4>🔗 إدارة الإحالات</h4>
             <div class="action-row">
-              <button id="viewReferralsBtn" class="btn" style="background:rgba(88,166,255,0.2);border:1px solid #58a6ff;">◆ عرض المحالين</button>
-              <button id="removeReferrerBtn" class="btn warning">✗ إزالة المُحيل</button>
+              <button id="viewReferralsBtn" class="btn" style="background:rgba(88,166,255,0.2);border:1px solid #58a6ff;">👥 عرض المحالين</button>
+              <button id="removeReferrerBtn" class="btn warning">❌ إزالة المُحيل</button>
             </div>
-            <p style="color: var(--muted); font-size: 12px; margin-top: 8px;">◆ اضغط "عرض المحالين" لرؤية قائمة المحالين مع خيارات نقل/حذف فردية لكل شخص</p>
+            <p style="color: var(--muted); font-size: 12px; margin-top: 8px;">💡 اضغط "عرض المحالين" لرؤية قائمة المحالين مع خيارات نقل/حذف فردية لكل شخص</p>
             <div id="userReferralsList" class="hidden" style="margin-top:12px;"></div>
           </div>
 
           <div class="action-section">
-            <h4>◆ إجراءات أخرى</h4>
+            <h4>🚧 إجراءات أخرى</h4>
             <div class="action-row">
               <button id="clearHistoryBtn" class="btn warning">تصفير السجل</button>
               <button id="clearWithdrawalsBtn" class="btn warning">تصفير طلبات السحب</button>
@@ -295,14 +295,14 @@
               <button id="clearTradesBtn" class="btn warning">حذف الصفقات</button>
             </div>
             <div class="action-row" style="margin-top:8px;">
-              <button id="deleteUserBtn" class="btn danger" style="flex:1;">✗ حذف الحساب نهائياً</button>
+              <button id="deleteUserBtn" class="btn danger" style="flex:1;">🗑️ حذف الحساب نهائياً</button>
             </div>
           </div>
         </div>
 
         <div class="card glass">
           <div class="card-header">
-            <h3>◆ قائمة المستخدمين</h3>
+            <h3>👥 قائمة المستخدمين</h3>
           </div>
           <div id="users" class="table-container"></div>
         </div>
@@ -312,7 +312,7 @@
       <section id="tab-wd" class="tab-content">
         <div class="card glass">
           <div class="card-header">
-            <h3>◆ طلبات السحب</h3>
+            <h3>💸 طلبات السحب</h3>
             <div class="filter-btns">
               <button class="filter-btn active" data-filter="pending">قيد الانتظار</button>
               <button class="filter-btn" data-filter="approved">مقبولة</button>
@@ -328,7 +328,7 @@
       <section id="tab-tr" class="tab-content">
         <div class="card glass">
           <div class="card-header">
-            <h3>◈ الصفقات</h3>
+            <h3>📊 الصفقات</h3>
             <div class="filter-btns">
               <button class="filter-btn active" data-filter="open">مفتوحة</button>
               <button class="filter-btn" data-filter="closed">مغلقة</button>
@@ -345,7 +345,7 @@
         <!-- Today's Scheduled Trades -->
         <div class="card glass" style="border: 2px solid rgba(0,214,143,0.3);">
           <div class="card-header">
-            <h3>◆ صفقات اليوم المجدولة</h3>
+            <h3>📅 صفقات اليوم المجدولة</h3>
             <button id="createDailyBtn" class="btn-small success">إنشاء صفقات اليوم</button>
           </div>
           <div id="todayScheduled" class="today-trades-grid"></div>
@@ -354,7 +354,7 @@
         <!-- Create Manual Mass Trade - ENHANCED -->
         <div class="card glass" style="border: 2px solid rgba(163,113,247,0.3);">
           <div class="card-header">
-            <h3>◇ فتح صفقة جماعية يدوية (محسّن)</h3>
+            <h3>🎯 فتح صفقة جماعية يدوية (محسّن)</h3>
           </div>
           <div class="action-section">
             <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
@@ -371,12 +371,12 @@
               <select id="massDirection" class="input small">
                 <option value="BUY">BUY (شراء)</option>
                 <option value="SELL">SELL (بيع)</option>
-                <option value="random">◇ عشوائي</option>
+                <option value="random">🎲 عشوائي</option>
               </select>
               <select id="massResult" class="input small">
-                <option value="random">◇ عشوائي</option>
-                <option value="win">✓ ربح</option>
-                <option value="lose">✗ خسارة</option>
+                <option value="random">🎲 عشوائي</option>
+                <option value="win">✅ ربح</option>
+                <option value="lose">❌ خسارة</option>
               </select>
             </div>
             <div class="action-row" style="margin-top:8px;">
@@ -390,12 +390,12 @@
               <select id="massSpeed" class="input small">
                 <option value="normal">عادي</option>
                 <option value="fast">⚡ سريع</option>
-                <option value="turbo">✦ تيربو</option>
+                <option value="turbo">🚀 تيربو</option>
               </select>
             </div>
             <div class="action-row" style="margin-top:8px;">
               <input id="massNote" class="input" placeholder="ملاحظة (اختياري)" style="flex:2;"/>
-              <button id="openMassTradeBtn" class="btn success" style="flex:1;">✦ فتح صفقة جماعية</button>
+              <button id="openMassTradeBtn" class="btn success" style="flex:1;">🚀 فتح صفقة جماعية</button>
             </div>
           </div>
         </div>
@@ -403,7 +403,7 @@
         <!-- Extra Trade Users Management -->
         <div class="card glass" style="border: 2px solid rgba(255,165,0,0.3);">
           <div class="card-header">
-            <h3>✦ مستخدمون بصفقات إضافية</h3>
+            <h3>⭐ مستخدمون بصفقات إضافية</h3>
           </div>
           <div class="action-section">
             <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
@@ -422,7 +422,7 @@
         <!-- Mass Trades History -->
         <div class="card glass">
           <div class="card-header">
-            <h3>◆ سجل الصفقات الجماعية</h3>
+            <h3>📋 سجل الصفقات الجماعية</h3>
           </div>
           <div id="massTrades" class="table-container"></div>
         </div>
@@ -430,25 +430,25 @@
         <!-- Mass Trade Activate/Close Modal -->
         <div id="massActionModal" class="card glass hidden" style="border: 2px solid var(--accent);">
           <div class="card-header">
-            <h3 id="massActionTitle">◆ صفقة جماعية #<span id="massActionId">-</span></h3>
+            <h3 id="massActionTitle">🔒 صفقة جماعية #<span id="massActionId">-</span></h3>
             <button id="closeMassActionModal" class="btn-small">✕</button>
           </div>
           
           <!-- For Pending trades: Set percentage (auto-activate at scheduled time) -->
           <div id="activateSection">
             <div class="action-section">
-              <h4>◆ تعيين نسبة الأرباح/الخسارة</h4>
+              <h4>⚙️ تعيين نسبة الأرباح/الخسارة</h4>
               <div class="action-row">
                 <input id="activatePercentage" type="number" step="0.01" class="input small" placeholder="النسبة % (مثال: 5 أو -3)"/>
-                <button id="setPercentageBtn" class="btn success">✓ حفظ النسبة (تفعيل تلقائي بالوقت)</button>
+                <button id="setPercentageBtn" class="btn success">✅ حفظ النسبة (تفعيل تلقائي بالوقت)</button>
               </div>
               <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">
-                ◆ عند حفظ النسبة، ستتحول الصفقة لحالة "جاهزة" وستُفعّل تلقائياً عند وصول الوقت المجدول.
+                💡 عند حفظ النسبة، ستتحول الصفقة لحالة "جاهزة" وستُفعّل تلقائياً عند وصول الوقت المجدول.
                 سيتم إنشاء صفقة حية لكل مستخدم (مدة ساعة) مع إشعار تلغرام.
               </p>
               <hr style="border-color: rgba(255,255,255,0.1); margin: 16px 0;">
               <h4>⚡ تفعيل فوري (بدون انتظار الوقت)</h4>
-              <button id="activateMassTradeBtn" class="btn" style="background: rgba(255,165,0,0.3); border: 1px solid orange;">✦ تفعيل الآن فوراً</button>
+              <button id="activateMassTradeBtn" class="btn" style="background: rgba(255,165,0,0.3); border: 1px solid orange;">🚀 تفعيل الآن فوراً</button>
               <p style="color: var(--muted); font-size: 12px; margin-top: 6px;">
                 هذا الخيار يفعّل الصفقة فوراً بدون انتظار الوقت المجدول (يجب إدخال النسبة أعلاه أولاً).
               </p>
@@ -459,12 +459,12 @@
           <div id="readySection" class="hidden">
             <div class="action-section">
               <div style="padding: 16px; background: rgba(0,214,143,0.1); border-radius: 12px; border: 1px solid rgba(0,214,143,0.3);">
-                <h4 style="color: var(--success); margin-bottom: 8px;">✓ النسبة محفوظة - بانتظار الوقت المجدول</h4>
+                <h4 style="color: var(--success); margin-bottom: 8px;">✅ النسبة محفوظة - بانتظار الوقت المجدول</h4>
                 <p id="readyInfo" style="color: var(--muted); font-size: 13px;"></p>
               </div>
               <div style="margin-top: 12px; display: flex; gap: 8px;">
                 <button id="editPercentageBtn" class="btn" style="background: rgba(255,255,255,0.1);">✏️ تعديل النسبة</button>
-                <button id="forceActivateBtn" class="btn" style="background: rgba(255,165,0,0.3); border: 1px solid orange;">✦ تفعيل الآن فوراً</button>
+                <button id="forceActivateBtn" class="btn" style="background: rgba(255,165,0,0.3); border: 1px solid orange;">🚀 تفعيل الآن فوراً</button>
               </div>
             </div>
           </div>
@@ -472,7 +472,7 @@
           <!-- For Open trades: Close manually -->
           <div id="closeSection" class="hidden">
             <div class="action-section">
-              <h4>◆ إغلاق الصفقة الجماعية</h4>
+              <h4>🔒 إغلاق الصفقة الجماعية</h4>
               <button id="forceCloseMassTradeBtn" class="btn danger">إغلاق فوري لجميع الصفقات</button>
               <p style="color: var(--muted); font-size: 13px; margin-top: 8px;">
                 سيتم إغلاق جميع صفقات المستخدمين فوراً وتطبيق الأرباح/الخسائر على أرصدتهم.
@@ -496,7 +496,7 @@
 
           <!-- Override Section -->
           <div class="action-section">
-            <h4>⚙ نسبة مخصصة لمستخدم معين</h4>
+            <h4>⚙️ نسبة مخصصة لمستخدم معين</h4>
             <div class="action-row">
               <input id="overrideUserId" type="number" class="input small" placeholder="User ID"/>
               <input id="overridePercentage" type="number" step="0.01" class="input small" placeholder="النسبة %"/>
@@ -508,7 +508,7 @@
           <!-- User Trades List (for open mass trades) -->
           <div id="userTradesList" class="hidden">
             <div class="action-section">
-              <h4>◆ صفقات المستخدمين الحية</h4>
+              <h4>👥 صفقات المستخدمين الحية</h4>
               <div id="userTradesTable" class="table-container"></div>
             </div>
           </div>
@@ -519,7 +519,7 @@
       <section id="tab-custom" class="tab-content">
         <div class="card glass" style="border: 2px solid rgba(163,113,247,0.3);">
           <div class="card-header">
-            <h3>◇ فتح صفقة مخصصة لأشخاص محددين</h3>
+            <h3>🎨 فتح صفقة مخصصة لأشخاص محددين</h3>
           </div>
           <div class="action-section">
             <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
@@ -539,12 +539,12 @@
               <select id="customDirection" class="input small">
                 <option value="BUY">BUY (شراء)</option>
                 <option value="SELL">SELL (بيع)</option>
-                <option value="random">◇ عشوائي</option>
+                <option value="random">🎲 عشوائي</option>
               </select>
               <select id="customResult" class="input small">
-                <option value="random">◇ عشوائي</option>
-                <option value="win">✓ ربح</option>
-                <option value="lose">✗ خسارة</option>
+                <option value="random">🎲 عشوائي</option>
+                <option value="win">✅ ربح</option>
+                <option value="lose">❌ خسارة</option>
               </select>
             </div>
             <div class="action-row" style="margin-top:8px;">
@@ -558,21 +558,21 @@
               <select id="customSpeed" class="input small">
                 <option value="normal">عادي</option>
                 <option value="fast">⚡ سريع</option>
-                <option value="turbo">✦ تيربو</option>
+                <option value="turbo">🚀 تيربو</option>
               </select>
             </div>
             <div class="action-row" style="margin-top:8px;">
               <label style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;">
                 <input id="customCanClose" type="checkbox" checked/> السماح للمستخدم بإغلاق الصفقة
               </label>
-              <button id="openCustomTradeBtn" class="btn success" style="flex:1;">✦ فتح الصفقة المخصصة</button>
+              <button id="openCustomTradeBtn" class="btn success" style="flex:1;">🚀 فتح الصفقة المخصصة</button>
             </div>
           </div>
         </div>
 
         <div class="card glass">
           <div class="card-header">
-            <h3>◆ سجل الصفقات المخصصة</h3>
+            <h3>📋 سجل الصفقات المخصصة</h3>
             <div class="filter-btns">
               <button class="filter-btn active" data-filter="open" data-target="custom">مفتوحة</button>
               <button class="filter-btn" data-filter="closed" data-target="custom">مغلقة</button>
@@ -587,28 +587,28 @@
       <section id="tab-referrals" class="tab-content">
         <div class="kpi-grid">
           <div class="kpi-card glass">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">🔗</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-refs-total">0</span>
               <span class="kpi-label">إجمالي الدعوات</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">✓</div>
+            <div class="kpi-icon">✅</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-refs-credited">0</span>
               <span class="kpi-label">دعوات مكتملة</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">◆</div>
+            <div class="kpi-icon">💰</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-refs-paid">$0</span>
               <span class="kpi-label">إجمالي المكافآت</span>
             </div>
           </div>
           <div class="kpi-card glass">
-            <div class="kpi-icon">◇</div>
+            <div class="kpi-icon">🔄</div>
             <div class="kpi-data">
               <span class="kpi-value" id="k-refs-pending">0</span>
               <span class="kpi-label">دعوات معلقة</span>
@@ -618,20 +618,20 @@
 
         <div class="card glass">
           <div class="card-header">
-            <h3>✦ أفضل المُحيلين</h3>
+            <h3>🏆 أفضل المُحيلين</h3>
           </div>
           <div id="topReferrers" class="table-container"></div>
         </div>
 
         <div class="card glass">
           <div class="card-header">
-            <h3>◆ نظام المكافآت</h3>
+            <h3>📋 نظام المكافآت</h3>
           </div>
           <div style="padding: 16px; color: var(--muted);">
-            <p style="margin-bottom: 12px;">◆ كل مستخدم لديه رابط دعوة فريد</p>
-            <p style="margin-bottom: 12px;">◆ عندما يسجل شخص عبر الرابط ويودع <strong style="color: var(--success);">$500+</strong> يحصل المُحيل على <strong style="color: var(--success);">$50</strong></p>
-            <p style="margin-bottom: 12px;">◆ عندما يسجل شخص عبر الرابط ويودع <strong style="color: var(--success);">$1000+</strong> يحصل المُحيل على <strong style="color: var(--success);">$100</strong></p>
-            <p>◆ المكافأة تُضاف تلقائياً لرصيد المُحيل</p>
+            <p style="margin-bottom: 12px;">🔸 كل مستخدم لديه رابط دعوة فريد</p>
+            <p style="margin-bottom: 12px;">🔸 عندما يسجل شخص عبر الرابط ويودع <strong style="color: var(--success);">$500+</strong> يحصل المُحيل على <strong style="color: var(--success);">$50</strong></p>
+            <p style="margin-bottom: 12px;">🔸 عندما يسجل شخص عبر الرابط ويودع <strong style="color: var(--success);">$1000+</strong> يحصل المُحيل على <strong style="color: var(--success);">$100</strong></p>
+            <p>🔸 المكافأة تُضاف تلقائياً لرصيد المُحيل</p>
           </div>
         </div>
       </section>
@@ -641,7 +641,7 @@
         <div class="settings-grid">
           <div class="card glass">
             <div class="card-header">
-              <h3>◆ إعدادات السحب</h3>
+              <h3>💸 إعدادات السحب</h3>
             </div>
             <div class="setting-item">
               <span class="setting-label">حالة السحب:</span>
@@ -653,20 +653,20 @@
           <!-- Fee Management -->
           <div class="card glass" style="grid-column: 1 / -1;">
             <div class="card-header">
-              <h3>◆ إدارة رسوم السحب (Fee Management)</h3>
+              <h3>💸 إدارة رسوم السحب (Fee Management)</h3>
             </div>
             <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">* الرسوم مخفية عن المستخدمين وتُخصم تلقائياً. يبدأ العد من جديد عند كل سحب.</p>
             <div style="background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.1);border-radius:10px;padding:14px;margin-bottom:14px;">
               <div style="font-size:13px;font-weight:600;color:#FFD700;margin-bottom:8px;">النظام الافتراضي:</div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;color:#aaa;">
-                <span>◇ 0-15 يوم: <b style="color:#f85149;">25%</b></span>
-                <span>◇ 16-30 يوم: <b style="color:#d29922;">15%</b></span>
-                <span>◇ 31-89 يوم: <b style="color:#3fb950;">5%</b></span>
-                <span>◇ 90+ يوم: <b style="color:#3fb950;">3%</b></span>
+                <span>• 0-15 يوم: <b style="color:#f85149;">25%</b></span>
+                <span>• 16-30 يوم: <b style="color:#d29922;">15%</b></span>
+                <span>• 31-89 يوم: <b style="color:#3fb950;">5%</b></span>
+                <span>• 90+ يوم: <b style="color:#3fb950;">3%</b></span>
               </div>
             </div>
             
-            <h4 style="margin:14px 0 8px;color:#FFD700;font-size:13px;">◆ تعيين خصم لمستخدم محدد</h4>
+            <h4 style="margin:14px 0 8px;color:#FFD700;font-size:13px;">📌 تعيين خصم لمستخدم محدد</h4>
             <div class="action-row" style="margin-bottom:8px;">
               <input id="feeUserId" type="number" class="input small" placeholder="User ID"/>
               <input id="feeOverrideValue" type="number" class="input small" placeholder="نسبة الخصم % (0 = بدون)" min="0" max="100"/>
@@ -679,7 +679,7 @@
             </div>
             <div id="feeInfoResult" style="display:none;background:#111;border-radius:8px;padding:12px;margin-top:8px;font-size:12px;"></div>
             
-            <h4 style="margin:16px 0 8px;color:#FFD700;font-size:13px;">◆ تعيين خصم لجميع المستخدمين</h4>
+            <h4 style="margin:16px 0 8px;color:#FFD700;font-size:13px;">📌 تعيين خصم لجميع المستخدمين</h4>
             <div class="action-row">
               <input id="allFeeOverrideValue" type="number" class="input small" placeholder="نسبة الخصم % للجميع" min="0" max="100"/>
               <button id="setAllFeeBtn" class="btn danger">تعيين للجميع</button>
@@ -689,7 +689,7 @@
 
           <div class="card glass">
             <div class="card-header">
-              <h3>⚙ وضع الصيانة</h3>
+              <h3>🛠️ وضع الصيانة</h3>
             </div>
             <div class="setting-item">
               <span class="setting-label">حالة الصيانة:</span>
@@ -700,7 +700,7 @@
 
           <div class="card glass">
             <div class="card-header">
-              <h3>◆ إنشاء مفتاح اشتراك</h3>
+              <h3>🔑 إنشاء مفتاح اشتراك</h3>
             </div>
             <div class="action-row">
               <input id="newKeyCode" class="input" placeholder="كود المفتاح"/>
@@ -711,7 +711,7 @@
 
           <div class="card glass">
             <div class="card-header">
-              <h3>◆ إرسال رسالة جماعية</h3>
+              <h3>📢 إرسال رسالة جماعية</h3>
             </div>
             <div class="broadcast-form">
               <input id="broadcastTitle" class="input" placeholder="عنوان الرسالة (اختياري)"/>
@@ -722,7 +722,7 @@
 
           <div class="card glass">
             <div class="card-header">
-              <h3>✗ إجراءات عامة</h3>
+              <h3>🗑️ إجراءات عامة</h3>
             </div>
             <div class="action-row">
               <button id="clearAllWithdrawalsBtn" class="btn danger">تصفير جميع طلبات السحب</button>
@@ -732,7 +732,7 @@
           <!-- Supervisor Management Card -->
           <div class="card glass" style="grid-column: 1 / -1;">
             <div class="card-header">
-              <h3>◆ إدارة حسابات المشرفين (Supervisors)</h3>
+              <h3>🛡️ إدارة حسابات المشرفين (Supervisors)</h3>
             </div>
 
             <!-- Create New Supervisor -->
@@ -752,7 +752,7 @@
               <div class="action-row" style="flex-wrap:wrap;gap:8px;">
                 <input id="svChangeUsername" class="input" placeholder="اسم المستخدم" style="max-width:160px;"/>
                 <input id="svChangePassword" class="input" type="password" placeholder="كلمة المرور الجديدة" style="max-width:160px;"/>
-                <button id="changeSvPasswordBtn" class="btn">◆ تغيير كلمة المرور</button>
+                <button id="changeSvPasswordBtn" class="btn">🔒 تغيير كلمة المرور</button>
               </div>
             </div>
 

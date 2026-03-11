@@ -60,9 +60,9 @@ $('#admBtn').addEventListener('click', async () => {
     $('#login').classList.add('hidden');
     $('#panel').classList.remove('hidden');
     loadAll();
-    toast('✓ تم تسجيل الدخول بنجاح');
+    toast('✅ تم تسجيل الدخول بنجاح');
   } else {
-    $('#msg').textContent = '✗ كلمة المرور غير صحيحة';
+    $('#msg').textContent = '❌ كلمة المرور غير صحيحة';
     state.token = null;
   }
 });
@@ -194,12 +194,12 @@ async function loadUsers() {
     ${users.map(u => `
       <div class="table-row" style="${u.is_banned ? 'opacity: 0.5; border-right: 3px solid var(--danger);' : ''}">
         <div>${u.id}</div>
-        <div>${u.name || u.tg_id}${u.tg_username ? ` <span style="color:#58a6ff;font-size:11px;">@${u.tg_username}</span>` : ''} ${u.is_banned ? '<span style="color:var(--danger);font-size:12px;">✗ محظور</span>' : ''}</div>
+        <div>${u.name || u.tg_id}${u.tg_username ? ` <span style="color:#58a6ff;font-size:11px;">@${u.tg_username}</span>` : ''} ${u.is_banned ? '<span style="color:var(--danger);font-size:12px;">⛔ محظور</span>' : ''}</div>
         <div>$${Number(u.balance || 0).toFixed(2)}</div>
         <div>${u.sub_expires ? new Date(u.sub_expires).toLocaleDateString('ar') : 'منتهي'}</div>
         <div class="table-actions">
           <button class="mini-btn view" onclick="viewUser(${u.id})">عرض</button>
-          <button class="mini-btn" style="background: rgba(0,102,255,0.2); border: 1px solid #0066ff; font-size: 11px;" onclick="viewUserReferrals(${u.id}, '${(u.name || u.tg_id).replace(/'/g, '')}')">◆ مدعوين</button>
+          <button class="mini-btn" style="background: rgba(0,102,255,0.2); border: 1px solid #0066ff; font-size: 11px;" onclick="viewUserReferrals(${u.id}, '${(u.name || u.tg_id).replace(/'/g, '')}')">🤝 مدعوين</button>
         </div>
       </div>
     `).join('')}
@@ -215,7 +215,7 @@ $('#searchBtn')?.addEventListener('click', async () => {
   if (r.ok && r.data) {
     showUserDetails(r.data);
   } else {
-    toast('✗ لم يتم العثور على المستخدم');
+    toast('❌ لم يتم العثور على المستخدم');
   }
 });
 
@@ -259,11 +259,11 @@ function showUserDetails(user) {
   $('#ud-sub').textContent = user.sub_expires ? new Date(user.sub_expires).toLocaleDateString('ar') : 'منتهي';
   
   if (user.is_banned) {
-    $('#ud-status').innerHTML = `<span style="color:var(--danger);">✗ محظور</span><br><small style="color:var(--muted);">السبب: ${user.ban_reason || '-'}</small>`;
+    $('#ud-status').innerHTML = `<span style="color:var(--danger);">⛔ محظور</span><br><small style="color:var(--muted);">السبب: ${user.ban_reason || '-'}</small>`;
     $('#banUserBtn').classList.add('hidden');
     $('#unbanUserBtn').classList.remove('hidden');
   } else {
-    $('#ud-status').innerHTML = `<span style="color:var(--success);">✓ نشط</span>`;
+    $('#ud-status').innerHTML = `<span style="color:var(--success);">✅ نشط</span>`;
     $('#banUserBtn').classList.remove('hidden');
     $('#unbanUserBtn').classList.add('hidden');
   }
@@ -297,13 +297,13 @@ $('#editNameBtn')?.addEventListener('click', async () => {
   btn.textContent = 'حفظ الاسم';
   
   if (r.ok) {
-    toast('✓ تم تغيير الاسم بنجاح');
+    toast('✅ تم تغيير الاسم بنجاح');
     $('#ud-name').textContent = newName;
     state.currentUser.name = newName;
     // Update name in users list
     loadUsers();
   } else {
-    toast('✗ ' + (r.error || 'خطأ في تغيير الاسم'));
+    toast('❌ ' + (r.error || 'خطأ في تغيير الاسم'));
   }
 });
 
@@ -314,8 +314,8 @@ $('#addBalanceBtn')?.addEventListener('click', async () => {
   if (!amount || amount <= 0) return toast('أدخل مبلغ صحيح');
   
   const r = await api('/api/admin/user/balance', 'POST', { user_id: state.currentUser.id, amount, action: 'add' });
-  if (r.ok) { toast('✓ تم إضافة الرصيد'); viewUser(state.currentUser.id); loadUsers(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم إضافة الرصيد'); viewUser(state.currentUser.id); loadUsers(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#removeBalanceBtn')?.addEventListener('click', async () => {
@@ -324,16 +324,16 @@ $('#removeBalanceBtn')?.addEventListener('click', async () => {
   if (!amount || amount <= 0) return toast('أدخل مبلغ صحيح');
   
   const r = await api('/api/admin/user/balance', 'POST', { user_id: state.currentUser.id, amount, action: 'remove' });
-  if (r.ok) { toast('✓ تم خصم الرصيد'); viewUser(state.currentUser.id); loadUsers(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم خصم الرصيد'); viewUser(state.currentUser.id); loadUsers(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#zeroBalanceBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;
   if (!confirm('هل أنت متأكد من تصفير الرصيد؟')) return;
   const r = await api('/api/admin/user/balance', 'POST', { user_id: state.currentUser.id, amount: 0, action: 'zero' });
-  if (r.ok) { toast('✓ تم تصفير الرصيد'); viewUser(state.currentUser.id); loadUsers(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم تصفير الرصيد'); viewUser(state.currentUser.id); loadUsers(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#extendSubBtn')?.addEventListener('click', async () => {
@@ -341,8 +341,8 @@ $('#extendSubBtn')?.addEventListener('click', async () => {
   const days = Number($('#subDays').value);
   if (!days || days <= 0) return toast('أدخل عدد الأيام');
   const r = await api('/api/admin/user/subscription', 'POST', { user_id: state.currentUser.id, days });
-  if (r.ok) { toast('✓ تم تمديد الاشتراك'); viewUser(state.currentUser.id); loadUsers(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم تمديد الاشتراك'); viewUser(state.currentUser.id); loadUsers(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#addTradeBtn')?.addEventListener('click', async () => {
@@ -360,40 +360,40 @@ $('#addTradeBtn')?.addEventListener('click', async () => {
   else duration_hours = durationValue;
   
   const r = await api('/api/admin/user/trade', 'POST', { user_id: state.currentUser.id, target_pnl: pnl, duration_hours, speed });
-  if (r.ok) { toast('✓ تم إضافة الصفقة (مع إشعار Telegram)'); loadTrades(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم إضافة الصفقة (مع إشعار Telegram)'); loadTrades(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#clearHistoryBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;
   if (!confirm('هل أنت متأكد من تصفير السجل؟')) return;
   const r = await api('/api/admin/user/clear-history', 'POST', { user_id: state.currentUser.id });
-  if (r.ok) toast('✓ تم تصفير السجل');
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) toast('✅ تم تصفير السجل');
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#clearWithdrawalsBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;
   if (!confirm('هل أنت متأكد من تصفير جميع طلبات السحب لهذا المستخدم؟')) return;
   const r = await api('/api/admin/withdraw/clear-user', 'POST', { user_id: state.currentUser.id });
-  if (r.ok) { toast('✓ تم تصفير طلبات السحب'); loadWithdrawals(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم تصفير طلبات السحب'); loadWithdrawals(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#resetWithdrawnBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;
   if (!confirm('هل أنت متأكد من تصفير إجمالي المسحوب؟')) return;
   const r = await api('/api/admin/user/reset-withdrawn', 'POST', { user_id: state.currentUser.id });
-  if (r.ok) { toast('✓ تم تصفير إجمالي المسحوب'); viewUser(state.currentUser.id); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم تصفير إجمالي المسحوب'); viewUser(state.currentUser.id); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#clearTradesBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;
   if (!confirm('هل أنت متأكد من حذف جميع صفقات هذا المستخدم؟')) return;
   const r = await api('/api/admin/user/clear-trades', 'POST', { user_id: state.currentUser.id });
-  if (r.ok) { toast('✓ تم حذف الصفقات'); loadTrades(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم حذف الصفقات'); loadTrades(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // Ban/Unban
@@ -402,22 +402,22 @@ $('#banUserBtn')?.addEventListener('click', async () => {
   const reason = $('#banReason').value.trim() || 'مخالفة شروط الاستخدام';
   if (!confirm(`هل أنت متأكد من حظر المستخدم #${state.currentUser.id}؟`)) return;
   const r = await api('/api/admin/user/ban', 'POST', { user_id: state.currentUser.id, banned: true, reason });
-  if (r.ok) { toast('✓ تم حظر المستخدم'); viewUser(state.currentUser.id); loadUsers(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم حظر المستخدم'); viewUser(state.currentUser.id); loadUsers(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#unbanUserBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;
   if (!confirm(`هل أنت متأكد من رفع الحظر عن المستخدم #${state.currentUser.id}؟`)) return;
   const r = await api('/api/admin/user/unban', 'POST', { user_id: state.currentUser.id });
-  if (r.ok) { toast('✓ تم رفع الحظر'); viewUser(state.currentUser.id); loadUsers(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم رفع الحظر'); viewUser(state.currentUser.id); loadUsers(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // ===== REFERRALS MODAL =====
 window.viewUserReferrals = async (userId, userName) => {
   const r = await api(`/api/admin/referrals/user/${userId}`);
-  if (!r.ok) return toast('✗ خطأ في جلب بيانات الدعوات');
+  if (!r.ok) return toast('❌ خطأ في جلب بيانات الدعوات');
   
   const data = r.data;
   const referrals = data.referrals || [];
@@ -431,7 +431,7 @@ window.viewUserReferrals = async (userId, userName) => {
     modalEl.innerHTML = `
       <div style="background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 100%; max-width: 700px; max-height: 80vh; overflow-y: auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <h3 id="referralsModalTitle" style="margin:0;">◆ المدعوين</h3>
+          <h3 id="referralsModalTitle" style="margin:0;">🤝 المدعوين</h3>
           <button onclick="document.getElementById('referralsModal').remove()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;">✕</button>
         </div>
         <div id="referralsModalContent"></div>
@@ -441,13 +441,13 @@ window.viewUserReferrals = async (userId, userName) => {
     modal = modalEl;
   }
   
-  $('#referralsModalTitle').textContent = `◆ مدعوو ${userName} (${referrals.length})`;
+  $('#referralsModalTitle').textContent = `🤝 مدعوو ${userName} (${referrals.length})`;
   
   const content = $('#referralsModalContent');
   if (referrals.length === 0) {
     content.innerHTML = `
       <div style="text-align:center;padding:40px;color:var(--muted);">
-        <div style="font-size:48px;margin-bottom:12px;">◆</div>
+        <div style="font-size:48px;margin-bottom:12px;">🔹</div>
         <div>لم يدعُ هذا المستخدم أحداً بعد</div>
         <div style="margin-top:8px;font-size:13px;">كود الدعوة: <strong style="color:var(--primary);">${data.referral_code || '-'}</strong></div>
       </div>
@@ -481,7 +481,7 @@ window.viewUserReferrals = async (userId, userName) => {
             <div style="color:var(--muted);">${i + 1}</div>
             <div>${ref.referred_name || '-'}</div>
             <div style="font-family:monospace;font-size:12px;">${ref.referred_tg_id || '-'}</div>
-            <div>${ref.status === 'credited' ? '<span style="color:var(--success);">✓ مُكافأ</span>' : '<span style="color:#f0ad4e;">◇ معلّق</span>'}</div>
+            <div>${ref.status === 'credited' ? '<span style="color:var(--success);">✅ مُكافأ</span>' : '<span style="color:#f0ad4e;">🔄 معلّق</span>'}</div>
             <div style="font-size:12px;color:var(--muted);">${new Date(ref.created_at).toLocaleDateString('ar')}</div>
           </div>
         `).join('')}
@@ -517,11 +517,11 @@ async function loadWithdrawals() {
         <div>${w.id}</div>
         <div>${w.user_name || w.user_id}</div>
         <div style="color: var(--success); font-weight: 700;">$${Number(w.amount || 0).toFixed(2)}</div>
-        <div>${w.method === 'usdt_trc20' ? '◆ USDT TRC20' : w.method === 'usdt_erc20' ? '◆ USDT ERC20' : w.method || '-'}</div>
+        <div>${w.method === 'usdt_trc20' ? '💎 USDT TRC20' : w.method === 'usdt_erc20' ? '💜 USDT ERC20' : w.method || '-'}</div>
         <div style="font-family: monospace; font-size: 12px;">
-          <span title="${walletAddr}" style="cursor: pointer;" onclick="navigator.clipboard.writeText('${walletAddr}').then(()=>toast('✓ تم نسخ العنوان'))">${shortAddr} ◆</span>
+          <span title="${walletAddr}" style="cursor: pointer;" onclick="navigator.clipboard.writeText('${walletAddr}').then(()=>toast('✅ تم نسخ العنوان'))">${shortAddr} 📋</span>
         </div>
-        <div>${w.status === 'pending' ? '<span style="color:#f0ad4e;">◇ قيد الانتظار</span>' : w.status === 'approved' ? '<span style="color:var(--success);">✓ مقبول</span>' : '<span style="color:var(--danger);">✗ مرفوض</span>'}</div>
+        <div>${w.status === 'pending' ? '<span style="color:#f0ad4e;">🔄 قيد الانتظار</span>' : w.status === 'approved' ? '<span style="color:var(--success);">✅ مقبول</span>' : '<span style="color:var(--danger);">❌ مرفوض</span>'}</div>
         <div class="table-actions">
           ${w.status === 'pending' ? `
             <button class="mini-btn view" onclick="approveWithdraw(${w.id})">قبول</button>
@@ -546,15 +546,15 @@ $$('#tab-wd .filter-btn').forEach(btn => {
 window.approveWithdraw = async (id) => {
   if (!confirm('هل أنت متأكد من قبول طلب السحب؟')) return;
   const r = await api('/api/admin/withdraw/approve', 'POST', { request_id: id });
-  if (r.ok) { toast('✓ تم قبول طلب السحب'); loadWithdrawals(); loadDashboard(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم قبول طلب السحب'); loadWithdrawals(); loadDashboard(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 };
 
 window.rejectWithdraw = async (id) => {
   const reason = prompt('سبب الرفض (اختياري):');
   const r = await api('/api/admin/withdraw/reject', 'POST', { request_id: id, reason });
-  if (r.ok) { toast('✓ تم رفض طلب السحب'); loadWithdrawals(); loadDashboard(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم رفض طلب السحب'); loadWithdrawals(); loadDashboard(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 };
 
 // ===== TRADES =====
@@ -578,7 +578,7 @@ async function loadTrades() {
         <div>${t.user_name || t.user_id}</div>
         <div>${t.symbol || 'XAUUSD'}</div>
         <div style="color: ${Number(t.pnl) >= 0 ? 'var(--success)' : 'var(--danger)'}">$${Number(t.pnl || 0).toFixed(2)}</div>
-        <div>${t.status === 'open' ? '◆ مفتوحة' : '⚫ مغلقة'}</div>
+        <div>${t.status === 'open' ? '✅ مفتوحة' : '🔒 مغلقة'}</div>
         <div class="table-actions">
           ${t.status === 'open' ? `<button class="mini-btn reject" onclick="closeTrade(${t.id})">إغلاق</button>` : '-'}
         </div>
@@ -599,8 +599,8 @@ $$('#tab-tr .filter-btn').forEach(btn => {
 window.closeTrade = async (id) => {
   if (!confirm('هل أنت متأكد من إغلاق الصفقة؟')) return;
   const r = await api('/api/admin/trade/close', 'POST', { trade_id: id });
-  if (r.ok) { toast('✓ تم إغلاق الصفقة'); loadTrades(); loadDashboard(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم إغلاق الصفقة'); loadTrades(); loadDashboard(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 };
 
 // ===== TODAY'S SCHEDULED TRADES =====
@@ -614,7 +614,7 @@ async function loadTodayScheduled() {
   if (trades.length === 0) {
     container.innerHTML = `
       <div style="text-align: center; padding: 24px; color: var(--muted);">
-        <div style="font-size: 40px; margin-bottom: 12px;">◆</div>
+        <div style="font-size: 40px; margin-bottom: 12px;">📋</div>
         <p>لم يتم إنشاء صفقات اليوم بعد</p>
         <p style="font-size: 13px;">اضغط "إنشاء صفقات اليوم" لإنشاء 3 صفقات مجدولة</p>
       </div>
@@ -624,9 +624,9 @@ async function loadTodayScheduled() {
   
   container.innerHTML = trades.map(t => {
     const statusColor = t.status === 'pending' ? '#f0ad4e' : t.status === 'ready' ? '#0066ff' : t.status === 'open' ? '#00d68f' : '#666';
-    const statusIcon = t.status === 'pending' ? '◇' : t.status === 'ready' ? '✓' : t.status === 'open' ? '◆' : '⚫';
+    const statusIcon = t.status === 'pending' ? '🔄' : t.status === 'ready' ? '✅' : t.status === 'open' ? '🟢' : '⚫';
     const statusText = t.status === 'pending' ? 'معلّقة - بانتظار النسبة' : t.status === 'ready' ? 'جاهزة - تفعيل تلقائي' : t.status === 'open' ? 'مفتوحة - صفقات حية' : 'مغلقة';
-    const timeLabel = t.scheduled_time === '14:00' ? '◆ 2:00 ظهراً' : t.scheduled_time === '18:00' ? '◆ 6:00 مساءً' : '◆ 9:30 ليلاً';
+    const timeLabel = t.scheduled_time === '14:00' ? '🌤️ 2:00 ظهراً' : t.scheduled_time === '18:00' ? '🌆 6:00 مساءً' : '🌙 9:30 ليلاً';
     const tradeDataStr = JSON.stringify({scheduled_time: t.scheduled_time, percentage: t.percentage}).replace(/"/g, '&quot;');
     
     return `
@@ -645,7 +645,7 @@ async function loadTodayScheduled() {
           ${t.status === 'pending' ? `
             <button class="mini-btn view" onclick="openMassActionModal(${t.id}, 'pending')">تعيين النسبة</button>
           ` : t.status === 'ready' ? `
-            <button class="mini-btn" onclick='openMassActionModal(${t.id}, "ready", ${tradeDataStr})' style="background: rgba(0,102,255,0.3); border: 1px solid #0066ff;">✓ جاهزة</button>
+            <button class="mini-btn" onclick='openMassActionModal(${t.id}, "ready", ${tradeDataStr})' style="background: rgba(0,102,255,0.3); border: 1px solid #0066ff;">✅ جاهزة</button>
           ` : t.status === 'open' ? `
             <button class="mini-btn reject" onclick="openMassActionModal(${t.id}, 'open')">إدارة</button>
           ` : `
@@ -661,11 +661,11 @@ async function loadTodayScheduled() {
 $('#createDailyBtn')?.addEventListener('click', async () => {
   const r = await api('/api/admin/mass-trade/create-daily', 'POST');
   if (r.ok) {
-    toast(`✓ ${r.message}`);
+    toast(`✅ ${r.message}`);
     loadTodayScheduled();
     loadMassTrades();
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -688,7 +688,7 @@ async function loadMassTrades() {
     </div>
     ${trades.map(t => {
       const statusColor = t.status === 'pending' ? '#f0ad4e' : t.status === 'ready' ? '#0066ff' : t.status === 'open' ? '#00d68f' : '#666';
-      const statusIcon = t.status === 'pending' ? '◇' : t.status === 'ready' ? '✓' : t.status === 'open' ? '◆' : '⚫';
+      const statusIcon = t.status === 'pending' ? '🔄' : t.status === 'ready' ? '✅' : t.status === 'open' ? '🟢' : '⚫';
       const statusText = t.status === 'pending' ? 'معلّقة' : t.status === 'ready' ? 'جاهزة' : t.status === 'open' ? 'مفتوحة' : 'مغلقة';
       const tradeDataStr2 = JSON.stringify({scheduled_time: t.scheduled_time, percentage: t.percentage}).replace(/"/g, '&quot;');
       
@@ -705,7 +705,7 @@ async function loadMassTrades() {
             ${t.status === 'pending' ? `
               <button class="mini-btn view" onclick="openMassActionModal(${t.id}, 'pending')">تعيين النسبة</button>
             ` : t.status === 'ready' ? `
-              <button class="mini-btn" onclick='openMassActionModal(${t.id}, "ready", ${tradeDataStr2})' style="background: rgba(0,102,255,0.3); border: 1px solid #0066ff;">✓ جاهزة</button>
+              <button class="mini-btn" onclick='openMassActionModal(${t.id}, "ready", ${tradeDataStr2})' style="background: rgba(0,102,255,0.3); border: 1px solid #0066ff;">✅ جاهزة</button>
             ` : t.status === 'open' ? `
               <button class="mini-btn reject" onclick="openMassActionModal(${t.id}, 'open')">إدارة</button>
             ` : `
@@ -743,12 +743,12 @@ $('#openMassTradeBtn')?.addEventListener('click', async () => {
     duration_seconds: durationSec, note 
   });
   if (r.ok) {
-    toast(`✓ تم إنشاء صفقة جماعية`);
+    toast(`✅ تم إنشاء صفقة جماعية`);
     loadMassTrades();
     loadTodayScheduled();
     $('#massNote').value = '';
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -771,18 +771,18 @@ window.openMassActionModal = async (id, status, tradeData) => {
   if (status === 'pending') {
     $('#activateSection').classList.remove('hidden');
     $('#legacyCloseSection').classList.remove('hidden');
-    $('#massActionTitle').innerHTML = `◆ تعيين نسبة الصفقة #<span id="massActionId">${id}</span>`;
+    $('#massActionTitle').innerHTML = `⚙️ تعيين نسبة الصفقة #<span id="massActionId">${id}</span>`;
   } else if (status === 'ready') {
     $('#readySection').classList.remove('hidden');
     $('#legacyCloseSection').classList.remove('hidden');
     const timeLabel = tradeData?.scheduled_time === '14:00' ? '2:00 ظهراً' : tradeData?.scheduled_time === '18:00' ? '6:00 مساءً' : '9:30 ليلاً';
     const pctText = tradeData?.percentage ? `${Number(tradeData.percentage) >= 0 ? '+' : ''}${tradeData.percentage}%` : '-';
     $('#readyInfo').innerHTML = `النسبة: <strong style="color: ${Number(tradeData?.percentage) >= 0 ? 'var(--success)' : 'var(--danger)'}">${pctText}</strong> | الوقت: <strong>${timeLabel}</strong> | ستُفعّل تلقائياً عند وصول الوقت`;
-    $('#massActionTitle').innerHTML = `✓ صفقة جاهزة #<span id="massActionId">${id}</span>`;
+    $('#massActionTitle').innerHTML = `✅ صفقة جاهزة #<span id="massActionId">${id}</span>`;
   } else if (status === 'open') {
     $('#closeSection').classList.remove('hidden');
     $('#userTradesList').classList.remove('hidden');
-    $('#massActionTitle').innerHTML = `◆ إدارة صفقة جماعية مفتوحة #<span id="massActionId">${id}</span>`;
+    $('#massActionTitle').innerHTML = `📊 إدارة صفقة جماعية مفتوحة #<span id="massActionId">${id}</span>`;
     
     // Load user trades
     loadMassTradeUserTrades(id);
@@ -812,7 +812,7 @@ $('#setPercentageBtn')?.addEventListener('click', async () => {
   if (isNaN(percentage)) return toast('أدخل النسبة المئوية');
   if (!confirm(`هل أنت متأكد من حفظ النسبة ${percentage >= 0 ? '+' : ''}${percentage}%؟\n\nستُفعّل الصفقة تلقائياً عند وصول الوقت المجدول.`)) return;
   
-  toast('◇ جاري حفظ النسبة...');
+  toast('🔄 جاري حفظ النسبة...');
   
   const r = await api('/api/admin/mass-trade/set-percentage', 'POST', {
     mass_trade_id: state.currentMassTradeId,
@@ -820,13 +820,13 @@ $('#setPercentageBtn')?.addEventListener('click', async () => {
   });
   
   if (r.ok) {
-    toast(`✓ تم حفظ النسبة ${percentage >= 0 ? '+' : ''}${percentage}% - ستُفعّل تلقائياً`);
+    toast(`✅ تم حفظ النسبة ${percentage >= 0 ? '+' : ''}${percentage}% - ستُفعّل تلقائياً`);
     $('#massActionModal').classList.add('hidden');
     state.currentMassTradeId = null;
     loadMassTrades();
     loadTodayScheduled();
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -838,7 +838,7 @@ $('#activateMassTradeBtn')?.addEventListener('click', async () => {
   if (isNaN(percentage)) return toast('أدخل النسبة المئوية أولاً');
   if (!confirm(`هل أنت متأكد من تفعيل الصفقة فوراً بنسبة ${percentage >= 0 ? '+' : ''}${percentage}%؟\n\nسيتم فتح صفقات حية لجميع المستخدمين الآن!`)) return;
   
-  toast('◇ جاري التفعيل...');
+  toast('🔄 جاري التفعيل...');
   
   const r = await api('/api/admin/mass-trade/activate', 'POST', {
     mass_trade_id: state.currentMassTradeId,
@@ -846,14 +846,14 @@ $('#activateMassTradeBtn')?.addEventListener('click', async () => {
   });
   
   if (r.ok) {
-    toast(`✓ تم التفعيل الفوري! ${r.data.participants} مستخدم - نسبة ${percentage}%`);
+    toast(`✅ تم التفعيل الفوري! ${r.data.participants} مستخدم - نسبة ${percentage}%`);
     $('#massActionModal').classList.add('hidden');
     state.currentMassTradeId = null;
     loadMassTrades();
     loadTodayScheduled();
     loadDashboard();
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -869,12 +869,12 @@ $('#forceActivateBtn')?.addEventListener('click', async () => {
   
   // Get the trade details to find the percentage
   const details = await api(`/api/admin/mass-trade/${state.currentMassTradeId}`);
-  if (!details.ok) return toast('✗ خطأ في جلب البيانات');
+  if (!details.ok) return toast('❌ خطأ في جلب البيانات');
   
   const percentage = Number(details.data.trade.percentage);
   if (!confirm(`هل أنت متأكد من تفعيل الصفقة فوراً بنسبة ${percentage >= 0 ? '+' : ''}${percentage}%؟`)) return;
   
-  toast('◇ جاري التفعيل...');
+  toast('🔄 جاري التفعيل...');
   
   const r = await api('/api/admin/mass-trade/activate', 'POST', {
     mass_trade_id: state.currentMassTradeId,
@@ -882,14 +882,14 @@ $('#forceActivateBtn')?.addEventListener('click', async () => {
   });
   
   if (r.ok) {
-    toast(`✓ تم التفعيل الفوري! ${r.data.participants} مستخدم`);
+    toast(`✅ تم التفعيل الفوري! ${r.data.participants} مستخدم`);
     $('#massActionModal').classList.add('hidden');
     state.currentMassTradeId = null;
     loadMassTrades();
     loadTodayScheduled();
     loadDashboard();
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -898,14 +898,14 @@ $('#forceCloseMassTradeBtn')?.addEventListener('click', async () => {
   if (!state.currentMassTradeId) return;
   if (!confirm('هل أنت متأكد من إغلاق جميع صفقات المستخدمين فوراً؟')) return;
   
-  toast('◇ جاري الإغلاق...');
+  toast('🔄 جاري الإغلاق...');
   
   const r = await api('/api/admin/mass-trade/close', 'POST', {
     mass_trade_id: state.currentMassTradeId
   });
   
   if (r.ok) {
-    toast(`✓ تم الإغلاق - ${r.data.affected} مستخدم تأثر`);
+    toast(`✅ تم الإغلاق - ${r.data.affected} مستخدم تأثر`);
     $('#massActionModal').classList.add('hidden');
     state.currentMassTradeId = null;
     loadMassTrades();
@@ -913,7 +913,7 @@ $('#forceCloseMassTradeBtn')?.addEventListener('click', async () => {
     loadDashboard();
     loadUsers();
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -925,7 +925,7 @@ $('#closeMassTradeBtn')?.addEventListener('click', async () => {
   if (isNaN(percentage)) return toast('أدخل النسبة المئوية');
   if (!confirm(`هل أنت متأكد من الإغلاق الفوري بنسبة ${percentage >= 0 ? '+' : ''}${percentage}%؟\nسيتم تحديث أرصدة جميع المستخدمين مباشرة.`)) return;
   
-  toast('◇ جاري الإغلاق...');
+  toast('🔄 جاري الإغلاق...');
   
   const r = await api('/api/admin/mass-trade/close', 'POST', {
     mass_trade_id: state.currentMassTradeId,
@@ -933,7 +933,7 @@ $('#closeMassTradeBtn')?.addEventListener('click', async () => {
   });
   
   if (r.ok) {
-    toast(`✓ تم الإغلاق - ${r.data.affected} مستخدم تأثر - إجمالي PnL: $${r.data.totalPnl}`);
+    toast(`✅ تم الإغلاق - ${r.data.affected} مستخدم تأثر - إجمالي PnL: $${r.data.totalPnl}`);
     $('#massActionModal').classList.add('hidden');
     state.currentMassTradeId = null;
     loadMassTrades();
@@ -941,7 +941,7 @@ $('#closeMassTradeBtn')?.addEventListener('click', async () => {
     loadDashboard();
     loadUsers();
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -961,7 +961,7 @@ $('#setOverrideBtn')?.addEventListener('click', async () => {
   });
   
   if (r.ok) {
-    toast(`✓ تم تعيين نسبة مخصصة ${percentage}% للمستخدم #${userId}`);
+    toast(`✅ تم تعيين نسبة مخصصة ${percentage}% للمستخدم #${userId}`);
     const list = $('#overridesList');
     list.innerHTML += `<div style="padding: 8px; background: rgba(0,102,255,0.1); border-radius: 8px; margin-bottom: 4px; font-size: 13px;">
       المستخدم #${userId}: <strong style="color: ${percentage >= 0 ? 'var(--success)' : 'var(--danger)'}">${percentage >= 0 ? '+' : ''}${percentage}%</strong>
@@ -969,7 +969,7 @@ $('#setOverrideBtn')?.addEventListener('click', async () => {
     $('#overrideUserId').value = '';
     $('#overridePercentage').value = '';
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -1002,7 +1002,7 @@ async function loadMassTradeUserTrades(massTradeId) {
           ${Number(ut.pnl) >= 0 ? '+' : ''}$${Number(ut.pnl || 0).toFixed(2)}
         </div>
         <div style="color: ${ut.status === 'open' ? 'var(--success)' : 'var(--muted)'};">
-          ${ut.status === 'open' ? '◆' : '⚫'} ${ut.status}
+          ${ut.status === 'open' ? '🟢' : '⚫'} ${ut.status}
         </div>
       </div>
     `).join('')}
@@ -1012,13 +1012,13 @@ async function loadMassTradeUserTrades(massTradeId) {
 // View Mass Trade Details
 window.viewMassTradeDetails = async (id) => {
   const r = await api(`/api/admin/mass-trade/${id}`);
-  if (!r.ok) return toast('✗ خطأ في تحميل التفاصيل');
+  if (!r.ok) return toast('❌ خطأ في تحميل التفاصيل');
   
   const { trade, participants, overrides, userTrades } = r.data;
   
   let detailsHtml = `<div class="card glass" style="border: 2px solid var(--accent); margin-top: 16px;">
     <div class="card-header">
-      <h3>◈ تفاصيل الصفقة الجماعية #${trade.id}</h3>
+      <h3>📋 تفاصيل الصفقة الجماعية #${trade.id}</h3>
       <button class="btn-small" onclick="document.getElementById('massTradeDetailsView').remove()">✕</button>
     </div>
     <div class="user-info">
@@ -1032,7 +1032,7 @@ window.viewMassTradeDetails = async (id) => {
     </div>`;
   
   if (participants && participants.length > 0) {
-    detailsHtml += `<h4 style="margin: 16px 0 8px; color: var(--accent-light);">◆ المشاركون (${participants.length})</h4>
+    detailsHtml += `<h4 style="margin: 16px 0 8px; color: var(--accent-light);">🤝 المشاركون (${participants.length})</h4>
     <div class="table-container">
       <div class="table-row header" style="grid-template-columns: 50px 1fr 100px 100px 100px 80px;">
         <div>ID</div>
@@ -1117,12 +1117,12 @@ $('#addExtraUserBtn')?.addEventListener('click', async () => {
   });
   
   if (r.ok) {
-    toast(`✓ تم إضافة المستخدم #${userId} لقائمة الصفقات الإضافية`);
+    toast(`✅ تم إضافة المستخدم #${userId} لقائمة الصفقات الإضافية`);
     loadExtraTradeUsers();
     $('#extraUserId').value = '';
     $('#extraNote').value = '';
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -1131,10 +1131,10 @@ window.removeExtraUser = async (userId) => {
   
   const r = await api('/api/admin/extra-trade-user/remove', 'POST', { user_id: userId });
   if (r.ok) {
-    toast('✓ تم الحذف');
+    toast('✅ تم الحذف');
     loadExtraTradeUsers();
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 };
 
@@ -1176,28 +1176,28 @@ async function loadSettings() {
   const wdStatus = await api('/api/admin/settings/withdrawal');
   if (wdStatus.ok) {
     const enabled = wdStatus.enabled !== false;
-    $('#withdrawStatus').textContent = enabled ? '✓ مفعّل' : '✗ متوقف';
+    $('#withdrawStatus').textContent = enabled ? '✅ مفعّل' : '❌ متوقف';
     $('#withdrawStatus').className = `status-badge ${enabled ? 'enabled' : 'disabled'}`;
   }
   
   const mStatus = await api('/api/admin/settings/maintenance');
   if (mStatus.ok) {
     const enabled = mStatus.enabled === true;
-    $('#maintenanceStatus').textContent = enabled ? '⚙ مفعّل' : '✓ غير مفعّل';
+    $('#maintenanceStatus').textContent = enabled ? '🔧 مفعّل' : '✅ غير مفعّل';
     $('#maintenanceStatus').className = `status-badge ${enabled ? 'disabled' : 'enabled'}`;
   }
 }
 
 $('#toggleWithdraw')?.addEventListener('click', async () => {
   const r = await api('/api/admin/settings/withdrawal/toggle', 'POST');
-  if (r.ok) { toast('✓ تم تغيير حالة السحب'); loadSettings(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم تغيير حالة السحب'); loadSettings(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#toggleMaintenance')?.addEventListener('click', async () => {
   const r = await api('/api/admin/settings/maintenance/toggle', 'POST');
-  if (r.ok) { toast('✓ تم تغيير حالة الصيانة'); loadSettings(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم تغيير حالة الصيانة'); loadSettings(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#createKeyBtn')?.addEventListener('click', async () => {
@@ -1205,8 +1205,8 @@ $('#createKeyBtn')?.addEventListener('click', async () => {
   const days = Number($('#newKeyDays').value) || 30;
   if (!code) return toast('أدخل كود المفتاح');
   const r = await api('/api/admin/key/create', 'POST', { code, days });
-  if (r.ok) { toast('✓ تم إنشاء المفتاح'); $('#newKeyCode').value = ''; }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم إنشاء المفتاح'); $('#newKeyCode').value = ''; }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#broadcastBtn')?.addEventListener('click', async () => {
@@ -1214,20 +1214,20 @@ $('#broadcastBtn')?.addEventListener('click', async () => {
   const msg = $('#broadcastMsg').value.trim();
   if (!msg) return toast('أدخل نص الرسالة');
   if (!confirm('هل أنت متأكد من إرسال الرسالة للجميع عبر Telegram؟')) return;
-  toast('◇ جاري الإرسال...');
+  toast('🔄 جاري الإرسال...');
   const r = await api('/api/admin/broadcast', 'POST', { message: msg, title });
   if (r.ok) {
-    toast(`✓ تم الإرسال - ${r.sent} نجح / ${r.failed} فشل`);
+    toast(`✅ تم الإرسال - ${r.sent} نجح / ${r.failed} فشل`);
     $('#broadcastMsg').value = '';
     if ($('#broadcastTitle')) $('#broadcastTitle').value = '';
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#clearAllWithdrawalsBtn')?.addEventListener('click', async () => {
-  if (!confirm('⚠ هل أنت متأكد من تصفير جميع طلبات السحب في النظام؟')) return;
+  if (!confirm('⚠️ هل أنت متأكد من تصفير جميع طلبات السحب في النظام؟')) return;
   const r = await api('/api/admin/withdraw/clear-all', 'POST');
-  if (r.ok) { toast('✓ تم تصفير جميع طلبات السحب'); loadWithdrawals(); loadDashboard(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast('✅ تم تصفير جميع طلبات السحب'); loadWithdrawals(); loadDashboard(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // ===== SUPERVISOR MANAGEMENT =====
@@ -1259,14 +1259,14 @@ async function loadSupervisors() {
               <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;
                 background:${sv.is_active ? 'rgba(63,185,80,0.15)' : 'rgba(248,81,73,0.15)'};
                 color:${sv.is_active ? '#3fb950' : '#f85149'}">
-                ${sv.is_active ? '✓ نشط' : '◆ معطّل'}
+                ${sv.is_active ? '✅ نشط' : '⏹️ معطّل'}
               </span>
             </td>
             <td style="padding:6px 10px;color:var(--muted);font-size:12px">${sv.last_login ? new Date(sv.last_login).toLocaleString('ar') : 'لم يدخل بعد'}</td>
             <td style="padding:6px 10px">
               <button onclick="toggleSupervisor(${sv.id}, ${sv.is_active})" 
                 style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 10px;border-radius:5px;cursor:pointer;font-size:12px;">
-                ${sv.is_active ? '◆ تعطيل' : '✓ تفعيل'}
+                ${sv.is_active ? '⏹️ تعطيل' : '✅ تفعيل'}
               </button>
             </td>
           </tr>
@@ -1280,37 +1280,37 @@ window.toggleSupervisor = async (id, isActive) => {
   const action = isActive ? 'تعطيل' : 'تفعيل';
   if (!confirm(`هل تريد ${action} هذا المشرف؟`)) return;
   const r = await api('/api/admin/supervisor/toggle', 'POST', { supervisor_id: id });
-  if (r.ok) { toast(`✓ تم ${action} المشرف`); loadSupervisors(); }
-  else toast('✗ ' + (r.error || 'خطأ'));
+  if (r.ok) { toast(`✅ تم ${action} المشرف`); loadSupervisors(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
 };
 
 $('#createSvBtn')?.addEventListener('click', async () => {
   const username = $('#svNewUsername')?.value?.trim();
   const password = $('#svNewPassword')?.value;
   const name = $('#svNewName')?.value?.trim();
-  if (!username || !password || !name) return toast('✗ يرجى ملء جميع الحقول');
-  if (password.length < 6) return toast('✗ كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+  if (!username || !password || !name) return toast('❌ يرجى ملء جميع الحقول');
+  if (password.length < 6) return toast('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل');
   const r = await api('/api/admin/supervisor/create', 'POST', { username, password, name });
   if (r.ok) {
-    toast('✓ تم إنشاء حساب المشرف بنجاح');
+    toast('✅ تم إنشاء حساب المشرف بنجاح');
     $('#svNewUsername').value = '';
     $('#svNewPassword').value = '';
     $('#svNewName').value = '';
     loadSupervisors();
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#changeSvPasswordBtn')?.addEventListener('click', async () => {
   const username = $('#svChangeUsername')?.value?.trim();
   const password = $('#svChangePassword')?.value;
-  if (!username || !password) return toast('✗ يرجى إدخال اسم المستخدم وكلمة المرور الجديدة');
-  if (password.length < 6) return toast('✗ كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+  if (!username || !password) return toast('❌ يرجى إدخال اسم المستخدم وكلمة المرور الجديدة');
+  if (password.length < 6) return toast('❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل');
   const r = await api('/api/admin/supervisor/change-password', 'POST', { username, new_password: password });
   if (r.ok) {
-    toast('✓ تم تغيير كلمة المرور بنجاح');
+    toast('✅ تم تغيير كلمة المرور بنجاح');
     $('#svChangeUsername').value = '';
     $('#svChangePassword').value = '';
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // Load supervisors when settings tab is opened
@@ -1337,16 +1337,16 @@ $('#deleteUserBtn')?.addEventListener('click', async () => {
   if (!state.currentUser) return;
   const userId = state.currentUser.id;
   const userName = state.currentUser.name || state.currentUser.tg_id;
-  if (!confirm(`⚠ هل أنت متأكد من حذف حساب "${userName}" نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه!`)) return;
-  if (!confirm('⚠ تأكيد نهائي: سيتم حذف جميع بيانات المستخدم بما في ذلك الصفقات والسحوبات والسجل.')) return;
+  if (!confirm(`⚠️ هل أنت متأكد من حذف حساب "${userName}" نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه!`)) return;
+  if (!confirm('⚠️ تأكيد نهائي: سيتم حذف جميع بيانات المستخدم بما في ذلك الصفقات والسحوبات والسجل.')) return;
   
   const r = await api('/api/admin/user/delete', 'POST', { user_id: userId });
   if (r.ok) {
-    toast('✓ تم حذف الحساب نهائياً');
+    toast('✅ تم حذف الحساب نهائياً');
     $('#userDetails').classList.add('hidden');
     state.currentUser = null;
     loadUsers();
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // ========== SET CUSTOM RANK ==========
@@ -1357,9 +1357,9 @@ $('#setRankBtn')?.addEventListener('click', async () => {
   
   const r = await api('/api/admin/user/rank', 'POST', { user_id: state.currentUser.id, custom_rank: rank });
   if (r.ok) {
-    toast(`✓ تم تعيين الرتبة: ${rank}`);
+    toast(`✅ تم تعيين الرتبة: ${rank}`);
     viewUser(state.currentUser.id);
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 $('#resetRankBtn')?.addEventListener('click', async () => {
@@ -1368,10 +1368,10 @@ $('#resetRankBtn')?.addEventListener('click', async () => {
   
   const r = await api('/api/admin/user/rank', 'POST', { user_id: state.currentUser.id, custom_rank: null });
   if (r.ok) {
-    toast('✓ تم إعادة الرتبة للتلقائية');
+    toast('✅ تم إعادة الرتبة للتلقائية');
     $('#customRankInput').value = '';
     viewUser(state.currentUser.id);
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // ========== REFERRAL MANAGEMENT ==========
@@ -1385,7 +1385,7 @@ $('#viewReferralsBtn')?.addEventListener('click', async () => {
     listEl.classList.remove('hidden');
     if (r.referrals && r.referrals.length > 0) {
       listEl.innerHTML = `
-        <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">◆ المحالين (${r.referrals.length}):</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">👥 المحالين (${r.referrals.length}):</div>
         ${r.referrals.map(ref => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;border:1px solid rgba(255,255,255,0.05);">
             <div style="flex:1;">
@@ -1394,8 +1394,8 @@ $('#viewReferralsBtn')?.addEventListener('click', async () => {
             </div>
             <div style="display:flex;gap:6px;align-items:center;">
               <input type="number" class="input small" id="transferTo_${ref.id}" placeholder="نقل إلى TG ID" style="width:120px;font-size:11px;padding:4px 6px;"/>
-              <button class="btn-small" style="background:rgba(163,113,247,0.2);border:1px solid #a371f7;color:#a371f7;font-size:11px;" onclick="transferSingleReferral(${ref.id}, ${ref.tg_id})">◇ نقل</button>
-              <button class="btn-small danger" style="font-size:11px;" onclick="removeReferral(${ref.id}, ${state.currentUser.id})">✗ حذف</button>
+              <button class="btn-small" style="background:rgba(163,113,247,0.2);border:1px solid #a371f7;color:#a371f7;font-size:11px;" onclick="transferSingleReferral(${ref.id}, ${ref.tg_id})">↗️ نقل</button>
+              <button class="btn-small danger" style="font-size:11px;" onclick="removeReferral(${ref.id}, ${state.currentUser.id})">❌ حذف</button>
             </div>
           </div>
         `).join('')}
@@ -1403,7 +1403,7 @@ $('#viewReferralsBtn')?.addEventListener('click', async () => {
     } else {
       listEl.innerHTML = '<div style="text-align:center;padding:12px;color:#666;">لا يوجد محالين</div>';
     }
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // Remove referrer from user
@@ -1413,9 +1413,9 @@ $('#removeReferrerBtn')?.addEventListener('click', async () => {
   
   const r = await api('/api/admin/referral/remove', 'POST', { user_id: state.currentUser.id });
   if (r.ok) {
-    toast('✓ تم إزالة المُحيل');
+    toast('✅ تم إزالة المُحيل');
     viewUser(state.currentUser.id);
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // Transfer referral
@@ -1430,10 +1430,10 @@ $('#transferReferralBtn')?.addEventListener('click', async () => {
     new_referrer_id: newReferrerId 
   });
   if (r.ok) {
-    toast('✓ تم نقل الإحالة بنجاح');
+    toast('✅ تم نقل الإحالة بنجاح');
     $('#transferRefToId').value = '';
     viewUser(state.currentUser.id);
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // Global function for removing individual referral
@@ -1441,9 +1441,9 @@ window.removeReferral = async (referralId, parentUserId) => {
   if (!confirm('هل تريد حذف هذه الإحالة؟')) return;
   const r = await api('/api/admin/referral/remove-single', 'POST', { referral_id: referralId });
   if (r.ok) {
-    toast('✓ تم حذف الإحالة');
+    toast('✅ تم حذف الإحالة');
     $('#viewReferralsBtn')?.click();
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 };
 
 // Global function for transferring a single referral to a new referrer
@@ -1459,9 +1459,9 @@ window.transferSingleReferral = async (userId, userTgId) => {
     new_referrer_tg_id: newReferrerTgId 
   });
   if (r.ok) {
-    toast('✓ تم نقل الإحالة بنجاح');
+    toast('✅ تم نقل الإحالة بنجاح');
     $('#viewReferralsBtn')?.click();
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 };
 
 // ========== CUSTOM TRADES ==========
@@ -1501,9 +1501,9 @@ $('#openCustomTradeBtn')?.addEventListener('click', async () => {
   });
   
   if (r.ok) {
-    toast(`✓ تم فتح ${r.created || tg_ids.length} صفقة مخصصة`);
+    toast(`✅ تم فتح ${r.created || tg_ids.length} صفقة مخصصة`);
     loadCustomTrades();
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 });
 
 // Load custom trades list
@@ -1538,7 +1538,7 @@ async function loadCustomTrades(filter = 'open') {
         ${r.trades.map(t => {
           const pnl = Number(t.pnl || 0);
           const pnlColor = pnl >= 0 ? '#00d68f' : '#ff3b63';
-          const speedIcon = t.speed === 'turbo' ? '✦' : (t.speed === 'fast' ? '⚡' : '');
+          const speedIcon = t.speed === 'turbo' ? '⚡' : (t.speed === 'fast' ? '⚡' : '');
           const statusBadge = t.status === 'open' 
             ? '<span style="color:#00d68f;">● مفتوحة</span>' 
             : '<span style="color:#666;">● مغلقة</span>';
@@ -1564,9 +1564,9 @@ window.closeCustomTrade = async (tradeId) => {
   if (!confirm('هل تريد إغلاق هذه الصفقة المخصصة؟')) return;
   const r = await api(`/api/admin/custom-trade/close/${tradeId}`, 'POST');
   if (r.ok) {
-    toast('✓ تم إغلاق الصفقة');
+    toast('✅ تم إغلاق الصفقة');
     loadCustomTrades();
-  } else toast('✗ ' + (r.error || 'خطأ'));
+  } else toast('❌ ' + (r.error || 'خطأ'));
 };
 
 // Custom trades filter buttons
@@ -1593,51 +1593,51 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 document.getElementById('setUserFeeBtn')?.addEventListener('click', async () => {
   const userId = document.getElementById('feeUserId')?.value;
   const feeValue = document.getElementById('feeOverrideValue')?.value;
-  if (!userId) return toast('✗ أدخل User ID');
-  if (feeValue === '' || feeValue === undefined) return toast('✗ أدخل نسبة الخصم');
+  if (!userId) return toast('❌ أدخل User ID');
+  if (feeValue === '' || feeValue === undefined) return toast('❌ أدخل نسبة الخصم');
   
   const fee = Number(feeValue);
-  if (fee < 0 || fee > 100) return toast('✗ النسبة يجب أن تكون بين 0 و 100');
+  if (fee < 0 || fee > 100) return toast('❌ النسبة يجب أن تكون بين 0 و 100');
   
   const r = await api('POST', '/user/fee/set', { user_id: userId, fee_override: fee });
   if (r.ok) {
     toast('✓ ' + r.message);
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
 // Remove fee override (use default)
 document.getElementById('removeUserFeeBtn')?.addEventListener('click', async () => {
   const userId = document.getElementById('feeUserId')?.value;
-  if (!userId) return toast('✗ أدخل User ID');
+  if (!userId) return toast('❌ أدخل User ID');
   
   const r = await api('POST', '/user/fee/set', { user_id: userId, fee_override: null });
   if (r.ok) {
     toast('✓ ' + r.message);
     document.getElementById('feeInfoResult').style.display = 'none';
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
 // Reset fee timer for user
 document.getElementById('resetUserFeeTimerBtn')?.addEventListener('click', async () => {
   const userId = document.getElementById('feeUserId')?.value;
-  if (!userId) return toast('✗ أدخل User ID');
+  if (!userId) return toast('❌ أدخل User ID');
   
   const r = await api('POST', '/user/fee/reset-timer', { user_id: userId });
   if (r.ok) {
     toast('✓ ' + r.message);
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
 // Check user fee info
 document.getElementById('checkUserFeeBtn')?.addEventListener('click', async () => {
   const userId = document.getElementById('feeUserId')?.value;
-  if (!userId) return toast('✗ أدخل User ID');
+  if (!userId) return toast('❌ أدخل User ID');
   
   const r = await api('GET', `/user/fee/${userId}`);
   const infoDiv = document.getElementById('feeInfoResult');
@@ -1650,19 +1650,19 @@ document.getElementById('checkUserFeeBtn')?.addEventListener('click', async () =
     
     infoDiv.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div>◇ الاسم: <b style="color:#e0e0e0;">${u.name || '-'}</b></div>
-        <div>◇ TG ID: <b style="color:#e0e0e0;">${u.tg_id}</b></div>
-        <div>◇ نسبة الخصم الحالية: <b style="color:#FFD700;">${u.current_fee_rate}%</b></div>
-        <div>◇ نوع الخصم: ${overrideText}</div>
-        <div>◇ أيام من آخر عملية: <b style="color:#d29922;">${u.days_since_last_action} يوم</b></div>
-        <div>◇ وصف: <b style="color:#aaa;">${u.fee_label}</b></div>
+        <div>• الاسم: <b style="color:#e0e0e0;">${u.name || '-'}</b></div>
+        <div>• TG ID: <b style="color:#e0e0e0;">${u.tg_id}</b></div>
+        <div>• نسبة الخصم الحالية: <b style="color:#FFD700;">${u.current_fee_rate}%</b></div>
+        <div>• نوع الخصم: ${overrideText}</div>
+        <div>• أيام من آخر عملية: <b style="color:#d29922;">${u.days_since_last_action} يوم</b></div>
+        <div>• وصف: <b style="color:#aaa;">${u.fee_label}</b></div>
         <div>◇ أول إيداع: <b style="color:#aaa;">${u.first_deposit_at ? new Date(u.first_deposit_at).toLocaleDateString('ar') : 'لم يودع'}</b></div>
         <div>◇ آخر سحب: <b style="color:#aaa;">${u.last_withdrawal_at ? new Date(u.last_withdrawal_at).toLocaleDateString('ar') : 'لم يسحب'}</b></div>
       </div>
     `;
     infoDiv.style.display = 'block';
   } else {
-    infoDiv.innerHTML = `<span style="color:#f85149;">✗ ${r.error || 'المستخدم غير موجود'}</span>`;
+    infoDiv.innerHTML = `<span style="color:#f85149;">❌ ${r.error || 'المستخدم غير موجود'}</span>`;
     infoDiv.style.display = 'block';
   }
 });
@@ -1670,10 +1670,10 @@ document.getElementById('checkUserFeeBtn')?.addEventListener('click', async () =
 // Set fee for ALL users
 document.getElementById('setAllFeeBtn')?.addEventListener('click', async () => {
   const feeValue = document.getElementById('allFeeOverrideValue')?.value;
-  if (feeValue === '' || feeValue === undefined) return toast('✗ أدخل نسبة الخصم');
+  if (feeValue === '' || feeValue === undefined) return toast('❌ أدخل نسبة الخصم');
   
   const fee = Number(feeValue);
-  if (fee < 0 || fee > 100) return toast('✗ النسبة يجب أن تكون بين 0 و 100');
+  if (fee < 0 || fee > 100) return toast('❌ النسبة يجب أن تكون بين 0 و 100');
   
   if (!confirm(`هل أنت متأكد من تعيين خصم ${fee}% لجميع المستخدمين؟`)) return;
   
@@ -1681,7 +1681,7 @@ document.getElementById('setAllFeeBtn')?.addEventListener('click', async () => {
   if (r.ok) {
     toast(`✓ ${r.message} (${r.affected} مستخدم)`);
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
 
@@ -1693,6 +1693,6 @@ document.getElementById('removeAllFeeBtn')?.addEventListener('click', async () =
   if (r.ok) {
     toast(`✓ ${r.message} (${r.affected} مستخدم)`);
   } else {
-    toast('✗ ' + (r.error || 'خطأ'));
+    toast('❌ ' + (r.error || 'خطأ'));
   }
 });
