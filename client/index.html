@@ -282,18 +282,18 @@
       <!-- Withdrawal History / سجل السحب -->
       <section id="tab-requests" class="tab">
         <div class="card glass">
-          <div class="c-title">📋 سجل السحب | Withdrawal History</div>
+          <div class="c-title" data-i18n="withdrawalHistory">Withdrawal History</div>
           <div class="withdrawal-stats">
             <div class="stat-item">
-              <span class="stat-label">قيد المراجعة</span>
+              <span class="stat-label" data-i18n="pendingReview">Under Review</span>
               <span class="stat-value" id="pendingCount">0</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">تم الدفع</span>
+              <span class="stat-label" data-i18n="paid">Paid</span>
               <span class="stat-value success" id="approvedCount">0</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">ملغي/مرفوض</span>
+              <span class="stat-label" data-i18n="cancelledRejected">Cancelled/Rejected</span>
               <span class="stat-value danger" id="rejectedCount">0</span>
             </div>
           </div>
@@ -412,14 +412,14 @@
   
   <!-- Account Status Section -->
   <div class="sp-section">
-    <div class="sp-label">Account Status</div>
+    <div class="sp-label" data-i18n="accountStatus">Account Status</div>
     <div class="sp-row">
-      <div class="sp-key">Rank</div>
+      <div class="sp-key" data-i18n="rank">Rank</div>
       <div class="sp-value" id="spUserRank" style="color: #ffd700;">👤 Member</div>
     </div>
     <div class="sp-row">
-      <div class="sp-key">Status</div>
-      <div class="sp-value" style="color: #00d68f;">✓ Active</div>
+      <div class="sp-key" data-i18n="statusLabel">Status</div>
+      <div class="sp-value" style="color: #00d68f;" data-i18n="active">✓ Active</div>
     </div>
     <div class="sp-row">
       <div class="sp-key" data-i18n="daysOnPlatform">Days on Platform</div>
@@ -427,24 +427,7 @@
     </div>
   </div>
 
-  <!-- Country / Flag Section -->
-  <div class="sp-section">
-    <div class="sp-label" id="spCountryLabel">Country</div>
-    <div class="sp-row" style="align-items:center;gap:8px;">
-      <div class="sp-key" id="spCountryKey">Flag</div>
-      <div class="sp-value" id="spCountryDisplay" style="font-size:22px;cursor:pointer;letter-spacing:2px;" title="Change country">🏳️</div>
-      <button id="spChangeCountryBtn" style="margin-left:auto;background:rgba(88,166,255,0.15);border:1px solid #58a6ff;color:#58a6ff;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;">⭐ غيّر</button>
-    </div>
-  </div>
-
-  <!-- Country Picker Sheet (hidden) -->
-  <div id="countryPickerSheet" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1a1a2e;border-radius:20px 20px 0 0;padding:20px;max-height:70vh;overflow-y:auto;box-shadow:0 -4px 30px rgba(0,0,0,0.5);">
-    <div style="width:40px;height:4px;background:#444;border-radius:2px;margin:0 auto 16px;"></div>
-    <div style="text-align:center;font-size:15px;font-weight:600;color:#e6edf3;margin-bottom:16px;" id="cpTitle">Choose Your Country</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;" id="countryGrid"></div>
-    <button id="cpCancel" style="width:100%;margin-top:16px;padding:12px;background:rgba(255,255,255,0.05);border:1px solid #333;border-radius:12px;color:#8b949e;font-size:14px;cursor:pointer;">Cancel</button>
-  </div>
-  <div id="countryPickerBackdrop" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);"></div>
+  <!-- Country/Flag section removed -->
   
   <!-- App Info -->
   <div class="sp-section" style="background: transparent; border: none; padding: 8px 0;">

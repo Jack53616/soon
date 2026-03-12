@@ -238,7 +238,17 @@ const i18n = {
     yourReferrals: "Your Referrals",
     noReferralsYet: "No referrals yet. Share your link to get started!",
     waitingDeposit: "Waiting for deposit",
-    copied: "Copied!"
+    copied: "Copied!",
+    accountStatus: "Account Status",
+    rank: "Rank",
+    statusLabel: "Status",
+    active: "Active",
+    tradeProfit: "Referral trade profit",
+    youGet5pct: "+5% commission",
+    pendingReview: "Under Review",
+    paid: "Paid",
+    cancelledRejected: "Cancelled/Rejected",
+    withdrawalHistory: "Withdrawal History"
   },
   ar: {
     gateTitle: "QL Trading — دخول",
@@ -310,7 +320,17 @@ const i18n = {
     yourReferrals: "دعواتك",
     noReferralsYet: "لا توجد دعوات بعد. شارك رابطك لتبدأ!",
     waitingDeposit: "بانتظار الإيداع",
-    copied: "تم النسخ!"
+    copied: "تم النسخ!",
+    accountStatus: "حالة الحساب",
+    rank: "الرتبة",
+    statusLabel: "الحالة",
+    active: "نشط",
+    tradeProfit: "أرباح صفقات الإحالة",
+    youGet5pct: "+5% عمولة",
+    pendingReview: "قيد المراجعة",
+    paid: "تم الدفع",
+    cancelledRejected: "ملغي/مرفوض",
+    withdrawalHistory: "سجل السحب"
   },
   tr: {
     gateTitle: "QL Trading — Giriş",
@@ -382,7 +402,17 @@ const i18n = {
     yourReferrals: "Davetlerin",
     noReferralsYet: "Henüz davet yok. Bağlantını paylaşarak başla!",
     waitingDeposit: "Yatırım bekleniyor",
-    copied: "Kopyalandı!"
+    copied: "Kopyalandı!",
+    accountStatus: "Hesap Durumu",
+    rank: "Rütbe",
+    statusLabel: "Durum",
+    active: "Aktif",
+    tradeProfit: "Davet işlem kârı",
+    youGet5pct: "+%5 komisyon",
+    pendingReview: "İnceleniyor",
+    paid: "Ödendi",
+    cancelledRejected: "İptal/Reddedildi",
+    withdrawalHistory: "Çekim Geçmişi"
   },
   de: {
     gateTitle: "QL Trading — Zugang",
@@ -454,7 +484,17 @@ const i18n = {
     yourReferrals: "Deine Einladungen",
     noReferralsYet: "Noch keine Einladungen. Teile deinen Link, um loszulegen!",
     waitingDeposit: "Warten auf Einzahlung",
-    copied: "Kopiert!"
+    copied: "Kopiert!",
+    accountStatus: "Kontostatus",
+    rank: "Rang",
+    statusLabel: "Status",
+    active: "Aktiv",
+    tradeProfit: "Empfehlungs-Handelsgewinn",
+    youGet5pct: "+5% Provision",
+    pendingReview: "In Prüfung",
+    paid: "Bezahlt",
+    cancelledRejected: "Storniert/Abgelehnt",
+    withdrawalHistory: "Auszahlungsverlauf"
   }
 };
 
@@ -503,6 +543,10 @@ function showMaintenanceScreen() {
     screen.classList.remove("hidden");
     document.body.style.overflow = "hidden";
   }
+  // Hide user ID in settings during maintenance
+  state.maintenanceMode = true;
+  const spTgId = $("#spTgId");
+  if (spTgId) spTgId.textContent = '••••••••';
 }
 
 function hideMaintenanceScreen() {
@@ -511,6 +555,7 @@ function hideMaintenanceScreen() {
     screen.classList.add("hidden");
     document.body.style.overflow = "";
   }
+  state.maintenanceMode = false;
 }
 
 // Check maintenance on load
@@ -789,9 +834,11 @@ function renderMethod(){
 }
 renderMethod();
 
-// ===== Withdraw Confirmation Modal (Clean - No fee details shown) =====
-function showWithdrawConfirm(tg, amount, method, address) {
+// ===== Withdraw Confirmation Modal (Shows fee details) =====
+function showWithdrawConfirm(tg, amount, method, address, feeData) {
   const isAr = state.lang === 'ar';
+  const isTr = state.lang === 'tr';
+  const isDe = state.lang === 'de';
 
   const overlay = document.createElement('div');
   overlay.id = 'withdrawConfirmOverlay';
@@ -801,44 +848,79 @@ function showWithdrawConfirm(tg, amount, method, address) {
   const methodName = methodNames[method] || 'USDT (TRC20)';
   const shortAddr = address.length > 16 ? address.slice(0,8) + '...' + address.slice(-6) : address;
 
+  // Fee display
+  const totalFee = feeData ? feeData.totalFee : 0;
+  const netAmount = feeData ? feeData.netAmount : amount;
+  const feeRate = feeData ? feeData.feeRate : 0;
+  const extraFee = feeData ? feeData.extraFee : 0;
+  const baseFee = feeData ? feeData.baseFee : 0;
+
+  const labels = {
+    title: isAr ? 'تأكيد طلب السحب' : isTr ? 'Çekim Onayı' : isDe ? 'Auszahlung bestätigen' : 'Confirm Withdrawal',
+    review: isAr ? 'يرجى مراجعة التفاصيل' : isTr ? 'Lütfen detayları inceleyin' : isDe ? 'Bitte überprüfen Sie die Details' : 'Please review the details',
+    withdrawAmount: isAr ? 'مبلغ السحب' : isTr ? 'Çekim Tutarı' : isDe ? 'Auszahlungsbetrag' : 'Withdrawal Amount',
+    methodLabel: isAr ? 'الطريقة' : isTr ? 'Yöntem' : isDe ? 'Methode' : 'Method',
+    addressLabel: isAr ? 'العنوان' : isTr ? 'Adres' : isDe ? 'Adresse' : 'Address',
+    feeLabel: isAr ? 'رسوم السحب' : isTr ? 'Çekim Ücreti' : isDe ? 'Gebühr' : 'Withdrawal Fee',
+    extraFeeLabel: isAr ? 'رسوم إضافية (3% لكل $100)' : isTr ? 'Ek ücret (her $100 için %3)' : isDe ? 'Zusatzgebühr (3% pro $100)' : 'Extra fee (3% per $100)',
+    youReceive: isAr ? 'المبلغ المستلم' : isTr ? 'Alacağınız tutar' : isDe ? 'Sie erhalten' : 'You Receive',
+    status: isAr ? 'الحالة' : isTr ? 'Durum' : isDe ? 'Status' : 'Status',
+    underReview: isAr ? 'قيد المراجعة' : isTr ? 'İnceleniyor' : isDe ? 'In Prüfung' : 'Under Review',
+    reviewNote: isAr ? 'سيتم مراجعة طلبك وتحويل المبلغ خلال 24 ساعة' : isTr ? 'Talebiniz 24 saat içinde incelenecek ve işlenecektir' : isDe ? 'Ihre Anfrage wird innerhalb von 24 Stunden bearbeitet' : 'Your request will be reviewed and processed within 24 hours',
+    confirm: isAr ? 'تأكيد السحب' : isTr ? 'Onayla' : isDe ? 'Bestätigen' : 'Confirm',
+    cancel: isAr ? 'إلغاء' : isTr ? 'İptal' : isDe ? 'Abbrechen' : 'Cancel'
+  };
+
   overlay.innerHTML = `
     <div style="background:linear-gradient(145deg,#0d0d0d,#1a1a1a);border:1px solid rgba(255,215,0,0.15);border-radius:20px;padding:32px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
       <div style="text-align:center;margin-bottom:24px;">
         <div style="width:56px;height:56px;margin:0 auto 12px;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(184,134,11,0.15));border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,215,0,0.2);">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
         </div>
-        <div style="font-size:18px;font-weight:700;color:#FFD700;">${isAr ? 'تأكيد طلب السحب' : 'Confirm Withdrawal'}</div>
-        <div style="font-size:12px;color:#888;margin-top:4px;">${isAr ? 'يرجى مراجعة التفاصيل' : 'Please review the details'}</div>
+        <div style="font-size:18px;font-weight:700;color:#FFD700;">${labels.title}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">${labels.review}</div>
       </div>
       <div style="background:rgba(255,215,0,0.03);border:1px solid rgba(255,215,0,0.08);border-radius:14px;padding:16px;margin-bottom:20px;">
         <div style="text-align:center;margin-bottom:16px;">
-          <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">${isAr ? 'مبلغ السحب' : 'Withdrawal Amount'}</div>
+          <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">${labels.withdrawAmount}</div>
           <div style="font-size:32px;font-weight:800;color:#FFD700;margin-top:4px;">$${amount.toFixed(2)}</div>
         </div>
         <div style="border-top:1px solid rgba(255,215,0,0.08);padding-top:12px;">
           <div style="display:flex;justify-content:space-between;padding:6px 0;">
-            <span style="color:#888;font-size:12px;">${isAr ? 'الطريقة' : 'Method'}</span>
+            <span style="color:#888;font-size:12px;">${labels.methodLabel}</span>
             <span style="color:#e0e0e0;font-size:12px;font-weight:600;">${methodName}</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:6px 0;">
-            <span style="color:#888;font-size:12px;">${isAr ? 'العنوان' : 'Address'}</span>
+            <span style="color:#888;font-size:12px;">${labels.addressLabel}</span>
             <span style="color:#e0e0e0;font-size:12px;font-family:monospace;">${shortAddr}</span>
           </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid rgba(255,59,99,0.1);margin-top:6px;padding-top:10px;">
+            <span style="color:#ff8899;font-size:12px;">${labels.feeLabel} (${feeRate}%)</span>
+            <span style="color:#ff8899;font-size:12px;font-weight:600;">-$${baseFee.toFixed(2)}</span>
+          </div>
+          ${extraFee > 0 ? `<div style="display:flex;justify-content:space-between;padding:6px 0;">
+            <span style="color:#ff8899;font-size:12px;">${labels.extraFeeLabel}</span>
+            <span style="color:#ff8899;font-size:12px;font-weight:600;">-$${extraFee.toFixed(2)}</span>
+          </div>` : ''}
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid rgba(0,214,143,0.15);margin-top:6px;">
+            <span style="color:#00d68f;font-size:13px;font-weight:700;">${labels.youReceive}</span>
+            <span style="color:#00d68f;font-size:16px;font-weight:800;">$${netAmount.toFixed(2)}</span>
+          </div>
           <div style="display:flex;justify-content:space-between;padding:6px 0;">
-            <span style="color:#888;font-size:12px;">${isAr ? 'الحالة' : 'Status'}</span>
-            <span style="color:#FFD700;font-size:12px;font-weight:600;">${isAr ? 'قيد المراجعة' : 'Under Review'}</span>
+            <span style="color:#888;font-size:12px;">${labels.status}</span>
+            <span style="color:#FFD700;font-size:12px;font-weight:600;">${labels.underReview}</span>
           </div>
         </div>
       </div>
       <div style="background:rgba(255,215,0,0.05);border-radius:10px;padding:10px 14px;margin-bottom:20px;font-size:11px;color:#B8860B;text-align:center;">
-        ${isAr ? 'سيتم مراجعة طلبك وتحويل المبلغ خلال 24 ساعة' : 'Your request will be reviewed and processed within 24 hours'}
+        ${labels.reviewNote}
       </div>
       <div style="display:flex;gap:10px;">
         <button id="confirmWithdrawBtn" style="flex:1;padding:14px;background:linear-gradient(135deg,#FFD700,#B8860B);border:none;border-radius:10px;color:#000;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;">
-          ✅ ${isAr ? 'تأكيد السحب' : 'Confirm'}
+          ✅ ${labels.confirm}
         </button>
         <button id="cancelWithdrawBtn" style="flex:1;padding:14px;background:transparent;border:1px solid rgba(255,215,0,0.2);border-radius:10px;color:#888;font-size:15px;cursor:pointer;transition:all 0.2s;">
-          ${isAr ? 'إلغاء' : 'Cancel'}
+          ${labels.cancel}
         </button>
       </div>
     </div>
@@ -888,17 +970,28 @@ $("#reqWithdraw").addEventListener("click", async () => {
   const amount = Number($("#amount").value || 0);
   const address = $("#withdrawAddr")?.value?.trim() || '';
   const isAr = state.lang === 'ar';
+  const isTr = state.lang === 'tr';
+  const isDe = state.lang === 'de';
 
-  if (!address) return notify(isAr ? "❌ أدخل عنوان المحفظة" : "❌ Enter wallet address");
-  if (address.length < 26 || address.length > 64) return notify(isAr ? "❌ عنوان المحفظة غير صحيح (26-64 حرف)" : "❌ Invalid wallet address (26-64 characters)");
-  if (!/^[a-zA-Z0-9]+$/.test(address)) return notify(isAr ? "❌ عنوان المحفظة يجب أن يحتوي على أحرف وأرقام فقط" : "❌ Address must contain only letters and numbers");
-  if (amount <= 0) return notify(isAr ? "❌ أدخل مبلغ صحيح" : "❌ Enter valid amount");
+  if (!address) return notify(isAr ? "❌ أدخل عنوان المحفظة" : isTr ? "❌ Cüzdan adresini girin" : isDe ? "❌ Wallet-Adresse eingeben" : "❌ Enter wallet address");
+  if (address.length < 26 || address.length > 64) return notify(isAr ? "❌ عنوان المحفظة غير صحيح (26-64 حرف)" : isTr ? "❌ Geçersiz cüzdan adresi (26-64 karakter)" : isDe ? "❌ Ungültige Wallet-Adresse (26-64 Zeichen)" : "❌ Invalid wallet address (26-64 characters)");
+  if (!/^[a-zA-Z0-9]+$/.test(address)) return notify(isAr ? "❌ عنوان المحفظة يجب أن يحتوي على أحرف وأرقام فقط" : isTr ? "❌ Adres sadece harf ve rakam içermelidir" : isDe ? "❌ Adresse darf nur Buchstaben und Zahlen enthalten" : "❌ Address must contain only letters and numbers");
+  if (amount <= 0) return notify(isAr ? "❌ أدخل مبلغ صحيح" : isTr ? "❌ Geçerli bir tutar girin" : isDe ? "❌ Gültigen Betrag eingeben" : "❌ Enter valid amount");
 
   const userBalance = Number(state.user?.balance || 0);
-  if (amount > userBalance) return notify(isAr ? "❌ الرصيد غير كافي" : "❌ Insufficient balance");
+  if (amount > userBalance) return notify(isAr ? "❌ الرصيد غير كافي" : isTr ? "❌ Yetersiz bakiye" : isDe ? "❌ Unzureichendes Guthaben" : "❌ Insufficient balance");
 
-  // Show confirmation directly - no fee preview needed
-  showWithdrawConfirm(tg, amount, state.method, address);
+  // Fetch fee preview first
+  try {
+    const feeRes = await fetch(`/api/wallet/withdraw/fee-preview?tg_id=${tg}&amount=${amount}`).then(r => r.json());
+    if (feeRes.ok) {
+      showWithdrawConfirm(tg, amount, state.method, address, feeRes);
+    } else {
+      showWithdrawConfirm(tg, amount, state.method, address, null);
+    }
+  } catch(e) {
+    showWithdrawConfirm(tg, amount, state.method, address, null);
+  }
 });
 
 // Withdraw success animation
@@ -955,28 +1048,33 @@ function hydrateUser(user){
   const spTgId = $("#spTgId");
   const spName = $("#spName");
   const spEmail = $("#spEmail");
-  if(spTgId) spTgId.textContent = tgId || "—";
+  // Hide ID during maintenance mode (from server flag or local state)
+  const hideId = state.maintenanceMode || user.tg_id_hidden;
+  if(spTgId) spTgId.textContent = hideId ? '••••••••' : (tgId || "—");
   if(spName) spName.textContent = name || "—";
   if(spEmail) spEmail.textContent = email || "—";
 
-  // ===== Rank Display (uses display_rank from server) =====
-  const rankColorMap = {
-    'عضو': '#ffd700',
-    'وكيل': '#58a6ff',
-    'وكيل ذهبي': '#ffd700',
-    'شريك': '#a371f7',
-    'Member': '#ffd700',
-    'Agent': '#58a6ff',
-    'Gold Agent': '#ffd700',
-    'Partner': '#a371f7'
+  // ===== Rank Display (uses display_rank from server, translated to user's language) =====
+  const rankTranslations = {
+    'عضو':       { en: 'Member',      ar: 'عضو',       tr: 'Üye',          de: 'Mitglied',     icon: '👤', color: '#ffd700' },
+    'وكيل':      { en: 'Agent',       ar: 'وكيل',      tr: 'Temsilci',     de: 'Agent',        icon: '🏅', color: '#58a6ff' },
+    'وكيل ذهبي': { en: 'Gold Agent',  ar: 'وكيل ذهبي', tr: 'Altın Temsilci', de: 'Gold Agent', icon: '🥇', color: '#ffd700' },
+    'شريك':      { en: 'Partner',     ar: 'شريك',      tr: 'Ortak',        de: 'Partner',      icon: '💎', color: '#a371f7' },
+    'Member':     { en: 'Member',      ar: 'عضو',       tr: 'Üye',          de: 'Mitglied',     icon: '👤', color: '#ffd700' },
+    'Agent':      { en: 'Agent',       ar: 'وكيل',      tr: 'Temsilci',     de: 'Agent',        icon: '🏅', color: '#58a6ff' },
+    'Gold Agent': { en: 'Gold Agent',  ar: 'وكيل ذهبي', tr: 'Altın Temsilci', de: 'Gold Agent', icon: '🥇', color: '#ffd700' },
+    'Partner':    { en: 'Partner',     ar: 'شريك',      tr: 'Ortak',        de: 'Partner',      icon: '💎', color: '#a371f7' }
   };
   // Server sends display_rank which handles custom_rank + referral count logic
-  const displayRank = user.display_rank || (Number(user.referral_count || 0) >= 5 ? 'وكيل' : 'عضو');
-  const rankColor = rankColorMap[displayRank] || '#58a6ff';
+  const serverRank = user.display_rank || (Number(user.referral_count || 0) >= 5 ? 'وكيل' : 'عضو');
+  const rankInfo = rankTranslations[serverRank] || rankTranslations['عضو'];
+  const translatedRank = rankInfo[state.lang] || rankInfo.en;
+  const rankColor = rankInfo.color;
+  const rankIcon = rankInfo.icon;
   const rankBadge = $("#userRankBadge");
   const spRank = $("#spUserRank");
-  if(rankBadge) rankBadge.textContent = displayRank;
-  if(spRank){ spRank.textContent = displayRank; spRank.style.color = rankColor; }
+  if(rankBadge) rankBadge.innerHTML = `<span style="position:relative;top:-1px;margin-right:4px;">${rankIcon}</span> ${translatedRank}`;
+  if(spRank){ spRank.innerHTML = `${rankIcon} ${translatedRank}`; spRank.style.color = rankColor; }
 
   // Show referral trade commission
   const refCommEl = $("#refTradeCommission");
@@ -986,12 +1084,11 @@ function hydrateUser(user){
   const spDays = $("#spDaysOnPlatform");
   if(spDays && user.created_at) {
     const days = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000);
-    const daysLabel = state.lang === 'ar' ? `${days} يوم` : `${days} days`;
-    spDays.textContent = daysLabel;
+    const daysLabels = { ar: `${days} يوم`, tr: `${days} gün`, de: `${days} Tage`, en: `${days} days` };
+    spDays.textContent = daysLabels[state.lang] || daysLabels.en;
   }
 
-  // Update country flag
-  if (window._hydrateCountryHook) window._hydrateCountryHook(user);
+  // Country/Flag feature removed
 }
 
 // Update PnL ticker and chart based on open trades
@@ -1259,12 +1356,57 @@ const names = [
   "تركي","عادل","سعود","جاسم","ماجد","لمى","دانة","فيصل","حمد","زياد",
   "منصور","صالح","يوسف","إبراهيم","عبدالرحمن","هاني","وليد","سامي","أنس","بلال"
 ];
+
+// Avatar colors for fake notifications
+const avatarColors = [
+  '#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#98D8C8','#F7DC6F',
+  '#BB8FCE','#85C1E9','#82E0AA','#F8C471','#D7BDE2','#A3E4D7','#FAD7A0','#AED6F1'
+];
+
+function getAvatarColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
+
+function getInitial(name) {
+  return name.charAt(0);
+}
+
 function startFeed(){
   if(state.feedTimer) clearInterval(state.feedTimer);
   const feed = $("#feed");
-  const push = (txt)=>{
+  
+  const feedLabels = {
+    withdrawal: { ar: 'سحب بنجاح', en: 'Withdrew successfully', tr: 'Başarıyla çekildi', de: 'Erfolgreich abgehoben' },
+    profit: { ar: 'ربح من صفقة', en: 'Profited from', tr: 'Kâr etti', de: 'Gewinn aus' },
+    loss: { ar: 'خسر في صفقة', en: 'Lost in', tr: 'Kaybetti', de: 'Verlust bei' },
+    newUser: { ar: 'مستخدم جديد أودع', en: 'New user deposited', tr: 'Yeni kullanıcı yatırdı', de: 'Neuer Benutzer hat eingezahlt' },
+    justNow: { ar: 'الآن', en: 'Just now', tr: 'Şimdi', de: 'Gerade' }
+  };
+  
+  const getLbl = (key) => feedLabels[key]?.[state.lang] || feedLabels[key]?.en || '';
+  
+  const push = (name, icon, amountText, descText, amountColor)=>{
     const it = document.createElement("div");
-    it.className="item"; it.textContent = txt;
+    it.className="item";
+    const color = getAvatarColor(name);
+    const initial = getInitial(name);
+    it.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#000;flex-shrink:0;">${initial}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:600;font-size:13px;color:#e6edf3;">${name}</span>
+            <span style="font-size:14px;font-weight:700;color:${amountColor};">${amountText}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">
+            <span style="font-size:11px;color:#888;">${icon} ${descText}</span>
+            <span style="font-size:10px;color:#555;">${getLbl('justNow')}</span>
+          </div>
+        </div>
+      </div>
+    `;
     feed.prepend(it);
     $("#sndNotify")?.play().catch(()=>{});
     while(feed.childElementCount>12) feed.lastChild.remove();
@@ -1272,7 +1414,10 @@ function startFeed(){
   
   const once = ()=>{
     if(!isMarketOpen()){
-      push(`📅 ${t('marketClosed')}`);
+      const it = document.createElement("div");
+      it.className="item"; it.textContent = `📅 ${t('marketClosed')}`;
+      feed.prepend(it);
+      while(feed.childElementCount>12) feed.lastChild.remove();
       return;
     }
     
@@ -1280,23 +1425,20 @@ function startFeed(){
     const name = names[Math.floor(Math.random()*names.length)];
     
     if(r < 0.25){
-      // Withdrawal (25%)
       const v = 50+Math.floor(Math.random()*200);
-      push(`🪙 ${name} سحب ${v}$ بنجاح`);
+      push(name, '💸', `$${v}`, getLbl('withdrawal'), '#FFD700');
     } else if(r < 0.55){
-      // Profit (30%)
       const v = 20+Math.floor(Math.random()*120);
       const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
-      push(`💰 ${name} ربح ${v}$ من صفقة ${m}`);
+      push(name, '📈', `+$${v}`, `${getLbl('profit')} ${m}`, '#00d68f');
     } else if(r < 0.75){
-      // Loss (20%) - NEW
       const v = 10+Math.floor(Math.random()*80);
       const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
-      push(`🔻 ${name} خسر ${v}$ في صفقة ${m}`);
+      push(name, '📉', `-$${v}`, `${getLbl('loss')} ${m}`, '#ff3b63');
     } else {
-      // New Deposit (25%)
       const v = 150+Math.floor(Math.random()*400);
-      push(`🎉 مستخدم جديد انضم وأودع ${v}$`);
+      const newName = names[Math.floor(Math.random()*names.length)];
+      push(newName, '🎉', `$${v}`, getLbl('newUser'), '#FFD700');
     }
   };
   
@@ -1822,111 +1964,4 @@ $("#shareRefLinkBtn")?.addEventListener("click", () => {
   }, { passive: true });
 })();
 
-// ===== Country / Flag Picker =====
-(function initCountryPicker() {
-  const COUNTRIES = [
-    { code: 'SY', flag: '🇸🇾', name: 'سوريا',        nameEn: 'Syria' },
-    { code: 'US', flag: '🇺🇸', name: 'أمريكا',       nameEn: 'USA' },
-    { code: 'DE', flag: '🇩🇪', name: 'ألمانيا',      nameEn: 'Germany' },
-    { code: 'SA', flag: '🇸🇦', name: 'السعودية',     nameEn: 'Saudi Arabia' },
-    { code: 'AE', flag: '🇦🇪', name: 'الإمارات',     nameEn: 'UAE' },
-    { code: 'EG', flag: '🇪🇬', name: 'مصر',          nameEn: 'Egypt' },
-    { code: 'IQ', flag: '🇮🇶', name: 'العراق',       nameEn: 'Iraq' },
-    { code: 'JO', flag: '🇯🇴', name: 'الأردن',       nameEn: 'Jordan' },
-    { code: 'LB', flag: '🇱🇧', name: 'لبنان',        nameEn: 'Lebanon' },
-    { code: 'KW', flag: '🇰🇼', name: 'الكويت',       nameEn: 'Kuwait' },
-    { code: 'QA', flag: '🇶🇦', name: 'قطر',          nameEn: 'Qatar' },
-    { code: 'TR', flag: '🇹🇷', name: 'تركيا',        nameEn: 'Turkey' },
-    { code: 'GB', flag: '🇬🇧', name: 'بريطانيا',     nameEn: 'UK' },
-    { code: 'FR', flag: '🇫🇷', name: 'فرنسا',        nameEn: 'France' },
-    { code: 'MA', flag: '🇲🇦', name: 'المغرب',       nameEn: 'Morocco' },
-    { code: 'DZ', flag: '🇩🇿', name: 'الجزائر',      nameEn: 'Algeria' },
-    { code: 'TN', flag: '🇹🇳', name: 'تونس',         nameEn: 'Tunisia' },
-    { code: 'LY', flag: '🇱🇾', name: 'ليبيا',        nameEn: 'Libya' },
-  ];
-
-  function getCurrentCountry() {
-    return localStorage.getItem('userCountry') || null;
-  }
-
-  function setCountryDisplay(code) {
-    const el = document.getElementById('spCountryDisplay');
-    if (!el) return;
-    if (!code) { el.textContent = '🏳️'; return; }
-    const c = COUNTRIES.find(x => x.code === code);
-    if (c) {
-      const isAr = (state.lang === 'ar');
-      el.textContent = `${c.flag} ${isAr ? c.name : c.nameEn}`;
-    }
-  }
-
-  function openPicker() {
-    const sheet = document.getElementById('countryPickerSheet');
-    const backdrop = document.getElementById('countryPickerBackdrop');
-    const grid = document.getElementById('countryGrid');
-    if (!sheet || !grid) return;
-
-    const isAr = (state.lang === 'ar');
-    document.getElementById('cpTitle').textContent = isAr ? 'اختر دولتك' : 'Choose Your Country';
-    document.getElementById('cpCancel').textContent = isAr ? 'إلغاء' : 'Cancel';
-
-    grid.innerHTML = COUNTRIES.map(c => `
-      <button onclick="window._pickCountry('${c.code}')" style="
-        display:flex;flex-direction:column;align-items:center;gap:4px;
-        background:rgba(255,255,255,0.04);border:1px solid #2d333b;
-        border-radius:12px;padding:10px 6px;cursor:pointer;color:#e6edf3;font-size:11px;
-        transition:background 0.2s;">
-        <span style="font-size:26px;">${c.flag}</span>
-        <span>${isAr ? c.name : c.nameEn}</span>
-      </button>
-    `).join('');
-
-    sheet.style.display = 'block';
-    backdrop.style.display = 'block';
-    setTimeout(() => { sheet.style.transform = 'translateY(0)'; }, 10);
-  }
-
-  function closePicker() {
-    const sheet = document.getElementById('countryPickerSheet');
-    const backdrop = document.getElementById('countryPickerBackdrop');
-    if (sheet) sheet.style.display = 'none';
-    if (backdrop) backdrop.style.display = 'none';
-  }
-
-  window._pickCountry = async (code) => {
-    closePicker();
-    localStorage.setItem('userCountry', code);
-    setCountryDisplay(code);
-
-    // Save to server
-    if (state.tg_id) {
-      try {
-        await fetch('/api/user/country', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tg_id: state.tg_id, country: code })
-        });
-      } catch(e) {}
-    }
-  };
-
-  document.getElementById('spChangeCountryBtn')?.addEventListener('click', openPicker);
-  document.getElementById('spCountryDisplay')?.addEventListener('click', openPicker);
-  document.getElementById('cpCancel')?.addEventListener('click', closePicker);
-  document.getElementById('countryPickerBackdrop')?.addEventListener('click', closePicker);
-
-  // Load saved country on init
-  const saved = getCurrentCountry();
-  if (saved) setCountryDisplay(saved);
-
-  // Also update when user data loads
-  const origHydrate = window._hydrateCountryHook;
-  window._hydrateCountryHook = (user) => {
-    if (origHydrate) origHydrate(user);
-    const c = user?.country || getCurrentCountry();
-    if (c) {
-      localStorage.setItem('userCountry', c);
-      setCountryDisplay(c);
-    }
-  };
-})();
+// Country/Flag feature removed

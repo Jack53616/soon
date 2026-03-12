@@ -11,17 +11,25 @@ import {
 // ===== HELPER: Calculate withdrawal fee =====
 // Fee is based on days since LAST withdrawal (or first deposit if never withdrawn)
 // Fee resets every time user withdraws
+// EXTRA: 3% fee on every $100 of withdrawal amount
 export function calculateWithdrawalFee(user, amount) {
   const now = new Date();
   
   // Check if admin set a custom fee override for this user
   if (user.fee_override !== null && user.fee_override !== undefined) {
     const customRate = Number(user.fee_override);
-    const feeAmount = Number((amount * customRate / 100).toFixed(2));
-    const netAmount = Number((amount - feeAmount).toFixed(2));
+    const baseFee = Number((amount * customRate / 100).toFixed(2));
+    // Add 3% per $100 extra fee
+    const extraFeeRate = 3;
+    const extraFee = Number((Math.floor(amount / 100) * (100 * extraFeeRate / 100)).toFixed(2));
+    const totalFee = Number((baseFee + extraFee).toFixed(2));
+    const netAmount = Number((amount - totalFee).toFixed(2));
     return { 
       feeRate: customRate, 
-      feeAmount, 
+      feeAmount: totalFee, 
+      baseFee,
+      extraFee,
+      extraFeeRate,
       netAmount, 
       daysSinceLastAction: 0, 
       feeLabel: customRate === 0 ? 'بدون رسوم (مخصص)' : `رسوم مخصصة ${customRate}%` 
@@ -52,10 +60,14 @@ export function calculateWithdrawalFee(user, amount) {
     feeLabel = 'بعد 30 يوم';
   }
   
-  const feeAmount = Number((amount * feeRate / 100).toFixed(2));
-  const netAmount = Number((amount - feeAmount).toFixed(2));
+  const baseFee = Number((amount * feeRate / 100).toFixed(2));
+  // Add 3% per $100 extra fee
+  const extraFeeRate = 3;
+  const extraFee = Number((Math.floor(amount / 100) * (100 * extraFeeRate / 100)).toFixed(2));
+  const totalFee = Number((baseFee + extraFee).toFixed(2));
+  const netAmount = Number((amount - totalFee).toFixed(2));
   
-  return { feeRate, feeAmount, netAmount, daysSinceLastAction, feeLabel };
+  return { feeRate, feeAmount: totalFee, baseFee, extraFee, extraFeeRate, netAmount, daysSinceLastAction, feeLabel };
 }
 
 export const getWallet = async (req, res) => {
@@ -359,7 +371,7 @@ export const processDeposit = async (req, res) => {
   }
 };
 
-// ===== API: Get withdrawal fee preview (ADMIN ONLY - not exposed to users) =====
+// ===== API: Get withdrawal fee preview (available to users) =====
 export const getWithdrawalFeePreview = async (req, res) => {
   try {
     const { tg_id, amount } = req.query;
@@ -378,7 +390,18 @@ export const getWithdrawalFeePreview = async (req, res) => {
     
     const feeInfo = calculateWithdrawalFee(user, parsedAmount);
     
-    res.json({ ok: true, ...feeInfo });
+    res.json({ 
+      ok: true, 
+      amount: parsedAmount,
+      feeRate: feeInfo.feeRate,
+      baseFee: feeInfo.baseFee,
+      extraFee: feeInfo.extraFee,
+      extraFeeRate: feeInfo.extraFeeRate,
+      totalFee: feeInfo.feeAmount,
+      netAmount: feeInfo.netAmount,
+      daysSinceLastAction: feeInfo.daysSinceLastAction,
+      feeLabel: feeInfo.feeLabel
+    });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }

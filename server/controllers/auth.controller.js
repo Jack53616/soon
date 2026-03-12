@@ -245,6 +245,15 @@ export const getUserInfo = async (req, res) => {
     user.display_rank = displayRank;
     user.referral_trade_commission = Number(user.referral_trade_commission || 0);
 
+    // Check if maintenance mode is on - hide sensitive data
+    try {
+      const maintResult = await query("SELECT value FROM settings WHERE key = 'maintenance_mode'");
+      const isMaintenance = maintResult.rows.length > 0 && maintResult.rows[0].value === 'true';
+      if (isMaintenance) {
+        user.tg_id_hidden = true;
+      }
+    } catch(e) { /* ignore */ }
+
     res.json({ ok: true, user });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });

@@ -357,15 +357,16 @@ Contact support if you believe this is an error.`, {
   }
 });
 
-// ===== Helper: Arabic rank label =====
-function getRankLabel(rank) {
+// ===== Helper: Multilingual rank label =====
+function getRankLabel(rank, lang = 'ar') {
   const labels = {
-    member: 'عضو',
-    agent: 'وكيل',
-    gold_agent: 'وكيل ذهبي',
-    partner: 'شريك'
+    member:     { ar: 'عضو',       en: 'Member',      tr: 'Üye',          de: 'Mitglied' },
+    agent:      { ar: 'وكيل',      en: 'Agent',       tr: 'Temsilci',     de: 'Agent' },
+    gold_agent: { ar: 'وكيل ذهبي', en: 'Gold Agent',  tr: 'Altın Temsilci', de: 'Gold Agent' },
+    partner:    { ar: 'شريك',      en: 'Partner',     tr: 'Ortak',        de: 'Partner' }
   };
-  return labels[rank] || 'عضو';
+  const rankData = labels[rank] || labels.member;
+  return rankData[lang] || rankData.ar;
 }
 
 // ===== أوامر الأدمن =====
