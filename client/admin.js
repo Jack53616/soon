@@ -1757,3 +1757,185 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     }
   });
 });
+
+
+// ========== REWARDS SYSTEM ==========
+async function loadRewardStatus() {
+  const info = $('#rewardStatusInfo');
+  const cancelBtn = $('#cancelRewardBtn');
+  if (!info) return;
+
+  try {
+    const r = await api('/api/admin/reward/status');
+    if (!r.ok) { info.innerHTML = '❌ خطأ في تحميل البيانات'; return; }
+
+    if (!r.reward || !r.reward.active) {
+      info.innerHTML = '<div style="text-align:center;padding:20px;">📭 لا توجد مكافأة نشطة حالياً</div>';
+      if (cancelBtn) cancelBtn.style.display = 'none';
+      return;
+    }
+
+    const rw = r.reward;
+    const claimed = rw.claimed ? rw.claimed.length : 0;
+    const pct = rw.totalUsers > 0 ? Math.round((claimed / rw.totalUsers) * 100) : 0;
+
+    info.innerHTML = `
+      <div style="background:rgba(255,215,0,0.05);border:1px solid rgba(255,215,0,0.15);border-radius:12px;padding:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><span style="color:#888;font-size:11px;">🆔 الرقم</span><br><strong>${rw.id}</strong></div>
+          <div><span style="color:#888;font-size:11px;">💰 المبلغ الإجمالي</span><br><strong style="color:#FFD700;">$${rw.totalAmount}</strong></div>
+          <div><span style="color:#888;font-size:11px;">💵 لكل مستخدم</span><br><strong style="color:#00d68f;">$${rw.perUser}</strong></div>
+          <div><span style="color:#888;font-size:11px;">👥 المستخدمين</span><br><strong>${rw.totalUsers}</strong></div>
+          <div><span style="color:#888;font-size:11px;">✅ فتحوا</span><br><strong style="color:#00d68f;">${claimed}/${rw.totalUsers} (${pct}%)</strong></div>
+          <div><span style="color:#888;font-size:11px;">📅 التاريخ</span><br><strong>${new Date(rw.createdAt).toLocaleString('ar')}</strong></div>
+        </div>
+        <div style="margin-top:12px;background:rgba(255,255,255,0.05);border-radius:8px;height:8px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#FFD700,#B8860B);border-radius:8px;transition:width 0.5s;"></div>
+        </div>
+      </div>
+    `;
+    if (cancelBtn) cancelBtn.style.display = 'block';
+  } catch(e) {
+    info.innerHTML = '❌ خطأ: ' + e.message;
+  }
+}
+
+$('#rewardAllBtn')?.addEventListener('click', async () => {
+  const amount = parseFloat($('#rewardAllAmount')?.value);
+  if (!amount || amount <= 0) return toast('❌ أدخل مبلغ صحيح');
+  if (!confirm(`هل تريد توزيع $${amount} على جميع المستخدمين النشطين؟`)) return;
+
+  toast('🔄 جاري التوزيع...');
+  const r = await api('/api/admin/reward/create', 'POST', { amount });
+  if (r.ok) {
+    toast(`✅ تم التوزيع! $${r.perUser} لكل مستخدم (${r.totalUsers} مستخدم)`);
+    $('#rewardAllAmount').value = '';
+    loadRewardStatus();
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+$('#rewardSendBtn')?.addEventListener('click', async () => {
+  const tgId = $('#rewardUserId')?.value?.trim();
+  const amount = parseFloat($('#rewardUserAmount')?.value);
+  if (!tgId) return toast('❌ أدخل Telegram ID');
+  if (!amount || amount <= 0) return toast('❌ أدخل مبلغ صحيح');
+
+  const r = await api('/api/admin/reward/send', 'POST', { tg_id: tgId, amount });
+  if (r.ok) {
+    toast(`✅ تم إرسال $${amount} للمستخدم ${r.userName || tgId}`);
+    $('#rewardUserId').value = '';
+    $('#rewardUserAmount').value = '';
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+$('#cancelRewardBtn')?.addEventListener('click', async () => {
+  if (!confirm('هل تريد إلغاء المكافأة النشطة؟')) return;
+  const r = await api('/api/admin/reward/cancel', 'POST');
+  if (r.ok) { toast('✅ تم إلغاء المكافأة'); loadRewardStatus(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+$('#refreshRewardBtn')?.addEventListener('click', () => loadRewardStatus());
+
+// ========== SESSION MANAGEMENT ==========
+$('#logoutUserBtn')?.addEventListener('click', async () => {
+  const tgId = $('#logoutUserId')?.value?.trim();
+  if (!tgId) return toast('❌ أدخل Telegram ID');
+  if (!confirm(`هل تريد تسجيل خروج المستخدم ${tgId} من جميع أجهزته؟`)) return;
+
+  const r = await api('/api/admin/session/logout', 'POST', { tg_id: tgId });
+  if (r.ok) {
+    toast(`✅ تم تسجيل خروج ${r.userName || tgId} من جميع الأجهزة`);
+    $('#logoutUserId').value = '';
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+$('#logoutAllBtn')?.addEventListener('click', async () => {
+  if (!confirm('⚠️ هل أنت متأكد من تسجيل خروج جميع المستخدمين من جميع الأجهزة؟')) return;
+  if (!confirm('⚠️ تأكيد نهائي: سيحتاج جميع المستخدمين إعادة تسجيل الدخول!')) return;
+
+  toast('🔄 جاري تسجيل الخروج...');
+  const r = await api('/api/admin/session/logout-all', 'POST');
+  if (r.ok) {
+    toast(`✅ تم تسجيل خروج ${r.count} مستخدم من جميع الأجهزة`);
+  } else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+// ========== MAINTENANCE MANAGEMENT ==========
+async function loadMaintenanceStatus() {
+  try {
+    const r = await api('/api/admin/settings/maintenance');
+    if (r.ok) {
+      const enabled = r.enabled === true;
+      const statusEl = $('#k-maint-status');
+      if (statusEl) {
+        statusEl.textContent = enabled ? '🔴 مفعّل' : '🟢 غير مفعّل';
+        statusEl.style.color = enabled ? '#ff3b63' : '#00d68f';
+      }
+    }
+  } catch(e) {}
+
+  // Load whitelist
+  try {
+    const r = await api('/api/admin/maintenance/whitelist');
+    const countEl = $('#k-wl-count');
+    const tableEl = $('#whitelistTable');
+    if (!r.ok) return;
+
+    const ids = r.whitelist || [];
+    if (countEl) countEl.textContent = ids.length;
+
+    if (!tableEl) return;
+    if (ids.length === 0) {
+      tableEl.innerHTML = '<div style="text-align:center;padding:12px;color:#666;">القائمة البيضاء فارغة</div>';
+      return;
+    }
+
+    tableEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${ids.map(id => `
+          <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px 12px;">
+            <span style="font-family:monospace;color:#58a6ff;">${id}</span>
+            <button onclick="removeFromWhitelist('${id}')" class="btn-small danger" style="font-size:11px;">❌ إزالة</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch(e) {}
+}
+
+$('#maintOnBtn')?.addEventListener('click', async () => {
+  if (!confirm('هل تريد تفعيل وضع الصيانة؟ المستخدمون سيرون شاشة الصيانة.')) return;
+  const r = await api('/api/admin/maintenance/enable', 'POST');
+  if (r.ok) { toast('🔴 تم تفعيل الصيانة'); loadMaintenanceStatus(); loadSettings(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+$('#maintOffBtn')?.addEventListener('click', async () => {
+  const r = await api('/api/admin/maintenance/disable', 'POST');
+  if (r.ok) { toast('🟢 تم إيقاف الصيانة'); loadMaintenanceStatus(); loadSettings(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+$('#wlAddBtn')?.addEventListener('click', async () => {
+  const tgId = $('#wlAddId')?.value?.trim();
+  if (!tgId) return toast('❌ أدخل Telegram ID');
+  const r = await api('/api/admin/maintenance/whitelist/add', 'POST', { tg_id: tgId });
+  if (r.ok) { toast(`✅ تم إضافة ${tgId} للقائمة البيضاء`); $('#wlAddId').value = ''; loadMaintenanceStatus(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
+});
+
+window.removeFromWhitelist = async (tgId) => {
+  if (!confirm(`إزالة ${tgId} من القائمة البيضاء؟`)) return;
+  const r = await api('/api/admin/maintenance/whitelist/remove', 'POST', { tg_id: tgId });
+  if (r.ok) { toast(`✅ تم إزالة ${tgId}`); loadMaintenanceStatus(); }
+  else toast('❌ ' + (r.error || 'خطأ'));
+};
+
+// Load tabs on switch
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'rewards') loadRewardStatus();
+    if (btn.dataset.tab === 'maint') loadMaintenanceStatus();
+  });
+});

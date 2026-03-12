@@ -45,6 +45,9 @@
       <button class="tab-btn" data-tab="mass">🎯 صفقات جماعية</button>
       <button class="tab-btn" data-tab="custom">🎨 صفقات مخصصة</button>
       <button class="tab-btn" data-tab="referrals">🔗 الدعوات</button>
+      <button class="tab-btn" data-tab="rewards">🎁 المكافآت</button>
+      <button class="tab-btn" data-tab="sessions">🔐 الجلسات</button>
+      <button class="tab-btn" data-tab="maint">🔧 الصيانة</button>
       <button class="tab-btn" data-tab="settings">⚙️ الإعدادات</button>
     </nav>
 
@@ -643,6 +646,134 @@
           </div>
           <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">💡 هؤلاء الأعضاء مسجلين بدون إحالة. يمكنك ربطهم تحت أي عضو آخر.</p>
           <div id="unlinkedUsersList" style="max-height:400px;overflow-y:auto;">جاري التحميل...</div>
+        </div>
+      </section>
+
+      <!-- Rewards Tab -->
+      <section id="tab-rewards" class="tab-content">
+        <!-- Reward to All Users -->
+        <div class="card glass" style="border: 2px solid rgba(255,215,0,0.3);">
+          <div class="card-header">
+            <h3>🎁 توزيع مكافأة للجميع</h3>
+          </div>
+          <div class="action-section">
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
+              أدخل المبلغ الإجمالي وسيتم توزيعه بالتساوي على جميع المستخدمين النشطين. عند فتح البوت يظهر لهم صندوق ذهبي "افتح واربح".
+            </p>
+            <div class="action-row">
+              <input id="rewardAllAmount" type="number" class="input small" placeholder="المبلغ الإجمالي ($)" min="1"/>
+              <button id="rewardAllBtn" class="btn success">🎁 توزيع للجميع</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reward to Specific User -->
+        <div class="card glass" style="border: 2px solid rgba(163,113,247,0.3);">
+          <div class="card-header">
+            <h3>🎯 إرسال مكافأة لشخص معين</h3>
+          </div>
+          <div class="action-section">
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
+              أرسل مكافأة لمستخدم محدد. عند فتح البوت يظهر له الصندوق الذهبي كأنه دخل وراه.
+            </p>
+            <div class="action-row">
+              <input id="rewardUserId" type="number" class="input small" placeholder="Telegram ID"/>
+              <input id="rewardUserAmount" type="number" class="input small" placeholder="المبلغ ($)" min="1"/>
+              <button id="rewardSendBtn" class="btn" style="background:#a371f7;color:#fff;">🎯 إرسال</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reward Status -->
+        <div class="card glass">
+          <div class="card-header">
+            <h3>📊 حالة المكافآت</h3>
+            <button id="refreshRewardBtn" class="btn-small">🔄 تحديث</button>
+          </div>
+          <div id="rewardStatusInfo" style="padding:16px;color:var(--muted);font-size:13px;">جاري التحميل...</div>
+          <div style="padding:0 16px 16px;">
+            <button id="cancelRewardBtn" class="btn danger" style="display:none;">❌ إلغاء المكافأة النشطة</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sessions Tab -->
+      <section id="tab-sessions" class="tab-content">
+        <div class="card glass" style="border: 2px solid rgba(255,59,99,0.3);">
+          <div class="card-header">
+            <h3>🔐 تسجيل خروج مستخدم معين</h3>
+          </div>
+          <div class="action-section">
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
+              سيتم تسجيل خروج المستخدم من جميع الأجهزة. سيحتاج إعادة تسجيل الدخول بالمفتاح.
+            </p>
+            <div class="action-row">
+              <input id="logoutUserId" type="number" class="input small" placeholder="Telegram ID"/>
+              <button id="logoutUserBtn" class="btn danger">🔐 تسجيل خروج</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass" style="border: 2px solid rgba(255,59,99,0.5);">
+          <div class="card-header">
+            <h3>🔴 تسجيل خروج جميع المستخدمين</h3>
+          </div>
+          <div class="action-section">
+            <p style="color: var(--danger); font-size: 13px; margin-bottom: 12px;">
+              ⚠️ تحذير: سيتم تسجيل خروج جميع المستخدمين من جميع أجهزتهم. سيحتاجون جميعاً إعادة تسجيل الدخول.
+            </p>
+            <div class="action-row">
+              <button id="logoutAllBtn" class="btn danger" style="flex:1;">🔴 تسجيل خروج الجميع</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Maintenance Tab -->
+      <section id="tab-maint" class="tab-content">
+        <div class="kpi-grid">
+          <div class="kpi-card glass">
+            <div class="kpi-icon">🔧</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-maint-status" style="font-size:16px;">جاري التحميل...</span>
+              <span class="kpi-label">حالة الصيانة</span>
+            </div>
+          </div>
+          <div class="kpi-card glass">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-data">
+              <span class="kpi-value" id="k-wl-count">0</span>
+              <span class="kpi-label">القائمة البيضاء</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass" style="border: 2px solid rgba(255,165,0,0.3);">
+          <div class="card-header">
+            <h3>🔧 التحكم بالصيانة</h3>
+          </div>
+          <div class="action-section">
+            <div class="action-row">
+              <button id="maintOnBtn" class="btn danger" style="flex:1;">🔴 تفعيل الصيانة</button>
+              <button id="maintOffBtn" class="btn success" style="flex:1;">🟢 إيقاف الصيانة</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card glass" style="border: 2px solid rgba(0,214,143,0.3);">
+          <div class="card-header">
+            <h3>✅ القائمة البيضاء (استثناء من الصيانة)</h3>
+          </div>
+          <div class="action-section">
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 12px;">
+              المستخدمون في القائمة البيضاء يفتح عندهم البوت بشكل طبيعي حتى أثناء الصيانة.
+            </p>
+            <div class="action-row">
+              <input id="wlAddId" type="number" class="input small" placeholder="Telegram ID"/>
+              <button id="wlAddBtn" class="btn success">➕ إضافة</button>
+            </div>
+          </div>
+          <div id="whitelistTable" style="padding:0 16px 16px;">جاري التحميل...</div>
         </div>
       </section>
 
