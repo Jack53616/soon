@@ -248,7 +248,10 @@ const i18n = {
     pendingReview: "Under Review",
     paid: "Paid",
     cancelledRejected: "Cancelled/Rejected",
-    withdrawalHistory: "Withdrawal History"
+    withdrawalHistory: "Withdrawal History",
+    rewardTap: "Tap to open & win!",
+    rewardCollect: "Collect Reward",
+    rewardCongrats: "Congratulations! You won a reward!"
   },
   ar: {
     gateTitle: "QL Trading — دخول",
@@ -330,7 +333,10 @@ const i18n = {
     pendingReview: "قيد المراجعة",
     paid: "تم الدفع",
     cancelledRejected: "ملغي/مرفوض",
-    withdrawalHistory: "سجل السحب"
+    withdrawalHistory: "سجل السحب",
+    rewardTap: "اضغط لفتح الصندوق واربح!",
+    rewardCollect: "استلم المكافأة",
+    rewardCongrats: "مبروك! ربحت مكافأة!"
   },
   tr: {
     gateTitle: "QL Trading — Giriş",
@@ -412,7 +418,10 @@ const i18n = {
     pendingReview: "İnceleniyor",
     paid: "Ödendi",
     cancelledRejected: "İptal/Reddedildi",
-    withdrawalHistory: "Çekim Geçmişi"
+    withdrawalHistory: "Çekim Geçmişi",
+    rewardTap: "Açmak ve kazanmak için dokun!",
+    rewardCollect: "Ödülü Topla",
+    rewardCongrats: "Tebrikler! Bir ödül kazandın!"
   },
   de: {
     gateTitle: "QL Trading — Zugang",
@@ -494,7 +503,10 @@ const i18n = {
     pendingReview: "In Prüfung",
     paid: "Bezahlt",
     cancelledRejected: "Storniert/Abgelehnt",
-    withdrawalHistory: "Auszahlungsverlauf"
+    withdrawalHistory: "Auszahlungsverlauf",
+    rewardTap: "Tippe zum Öffnen & Gewinnen!",
+    rewardCollect: "Belohnung einsammeln",
+    rewardCongrats: "Herzlichen Glückwunsch! Du hast eine Belohnung gewonnen!"
   }
 };
 
@@ -524,7 +536,8 @@ setTimeout(()=> { $("#splash")?.classList.add("hidden"); }, 1800);
 // Check maintenance mode
 async function checkMaintenance() {
   try {
-    const r = await fetch("/api/settings/maintenance").then(r => r.json());
+    const tgParam = state.tg_id ? `?tg_id=${state.tg_id}` : '';
+    const r = await fetch(`/api/settings/maintenance${tgParam}`).then(r => r.json());
     if (r.ok && r.maintenance === true) {
       showMaintenanceScreen();
       return true;
@@ -543,10 +556,7 @@ function showMaintenanceScreen() {
     screen.classList.remove("hidden");
     document.body.style.overflow = "hidden";
   }
-  // Hide user ID in settings during maintenance
   state.maintenanceMode = true;
-  const spTgId = $("#spTgId");
-  if (spTgId) spTgId.textContent = '••••••••';
 }
 
 function hideMaintenanceScreen() {
@@ -1048,9 +1058,7 @@ function hydrateUser(user){
   const spTgId = $("#spTgId");
   const spName = $("#spName");
   const spEmail = $("#spEmail");
-  // Hide ID during maintenance mode (from server flag or local state)
-  const hideId = state.maintenanceMode || user.tg_id_hidden;
-  if(spTgId) spTgId.textContent = hideId ? '••••••••' : (tgId || "—");
+  if(spTgId) spTgId.textContent = tgId || "—";
   if(spName) spName.textContent = name || "—";
   if(spEmail) spEmail.textContent = email || "—";
 
@@ -1089,6 +1097,9 @@ function hydrateUser(user){
   }
 
   // Country/Flag feature removed
+
+  // Trigger reward check hook
+  if (window._rewardHydrateHook) window._rewardHydrateHook(user);
 }
 
 // Update PnL ticker and chart based on open trades
@@ -1965,3 +1976,175 @@ $("#shareRefLinkBtn")?.addEventListener("click", () => {
 })();
 
 // Country/Flag feature removed
+
+// ===== Reward Box System =====
+(function initRewardSystem() {
+  let rewardData = null;
+  let rewardChecked = false;
+
+  async function checkReward() {
+    if (!state.tg_id || rewardChecked) return;
+    try {
+      const r = await fetch(`/api/reward/check?tg_id=${state.tg_id}`).then(r => r.json());
+      if (r.ok && r.hasReward) {
+        rewardData = { rewardId: r.rewardId, amount: r.amount };
+        showRewardBox();
+      }
+      rewardChecked = true;
+    } catch(e) {
+      console.log('Reward check failed:', e);
+    }
+  }
+
+  function showRewardBox() {
+    const overlay = document.getElementById('rewardOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Apply i18n
+    const tapText = overlay.querySelector('[data-i18n="rewardTap"]');
+    if (tapText) tapText.textContent = t('rewardTap');
+    const collectBtn = document.getElementById('rewardCollectBtn');
+    if (collectBtn) collectBtn.textContent = t('rewardCollect');
+
+    // Spawn background stars
+    const particles = document.getElementById('rewardParticles');
+    if (particles) {
+      particles.innerHTML = '';
+      for (let i = 0; i < 30; i++) {
+        const star = document.createElement('div');
+        star.className = 'reward-star';
+        star.textContent = ['\u2728', '\u2B50', '\u2726', '\u2605'][Math.floor(Math.random() * 4)];
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.animationDelay = (Math.random() * 2) + 's';
+        star.style.fontSize = (10 + Math.random() * 14) + 'px';
+        particles.appendChild(star);
+      }
+    }
+  }
+
+  function spawnCoinBurst() {
+    const container = document.getElementById('rewardCoins');
+    if (!container) return;
+    container.innerHTML = '';
+    const emojis = ['\ud83e\ude99', '\ud83d\udcb0', '\ud83d\udcb5', '\ud83c\udf1f', '\u2728', '\ud83d\udc8e', '\ud83c\udfc6'];
+    for (let i = 0; i < 20; i++) {
+      const coin = document.createElement('div');
+      coin.className = 'reward-coin';
+      coin.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      const angle = (Math.PI * 2 * i) / 20;
+      const dist = 80 + Math.random() * 120;
+      coin.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+      coin.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+      coin.style.left = '50%';
+      coin.style.top = '50%';
+      coin.style.animationDelay = (Math.random() * 0.3) + 's';
+      coin.style.fontSize = (18 + Math.random() * 16) + 'px';
+      container.appendChild(coin);
+    }
+  }
+
+  function spawnGoldParticles() {
+    const particles = document.getElementById('rewardParticles');
+    if (!particles) return;
+    particles.innerHTML = '';
+    const colors = ['#FFD700', '#FFE44D', '#DAA520', '#FFA500', '#FF6347', '#00d68f', '#fff'];
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement('div');
+      p.className = 'reward-particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      p.style.animationDuration = (2 + Math.random() * 3) + 's';
+      p.style.animationDelay = (Math.random() * 2) + 's';
+      p.style.width = (4 + Math.random() * 8) + 'px';
+      p.style.height = p.style.width;
+      if (Math.random() > 0.5) {
+        p.style.borderRadius = '2px';
+        p.style.transform = 'rotate(45deg)';
+      }
+      particles.appendChild(p);
+    }
+  }
+
+  // Click on unopened box
+  document.getElementById('rewardBoxUnopened')?.addEventListener('click', async () => {
+    if (!rewardData) return;
+    const unopened = document.getElementById('rewardBoxUnopened');
+    const opened = document.getElementById('rewardBoxOpened');
+    if (!unopened || !opened) return;
+
+    // Shake animation
+    unopened.classList.add('opening');
+
+    // Claim from server
+    try {
+      const r = await fetch('/api/reward/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tg_id: state.tg_id })
+      }).then(r => r.json());
+
+      if (!r.ok) {
+        document.getElementById('rewardOverlay')?.classList.add('hidden');
+        document.body.style.overflow = '';
+        return;
+      }
+
+      // After shake, show opened state
+      setTimeout(() => {
+        unopened.classList.add('hidden');
+        opened.classList.remove('hidden');
+
+        // Set amount
+        const amountEl = document.getElementById('rewardAmountText');
+        if (amountEl) amountEl.textContent = '$' + r.amount.toFixed(2);
+
+        // Set congrats text
+        const congratsEl = document.getElementById('rewardCongratsText');
+        if (congratsEl) congratsEl.textContent = t('rewardCongrats');
+
+        // Spawn effects
+        spawnCoinBurst();
+        spawnGoldParticles();
+
+        // Update balance display
+        const balEl = document.getElementById('balance');
+        if (balEl && r.newBalance !== undefined) {
+          balEl.textContent = '$' + Number(r.newBalance).toLocaleString('en', { minimumFractionDigits: 2 });
+        }
+      }, 600);
+
+    } catch(e) {
+      console.log('Claim error:', e);
+      document.getElementById('rewardOverlay')?.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  });
+
+  // Collect button
+  document.getElementById('rewardCollectBtn')?.addEventListener('click', () => {
+    const overlay = document.getElementById('rewardOverlay');
+    if (overlay) {
+      overlay.style.animation = 'rewardFadeIn 0.3s ease reverse';
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+        overlay.style.animation = '';
+        document.body.style.overflow = '';
+      }, 300);
+    }
+  });
+
+  // Check reward after user data loads
+  const origHydrate = window._rewardHydrateHook;
+  window._rewardHydrateHook = (user) => {
+    if (origHydrate) origHydrate(user);
+    setTimeout(checkReward, 1000);
+  };
+
+  // Also check on load if tg_id already set
+  setTimeout(() => {
+    if (state.tg_id) checkReward();
+  }, 2000);
+})();

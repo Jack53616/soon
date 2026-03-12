@@ -439,6 +439,36 @@
 </div>
   <audio id="sndNotify" src="./notify.mp3" preload="auto"></audio>
 
+  <!-- Reward Box Overlay -->
+  <div id="rewardOverlay" class="reward-overlay hidden">
+    <div class="reward-particles" id="rewardParticles"></div>
+    <div class="reward-box-container" id="rewardBoxContainer">
+      <!-- Unopened State -->
+      <div class="reward-box-unopened" id="rewardBoxUnopened">
+        <div class="reward-glow"></div>
+        <div class="reward-box">
+          <div class="reward-box-lid">
+            <div class="reward-ribbon"></div>
+          </div>
+          <div class="reward-box-body">
+            <div class="reward-question">?</div>
+          </div>
+        </div>
+        <p class="reward-tap-text" data-i18n="rewardTap"></p>
+      </div>
+      <!-- Opened State -->
+      <div class="reward-box-opened hidden" id="rewardBoxOpened">
+        <div class="reward-coins" id="rewardCoins"></div>
+        <div class="reward-amount-display">
+          <span class="reward-plus">+</span>
+          <span class="reward-amount" id="rewardAmountText">$0.00</span>
+        </div>
+        <p class="reward-congrats" id="rewardCongratsText"></p>
+        <button class="reward-collect-btn" id="rewardCollectBtn" data-i18n="rewardCollect"></button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="./app.js"></script>
 </body>
 </html>

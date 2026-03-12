@@ -50,11 +50,23 @@ app.get("/health", (req, res) => {
   res.json({ ok: true, status: "running", timestamp: new Date().toISOString() });
 });
 
-// Maintenance status check
+// Maintenance status check (supports whitelist bypass)
 app.get("/api/settings/maintenance", async (req, res) => {
   try {
     const result = await pool.query("SELECT value FROM settings WHERE key = 'maintenance_mode'");
     const maintenance = result.rows.length > 0 && result.rows[0].value === 'true';
+    
+    // If maintenance is on, check if user is whitelisted
+    if (maintenance && req.query.tg_id) {
+      const wlResult = await pool.query("SELECT value FROM settings WHERE key = 'maintenance_whitelist'");
+      if (wlResult.rows.length > 0) {
+        const whitelist = (wlResult.rows[0].value || '').split(',').map(s => s.trim());
+        if (whitelist.includes(String(req.query.tg_id))) {
+          return res.json({ ok: true, maintenance: false, whitelisted: true });
+        }
+      }
+    }
+    
     res.json({ ok: true, maintenance });
   } catch (error) {
     res.json({ ok: true, maintenance: false });
@@ -78,6 +90,65 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/supervisor", supervisorRoutes);
 app.use("/api/agent", agentRoutes);
+
+// ===== Reward System API =====
+// Check if there's an active reward for user
+app.get("/api/reward/check", async (req, res) => {
+  try {
+    const tgId = req.query.tg_id;
+    if (!tgId) return res.json({ ok: false, error: 'Missing tg_id' });
+
+    const result = await pool.query("SELECT value FROM settings WHERE key = 'active_reward'");
+    if (result.rows.length === 0) return res.json({ ok: true, hasReward: false });
+
+    const reward = JSON.parse(result.rows[0].value);
+    if (!reward.active) return res.json({ ok: true, hasReward: false });
+
+    // Check if user already claimed
+    if (reward.claimed && reward.claimed.includes(String(tgId))) {
+      return res.json({ ok: true, hasReward: false, alreadyClaimed: true });
+    }
+
+    res.json({ ok: true, hasReward: true, rewardId: reward.id, amount: reward.perUser });
+  } catch (error) {
+    res.json({ ok: false, error: error.message });
+  }
+});
+
+// Claim reward
+app.post("/api/reward/claim", async (req, res) => {
+  try {
+    const { tg_id } = req.body;
+    if (!tg_id) return res.json({ ok: false, error: 'Missing tg_id' });
+
+    const result = await pool.query("SELECT value FROM settings WHERE key = 'active_reward'");
+    if (result.rows.length === 0) return res.json({ ok: false, error: 'No active reward' });
+
+    const reward = JSON.parse(result.rows[0].value);
+    if (!reward.active) return res.json({ ok: false, error: 'Reward expired' });
+
+    // Check if already claimed
+    if (reward.claimed && reward.claimed.includes(String(tg_id))) {
+      return res.json({ ok: false, error: 'Already claimed' });
+    }
+
+    // Add balance to user
+    const userResult = await pool.query("SELECT id, balance FROM users WHERE tg_id = $1", [tg_id]);
+    if (userResult.rows.length === 0) return res.json({ ok: false, error: 'User not found' });
+
+    const newBalance = Number(userResult.rows[0].balance) + reward.perUser;
+    await pool.query("UPDATE users SET balance = $1 WHERE tg_id = $2", [newBalance, tg_id]);
+
+    // Mark as claimed
+    if (!reward.claimed) reward.claimed = [];
+    reward.claimed.push(String(tg_id));
+    await pool.query("UPDATE settings SET value = $1, updated_at = NOW() WHERE key = 'active_reward'", [JSON.stringify(reward)]);
+
+    res.json({ ok: true, amount: reward.perUser, newBalance });
+  } catch (error) {
+    res.json({ ok: false, error: error.message });
+  }
+});
 
 // Get user statistics (Direct endpoint for frontend)
 app.get("/api/stats/:tg_id", async (req, res) => {

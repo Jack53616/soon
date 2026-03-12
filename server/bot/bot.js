@@ -413,6 +413,18 @@ bot.onText(/^\/help$/, (msg) => {
 
 🤝 *Referral System*
 \`/refstats\` - View referral statistics
+
+🎁 *Rewards System*
+\`/reward <amount>\` - Distribute reward to all users
+\`/reward_status\` - View active reward status
+\`/reward_cancel\` - Cancel active reward
+
+🔧 *Maintenance*
+\`/maintenance\` - Enable maintenance mode
+\`/endmaintenance\` - Disable maintenance mode
+\`/maint_allow <tg_id>\` - Whitelist user during maintenance
+\`/maint_remove <tg_id>\` - Remove from whitelist
+\`/maint_list\` - View whitelist
   `.trim(), { parse_mode: "Markdown" });
 });
 
@@ -878,9 +890,60 @@ bot.onText(/^\/maintenance$/, async (msg) => {
   try {
     await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'true') 
              ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
-    bot.sendMessage(msg.chat.id, `🔧 *تم تفعيل وضع الصيانة*\n\n⚠️ المستخدمون سيرون شاشة الصيانة عند فتح التطبيق.\n\n✅ لإنهاء الصيانة: /endmaintenance`, { parse_mode: "Markdown" });
+    bot.sendMessage(msg.chat.id, `🔧 *تم تفعيل وضع الصيانة*\n\n⚠️ المستخدمون سيرون شاشة الصيانة عند فتح التطبيق.\n\n📝 لإضافة أيدي مستثنى: /maint\\_allow <tg\\_id>\n📝 لإزالة أيدي: /maint\\_remove <tg\\_id>\n📋 لعرض القائمة: /maint\\_list\n✅ لإنهاء الصيانة: /endmaintenance`, { parse_mode: "Markdown" });
   } catch (e) {
     bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
+// ===== /maint_allow <tg_id> - إضافة أيدي لقائمة الاستثناء =====
+bot.onText(/^\/maint_allow\s+(\d+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tgId = m[1];
+  try {
+    const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_whitelist'`);
+    let whitelist = result.rows.length > 0 ? (result.rows[0].value || '').split(',').filter(s => s.trim()) : [];
+    if (!whitelist.includes(tgId)) whitelist.push(tgId);
+    const newValue = whitelist.join(',');
+    await q(`INSERT INTO settings (key, value) VALUES ('maintenance_whitelist', $1) 
+             ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`, [newValue]);
+    bot.sendMessage(msg.chat.id, `✅ *تم إضافة الأيدي لقائمة الاستثناء*\n\n👤 tg\_id: ${tgId}\n📋 القائمة الحالية: ${whitelist.join(', ')}\n\nℹ️ هذا المستخدم سيفتح عنده البوت بشكل طبيعي حتى أثناء الصيانة.`, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
+  }
+});
+
+// ===== /maint_remove <tg_id> - إزالة أيدي من قائمة الاستثناء =====
+bot.onText(/^\/maint_remove\s+(\d+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tgId = m[1];
+  try {
+    const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_whitelist'`);
+    let whitelist = result.rows.length > 0 ? (result.rows[0].value || '').split(',').filter(s => s.trim()) : [];
+    whitelist = whitelist.filter(id => id !== tgId);
+    const newValue = whitelist.join(',');
+    await q(`INSERT INTO settings (key, value) VALUES ('maintenance_whitelist', $1) 
+             ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`, [newValue]);
+    bot.sendMessage(msg.chat.id, `✅ *تم إزالة الأيدي من قائمة الاستثناء*\n\n👤 tg\_id: ${tgId}\n📋 القائمة الحالية: ${whitelist.length > 0 ? whitelist.join(', ') : 'فارغة'}`, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
+  }
+});
+
+// ===== /maint_list - عرض قائمة الاستثناء =====
+bot.onText(/^\/maint_list$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_whitelist'`);
+    const whitelist = result.rows.length > 0 ? (result.rows[0].value || '').split(',').filter(s => s.trim()) : [];
+    if (whitelist.length === 0) {
+      bot.sendMessage(msg.chat.id, `📋 *قائمة استثناء الصيانة*\n\nلا يوجد أيديات مستثناة.`, { parse_mode: 'Markdown' });
+    } else {
+      const list = whitelist.map((id, i) => `${i + 1}. \`${id}\``).join('\n');
+      bot.sendMessage(msg.chat.id, `📋 *قائمة استثناء الصيانة*\n\n${list}\n\nℹ️ هؤلاء المستخدمون يفتح عندهم البوت طبيعي أثناء الصيانة.`, { parse_mode: 'Markdown' });
+    }
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
   }
 });
 
@@ -929,6 +992,82 @@ bot.onText(/^\/startbot$/, async (msg) => {
     bot.sendMessage(msg.chat.id, `✅ *تم تشغيل البوت*\n\n🚀 البوت يعمل بشكل طبيعي الآن.`, { parse_mode: "Markdown" });
   } catch (e) {
     bot.sendMessage(msg.chat.id, "❌ Error: " + e.message);
+  }
+});
+
+// ===== نظام المكافآت =====
+// /reward <amount> - توزيع مكافأة على جميع المستخدمين
+bot.onText(/^\/reward\s+([\d.]+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const totalAmount = parseFloat(m[1]);
+  if (isNaN(totalAmount) || totalAmount <= 0) {
+    return bot.sendMessage(msg.chat.id, '❌ المبلغ غير صحيح.');
+  }
+
+  try {
+    // Get all active users
+    const usersResult = await q(`SELECT id, tg_id, name, first_name FROM users WHERE is_active = true`);
+    const users = usersResult.rows;
+    if (users.length === 0) {
+      return bot.sendMessage(msg.chat.id, '❌ لا يوجد مستخدمين نشطين.');
+    }
+
+    const perUser = Number((totalAmount / users.length).toFixed(2));
+    const rewardId = Date.now().toString(36);
+
+    // Create reward record in settings as JSON
+    const rewardData = JSON.stringify({
+      id: rewardId,
+      totalAmount,
+      perUser,
+      totalUsers: users.length,
+      claimed: [],
+      createdAt: new Date().toISOString(),
+      active: true
+    });
+
+    await q(`INSERT INTO settings (key, value) VALUES ('active_reward', $1)
+             ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`, [rewardData]);
+
+    bot.sendMessage(msg.chat.id, `🎁 *تم إنشاء المكافأة بنجاح!*\n\n💰 المبلغ الإجمالي: $${totalAmount}\n👥 عدد المستخدمين: ${users.length}\n💵 لكل مستخدم: $${perUser}\n🆔 رقم المكافأة: ${rewardId}\n\n✨ المستخدمون سيرون صندوق "افتح واربح" عند فتح البوت.\n\n📋 /reward\\_status - عرض الحالة\n❌ /reward\\_cancel - إلغاء`, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
+  }
+});
+
+// /reward_status - عرض حالة المكافأة
+bot.onText(/^\/reward_status$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    const result = await q(`SELECT value FROM settings WHERE key = 'active_reward'`);
+    if (result.rows.length === 0) {
+      return bot.sendMessage(msg.chat.id, '📋 لا توجد مكافأة نشطة حالياً.');
+    }
+    const reward = JSON.parse(result.rows[0].value);
+    if (!reward.active) {
+      return bot.sendMessage(msg.chat.id, '📋 لا توجد مكافأة نشطة حالياً.');
+    }
+    const claimed = reward.claimed ? reward.claimed.length : 0;
+    bot.sendMessage(msg.chat.id, `🎁 *حالة المكافأة*\n\n🆔 الرقم: ${reward.id}\n💰 المبلغ الإجمالي: $${reward.totalAmount}\n💵 لكل مستخدم: $${reward.perUser}\n👥 إجمالي المستخدمين: ${reward.totalUsers}\n✅ فتحوا الصندوق: ${claimed}/${reward.totalUsers}\n📅 تاريخ الإنشاء: ${new Date(reward.createdAt).toLocaleString('ar')}`, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
+  }
+});
+
+// /reward_cancel - إلغاء المكافأة
+bot.onText(/^\/reward_cancel$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+  try {
+    const result = await q(`SELECT value FROM settings WHERE key = 'active_reward'`);
+    if (result.rows.length === 0) {
+      return bot.sendMessage(msg.chat.id, '❌ لا توجد مكافأة نشطة لإلغائها.');
+    }
+    const reward = JSON.parse(result.rows[0].value);
+    reward.active = false;
+    await q(`UPDATE settings SET value = $1, updated_at = NOW() WHERE key = 'active_reward'`, [JSON.stringify(reward)]);
+    bot.sendMessage(msg.chat.id, `✅ *تم إلغاء المكافأة*\n\n🆔 ${reward.id}\n✅ فتحوا: ${reward.claimed?.length || 0}/${reward.totalUsers}`, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
   }
 });
 
