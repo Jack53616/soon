@@ -370,67 +370,21 @@ function getRankLabel(rank, lang = 'ar') {
 }
 
 // ===== أوامر الأدمن =====
+// ===== Admin Panel with Interactive Buttons =====
 bot.onText(/^\/help$/, (msg) => {
   if (!isAdmin(msg)) return;
-  bot.sendMessage(msg.chat.id, `
-⚙️ *Admin Dashboard v3.1*
-
-👥 *User Management*
-\`/addbalance <tg_id> <amount>\` - Add/Deduct balance
-\`/silentadd <tg_id> <amount>\` - Silent Add (No notify)
-\`/removebalance <tg_id> <amount>\` - Silent deduct (Max to 0)
-\`/zerobalance <tg_id>\` - Force reset to $0
-\`/setmoney <tg_id> <amount>\` - Migration deposit
-\`/setstats <tg_id> <wins> <losses>\` - Add manual stats
-\`/resetstats <tg_id>\` - Reset manual stats
-\`/create_key <KEY> <DAYS>\` - Create subscription key
-
-🎖️ *Rank Management*
-\`/setrank <tg_id> <rank>\` - Set user rank
-  Ranks: member | agent | gold_agent | partner
-\`/clearrank <tg_id>\` - Reset to member
-\`/userinfo <tg_id>\` - View user rank & info
-
-📊 *Trading Operations*
-\`/open <tg_id> <hours> <target>\` - Open smart trade
-\`/close_trade <trade_id> <pnl>\` - Force close trade
-\`/setdaily <tg_id> <amount>\` - Set daily profit target
-
-⛔ *Ban Management*
-\`/ban <tg_id> <reason>\` - Ban user with reason
-\`/unban <tg_id>\` - Unban user
-
-💰 *Withdrawals*
-\`/approve_withdraw <id>\` - Approve request
-\`/reject_withdraw <id> <reason>\` - Reject request
-\`/stopwithdraw\` - إيقاف السحب (صيانة)
-\`/startwithdraw\` - تشغيل السحب
-\`/withdrawstatus\` - حالة السحب
-
-📣 *Communication*
-\`/broadcast all <message>\` - Send to all users
-\`/notify <tg_id> <message>\` - Send private message
-
-🤝 *Referral System*
-\`/refstats\` - View referral statistics
-
-🎁 *Rewards System*
-\`/reward <amount>\` - Distribute reward to all users
-\`/reward_send <tg_id> <amount>\` - Send reward to specific user
-\`/reward_status\` - View active reward status
-\`/reward_cancel\` - Cancel active reward
-
-🔐 *Session Management*
-\`/logout <tg_id>\` - Logout user from all devices
-\`/logout_all\` - Logout ALL users from all devices
-
-🔧 *Maintenance*
-\`/maintenance\` - Enable maintenance mode
-\`/endmaintenance\` - Disable maintenance mode
-\`/maint_allow <tg_id>\` - Whitelist user during maintenance
-\`/maint_remove <tg_id>\` - Remove from whitelist
-\`/maint_list\` - View whitelist
-  `.trim(), { parse_mode: "Markdown" });
+  bot.sendMessage(msg.chat.id, `⚙️ *لوحة التحكم - Admin Dashboard v4.0*\n\nاختر القسم المطلوب:`, {
+    parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '👥 إدارة المستخدمين', callback_data: 'panel_users' }, { text: '🎖️ الرتب', callback_data: 'panel_ranks' }],
+        [{ text: '📊 التداول', callback_data: 'panel_trades' }, { text: '⛔ الحظر', callback_data: 'panel_ban' }],
+        [{ text: '💰 السحب', callback_data: 'panel_withdraw' }, { text: '📣 التواصل', callback_data: 'panel_comm' }],
+        [{ text: '🎁 المكافآت', callback_data: 'panel_rewards' }, { text: '🔐 الجلسات', callback_data: 'panel_sessions' }],
+        [{ text: '🔧 الصيانة', callback_data: 'panel_maintenance' }, { text: '🤝 الإحالات', callback_data: 'panel_referrals' }]
+      ]
+    }
+  });
 });
 
 // ===== /setrank <tg_id> <rank> =====
@@ -1159,6 +1113,370 @@ bot.onText(/^\/logout_all$/, async (msg) => {
     bot.sendMessage(msg.chat.id, `🔐 *تم تسجيل خروج الجميع!*\n\n👥 عدد المستخدمين: ${count}\n\n✅ تم تسجيل خروج جميع المستخدمين من جميع الأجهزة.\nسيحتاجون إعادة تسجيل الدخول بالمفتاح.`, { parse_mode: 'Markdown' });
   } catch (e) {
     bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
+  }
+});
+
+// ===== Admin Panel Callback Handlers =====
+// Store pending admin actions (waiting for user input)
+const adminPending = {};
+
+bot.on('callback_query', async (callbackQuery) => {
+  const msg = callbackQuery.message;
+  const chatId = msg.chat.id;
+  const data = callbackQuery.data;
+  
+  // Only admin can use panel
+  if (String(chatId) !== String(ADMIN_ID)) {
+    return bot.answerCallbackQuery(callbackQuery.id, { text: '⛔ غير مصرح' });
+  }
+
+  bot.answerCallbackQuery(callbackQuery.id);
+
+  const backBtn = [[{ text: '◀️ رجوع للوحة', callback_data: 'panel_back' }]];
+
+  // ===== Main Panel Sections =====
+  if (data === 'panel_back') {
+    return bot.editMessageText(`⚙️ *لوحة التحكم - Admin Dashboard v4.0*\n\nاختر القسم المطلوب:`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '👥 إدارة المستخدمين', callback_data: 'panel_users' }, { text: '🎖️ الرتب', callback_data: 'panel_ranks' }],
+          [{ text: '📊 التداول', callback_data: 'panel_trades' }, { text: '⛔ الحظر', callback_data: 'panel_ban' }],
+          [{ text: '💰 السحب', callback_data: 'panel_withdraw' }, { text: '📣 التواصل', callback_data: 'panel_comm' }],
+          [{ text: '🎁 المكافآت', callback_data: 'panel_rewards' }, { text: '🔐 الجلسات', callback_data: 'panel_sessions' }],
+          [{ text: '🔧 الصيانة', callback_data: 'panel_maintenance' }, { text: '🤝 الإحالات', callback_data: 'panel_referrals' }]
+        ]
+      }
+    });
+  }
+
+  // ===== Users Section =====
+  if (data === 'panel_users') {
+    return bot.editMessageText(`👥 *إدارة المستخدمين*\n\nالأوامر المتاحة:\n\n\`/addbalance <tg_id> <amount>\` - إضافة رصيد\n\`/silentadd <tg_id> <amount>\` - إضافة صامتة\n\`/removebalance <tg_id> <amount>\` - خصم رصيد\n\`/zerobalance <tg_id>\` - تصفير الرصيد\n\`/setmoney <tg_id> <amount>\` - تحديد الرصيد\n\`/setstats <tg_id> <wins> <losses>\` - إضافة إحصائيات\n\`/resetstats <tg_id>\` - إعادة تعيين الإحصائيات\n\`/create_key <KEY> <DAYS>\` - إنشاء مفتاح\n\`/userinfo <tg_id>\` - معلومات المستخدم`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: backBtn }
+    });
+  }
+
+  // ===== Ranks Section =====
+  if (data === 'panel_ranks') {
+    return bot.editMessageText(`🎖️ *إدارة الرتب*\n\nالأوامر المتاحة:\n\n\`/setrank <tg_id> <rank>\` - تعيين الرتبة\n  الرتب: member | agent | gold\_agent | partner\n\`/clearrank <tg_id>\` - إعادة تعيين لعضو`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: backBtn }
+    });
+  }
+
+  // ===== Trades Section =====
+  if (data === 'panel_trades') {
+    return bot.editMessageText(`📊 *عمليات التداول*\n\nالأوامر المتاحة:\n\n\`/open <tg_id> <hours> <target>\` - فتح صفقة\n\`/close_trade <trade_id> <pnl>\` - إغلاق صفقة\n\`/setdaily <tg_id> <amount>\` - تحديد الربح اليومي`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: backBtn }
+    });
+  }
+
+  // ===== Ban Section =====
+  if (data === 'panel_ban') {
+    return bot.editMessageText(`⛔ *إدارة الحظر*\n\nالأوامر المتاحة:\n\n\`/ban <tg_id> <reason>\` - حظر مستخدم\n\`/unban <tg_id>\` - إلغاء الحظر`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: backBtn }
+    });
+  }
+
+  // ===== Communication Section =====
+  if (data === 'panel_comm') {
+    return bot.editMessageText(`📣 *التواصل*\n\nالأوامر المتاحة:\n\n\`/broadcast all <message>\` - إرسال للجميع\n\`/notify <tg_id> <message>\` - رسالة خاصة`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: backBtn }
+    });
+  }
+
+  // ===== Referrals Section =====
+  if (data === 'panel_referrals') {
+    return bot.editMessageText(`🤝 *نظام الإحالات*\n\nالأوامر المتاحة:\n\n\`/refstats\` - إحصائيات الإحالات`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: backBtn }
+    });
+  }
+
+  // ===== Withdraw Section =====
+  if (data === 'panel_withdraw') {
+    // Get current withdrawal status
+    let statusText = '✅ مفعّل';
+    try {
+      const result = await q(`SELECT value FROM settings WHERE key = 'withdrawal_enabled'`);
+      if (result.rows.length > 0 && result.rows[0].value === 'false') statusText = '🛑 متوقف';
+    } catch(e) {}
+
+    return bot.editMessageText(`💰 *إدارة السحب*\n\n📊 حالة السحب: ${statusText}\n\nالأوامر:\n\`/approve_withdraw <id>\` - موافقة\n\`/reject_withdraw <id> <reason>\` - رفض`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '⏸️ إيقاف السحب', callback_data: 'act_stopwithdraw' }, { text: '▶️ تشغيل السحب', callback_data: 'act_startwithdraw' }],
+          backBtn[0]
+        ]
+      }
+    });
+  }
+
+  // ===== Rewards Section =====
+  if (data === 'panel_rewards') {
+    // Get current reward status
+    let rewardInfo = 'لا توجد مكافأة نشطة';
+    try {
+      const result = await q(`SELECT value FROM settings WHERE key = 'active_reward'`);
+      if (result.rows.length > 0) {
+        const reward = JSON.parse(result.rows[0].value);
+        if (reward.active) {
+          const claimed = reward.claimed ? reward.claimed.length : 0;
+          rewardInfo = `✅ نشطة | $${reward.totalAmount} | فتحوا: ${claimed}/${reward.totalUsers}`;
+        }
+      }
+    } catch(e) {}
+
+    return bot.editMessageText(`🎁 *نظام المكافآت*\n\n📊 الحالة: ${rewardInfo}\n\nالأوامر:\n\`/reward <amount>\` - توزيع على الجميع\n\`/reward_send <tg_id> <amount>\` - إرسال لشخص معين`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🎁 توزيع مكافأة للجميع', callback_data: 'act_reward_all' }],
+          [{ text: '🎯 إرسال لشخص معين', callback_data: 'act_reward_send' }],
+          [{ text: '📊 حالة المكافأة', callback_data: 'act_reward_status' }, { text: '❌ إلغاء المكافأة', callback_data: 'act_reward_cancel' }],
+          backBtn[0]
+        ]
+      }
+    });
+  }
+
+  // ===== Sessions Section =====
+  if (data === 'panel_sessions') {
+    return bot.editMessageText(`🔐 *إدارة الجلسات*\n\nتسجيل خروج المستخدمين من جميع الأجهزة.\nسيحتاجون إعادة تسجيل الدخول بالمفتاح.\n\nالأوامر:\n\`/logout <tg_id>\` - خروج مستخدم معين`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🔐 خروج مستخدم معين', callback_data: 'act_logout_user' }],
+          [{ text: '🔴 خروج جميع المستخدمين', callback_data: 'act_logout_all' }],
+          backBtn[0]
+        ]
+      }
+    });
+  }
+
+  // ===== Maintenance Section =====
+  if (data === 'panel_maintenance') {
+    // Get current maintenance status
+    let maintStatus = '✅ البوت يعمل';
+    let wlList = 'لا يوجد';
+    try {
+      const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_mode'`);
+      if (result.rows.length > 0 && result.rows[0].value === 'true') maintStatus = '🔴 وضع الصيانة مفعل';
+      const wlResult = await q(`SELECT value FROM settings WHERE key = 'maintenance_whitelist'`);
+      if (wlResult.rows.length > 0 && wlResult.rows[0].value) {
+        const ids = wlResult.rows[0].value.split(',').filter(s => s.trim());
+        if (ids.length > 0) wlList = ids.join(', ');
+      }
+    } catch(e) {}
+
+    return bot.editMessageText(`🔧 *إدارة الصيانة*\n\n📊 الحالة: ${maintStatus}\n📄 القائمة البيضاء: ${wlList}\n\nالأوامر:\n\`/maint_allow <tg_id>\` - إضافة للقائمة البيضاء\n\`/maint_remove <tg_id>\` - إزالة من القائمة`, {
+      chat_id: chatId, message_id: msg.message_id, parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🔴 تفعيل الصيانة', callback_data: 'act_maint_on' }, { text: '🟢 إيقاف الصيانة', callback_data: 'act_maint_off' }],
+          [{ text: '➕ إضافة للقائمة البيضاء', callback_data: 'act_maint_allow' }],
+          [{ text: '➖ إزالة من القائمة', callback_data: 'act_maint_remove' }],
+          [{ text: '📋 عرض القائمة', callback_data: 'act_maint_list' }],
+          backBtn[0]
+        ]
+      }
+    });
+  }
+
+  // ===== ACTION HANDLERS =====
+
+  // -- Withdraw actions --
+  if (data === 'act_stopwithdraw') {
+    try {
+      await q(`INSERT INTO settings (key, value) VALUES ('withdrawal_enabled', 'false') ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
+      bot.sendMessage(chatId, '⏸️ *تم إيقاف السحب*\n\nجميع طلبات السحب الجديدة ستُرفض تلقائياً.', { parse_mode: 'Markdown' });
+    } catch(e) { bot.sendMessage(chatId, '❌ Error: ' + e.message); }
+  }
+
+  if (data === 'act_startwithdraw') {
+    try {
+      await q(`INSERT INTO settings (key, value) VALUES ('withdrawal_enabled', 'true') ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
+      bot.sendMessage(chatId, '▶️ *تم تشغيل السحب*\n\nالمستخدمون يقدرون يسحبون الحين.', { parse_mode: 'Markdown' });
+    } catch(e) { bot.sendMessage(chatId, '❌ Error: ' + e.message); }
+  }
+
+  // -- Reward actions --
+  if (data === 'act_reward_all') {
+    adminPending[chatId] = { action: 'reward_all' };
+    return bot.sendMessage(chatId, '🎁 *توزيع مكافأة للجميع*\n\nأرسل المبلغ الإجمالي:\nمثال: `1000`', { parse_mode: 'Markdown' });
+  }
+
+  if (data === 'act_reward_send') {
+    adminPending[chatId] = { action: 'reward_send' };
+    return bot.sendMessage(chatId, '🎯 *إرسال مكافأة لشخص معين*\n\nأرسل الأيدي والمبلغ:\nمثال: `123456 50`', { parse_mode: 'Markdown' });
+  }
+
+  if (data === 'act_reward_status') {
+    try {
+      const result = await q(`SELECT value FROM settings WHERE key = 'active_reward'`);
+      if (result.rows.length === 0) return bot.sendMessage(chatId, '📋 لا توجد مكافأة نشطة حالياً.');
+      const reward = JSON.parse(result.rows[0].value);
+      if (!reward.active) return bot.sendMessage(chatId, '📋 لا توجد مكافأة نشطة حالياً.');
+      const claimed = reward.claimed ? reward.claimed.length : 0;
+      bot.sendMessage(chatId, `🎁 *حالة المكافأة*\n\n🆔 الرقم: ${reward.id}\n💰 المبلغ: $${reward.totalAmount}\n💵 لكل مستخدم: $${reward.perUser}\n👥 الإجمالي: ${reward.totalUsers}\n✅ فتحوا: ${claimed}/${reward.totalUsers}\n📅 التاريخ: ${new Date(reward.createdAt).toLocaleString('ar')}`, { parse_mode: 'Markdown' });
+    } catch(e) { bot.sendMessage(chatId, '❌ Error: ' + e.message); }
+  }
+
+  if (data === 'act_reward_cancel') {
+    try {
+      const result = await q(`SELECT value FROM settings WHERE key = 'active_reward'`);
+      if (result.rows.length === 0) return bot.sendMessage(chatId, '❌ لا توجد مكافأة نشطة لإلغائها.');
+      const reward = JSON.parse(result.rows[0].value);
+      reward.active = false;
+      await q(`UPDATE settings SET value = $1, updated_at = NOW() WHERE key = 'active_reward'`, [JSON.stringify(reward)]);
+      bot.sendMessage(chatId, `✅ *تم إلغاء المكافأة*\n\n🆔 ${reward.id}\n✅ فتحوا: ${reward.claimed?.length || 0}/${reward.totalUsers}`, { parse_mode: 'Markdown' });
+    } catch(e) { bot.sendMessage(chatId, '❌ Error: ' + e.message); }
+  }
+
+  // -- Session actions --
+  if (data === 'act_logout_user') {
+    adminPending[chatId] = { action: 'logout_user' };
+    return bot.sendMessage(chatId, '🔐 *تسجيل خروج مستخدم*\n\nأرسل الأيدي (tg\_id):\nمثال: `123456`', { parse_mode: 'Markdown' });
+  }
+
+  if (data === 'act_logout_all') {
+    try {
+      const result = await q(`SELECT COUNT(*) as cnt FROM users WHERE is_active = true`);
+      const count = result.rows[0].cnt;
+      await q(`UPDATE users SET session_token = CONCAT(EXTRACT(EPOCH FROM NOW())::text, '_', MD5(RANDOM()::text)), updated_at = NOW() WHERE is_active = true`);
+      bot.sendMessage(chatId, `🔐 *تم تسجيل خروج الجميع!*\n\n👥 عدد المستخدمين: ${count}\n✅ تم تسجيل خروج الجميع من جميع الأجهزة.`, { parse_mode: 'Markdown' });
+    } catch(e) { bot.sendMessage(chatId, '❌ Error: ' + e.message); }
+  }
+
+  // -- Maintenance actions --
+  if (data === 'act_maint_on') {
+    try {
+      await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'true') ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = NOW()`);
+      bot.sendMessage(chatId, '🔴 *تم تفعيل وضع الصيانة*\n\nالمستخدمون سيرون شاشة الصيانة (ما عدا القائمة البيضاء).', { parse_mode: 'Markdown' });
+    } catch(e) { bot.sendMessage(chatId, '❌ Error: ' + e.message); }
+  }
+
+  if (data === 'act_maint_off') {
+    try {
+      await q(`INSERT INTO settings (key, value) VALUES ('maintenance_mode', 'false') ON CONFLICT (key) DO UPDATE SET value = 'false', updated_at = NOW()`);
+      bot.sendMessage(chatId, '🟢 *تم إيقاف وضع الصيانة*\n\nالبوت يعمل بشكل طبيعي الحين.', { parse_mode: 'Markdown' });
+    } catch(e) { bot.sendMessage(chatId, '❌ Error: ' + e.message); }
+  }
+
+  if (data === 'act_maint_allow') {
+    adminPending[chatId] = { action: 'maint_allow' };
+    return bot.sendMessage(chatId, '➕ *إضافة للقائمة البيضاء*\n\nأرسل الأيدي (tg\_id):\nمثال: `123456`', { parse_mode: 'Markdown' });
+  }
+
+  if (data === 'act_maint_remove') {
+    adminPending[chatId] = { action: 'maint_remove' };
+    return bot.sendMessage(chatId, '➖ *إزالة من القائمة البيضاء*\n\nأرسل الأيدي (tg\_id):\nمثال: `123456`', { parse_mode: 'Markdown' });
+  }
+
+  if (data === 'act_maint_list') {
+    try {
+      const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_whitelist'`);
+      if (result.rows.length === 0 || !result.rows[0].value) {
+        return bot.sendMessage(chatId, '📋 القائمة البيضاء فارغة.');
+      }
+      const ids = result.rows[0].value.split(',').filter(s => s.trim());
+      if (ids.length === 0) return bot.sendMessage(chatId, '📋 القائمة البيضاء فارغة.');
+      bot.sendMessage(chatId, `📋 *القائمة البيضاء (${ids.length}):*\n\n${ids.map((id, i) => `${i+1}. \`${id.trim()}\``).join('\n')}`, { parse_mode: 'Markdown' });
+    } catch(e) { bot.sendMessage(chatId, '❌ Error: ' + e.message); }
+  }
+});
+
+// ===== Handle pending admin input (text messages after button press) =====
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
+  if (String(chatId) !== String(ADMIN_ID)) return;
+  if (!adminPending[chatId]) return;
+  if (msg.text && msg.text.startsWith('/')) { delete adminPending[chatId]; return; } // Cancel on command
+
+  const pending = adminPending[chatId];
+  const text = (msg.text || '').trim();
+  delete adminPending[chatId];
+
+  try {
+    // -- Reward All --
+    if (pending.action === 'reward_all') {
+      const totalAmount = parseFloat(text);
+      if (isNaN(totalAmount) || totalAmount <= 0) return bot.sendMessage(chatId, '❌ المبلغ غير صحيح.');
+      const usersResult = await q(`SELECT id, tg_id FROM users WHERE is_active = true`);
+      const users = usersResult.rows;
+      if (users.length === 0) return bot.sendMessage(chatId, '❌ لا يوجد مستخدمين نشطين.');
+      const perUser = Number((totalAmount / users.length).toFixed(2));
+      const rewardId = Date.now().toString(36);
+      const rewardData = JSON.stringify({ id: rewardId, totalAmount, perUser, totalUsers: users.length, claimed: [], createdAt: new Date().toISOString(), active: true });
+      await q(`INSERT INTO settings (key, value) VALUES ('active_reward', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`, [rewardData]);
+      bot.sendMessage(chatId, `🎁 *تم إنشاء المكافأة!*\n\n💰 المبلغ: $${totalAmount}\n👥 المستخدمين: ${users.length}\n💵 لكل واحد: $${perUser}`, { parse_mode: 'Markdown' });
+    }
+
+    // -- Reward Send --
+    if (pending.action === 'reward_send') {
+      const parts = text.split(/\s+/);
+      if (parts.length < 2) return bot.sendMessage(chatId, '❌ الصيغة: الأيدي المبلغ\nمثال: 123456 50');
+      const tgId = parts[0];
+      const amount = parseFloat(parts[1]);
+      if (isNaN(amount) || amount <= 0) return bot.sendMessage(chatId, '❌ المبلغ غير صحيح.');
+      const userResult = await q(`SELECT id, name, first_name FROM users WHERE tg_id = $1`, [tgId]);
+      if (userResult.rows.length === 0) return bot.sendMessage(chatId, `❌ المستخدم ${tgId} غير موجود.`);
+      const user = userResult.rows[0];
+      const rewardId = 'p_' + Date.now().toString(36);
+      const rewardData = JSON.stringify({ id: rewardId, totalAmount: amount, perUser: amount, totalUsers: 1, targetUser: String(tgId), claimed: [], createdAt: new Date().toISOString(), active: true, isPersonal: true });
+      await q(`INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`, [`personal_reward_${tgId}`, rewardData]);
+      const userName = user.name || user.first_name || tgId;
+      bot.sendMessage(chatId, `🎁 *تم إرسال المكافأة!*\n\n👤 ${userName} (${tgId})\n💰 $${amount}`, { parse_mode: 'Markdown' });
+    }
+
+    // -- Logout User --
+    if (pending.action === 'logout_user') {
+      const tgId = text.trim();
+      if (!tgId || isNaN(tgId)) return bot.sendMessage(chatId, '❌ أيدي غير صحيح.');
+      const userResult = await q(`SELECT id, name, first_name FROM users WHERE tg_id = $1`, [tgId]);
+      if (userResult.rows.length === 0) return bot.sendMessage(chatId, `❌ المستخدم ${tgId} غير موجود.`);
+      const newToken = Date.now().toString(36) + Math.random().toString(36).slice(2);
+      await q(`UPDATE users SET session_token = $1, updated_at = NOW() WHERE tg_id = $2`, [newToken, tgId]);
+      const userName = userResult.rows[0].name || userResult.rows[0].first_name || tgId;
+      bot.sendMessage(chatId, `🔐 *تم تسجيل الخروج*\n\n👤 ${userName} (${tgId})\n✅ تم تسجيل خروجه من جميع الأجهزة.`, { parse_mode: 'Markdown' });
+    }
+
+    // -- Maintenance Allow --
+    if (pending.action === 'maint_allow') {
+      const tgId = text.trim();
+      if (!tgId || isNaN(tgId)) return bot.sendMessage(chatId, '❌ أيدي غير صحيح.');
+      const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_whitelist'`);
+      let whitelist = result.rows.length > 0 ? (result.rows[0].value || '') : '';
+      const ids = whitelist.split(',').map(s => s.trim()).filter(Boolean);
+      if (ids.includes(tgId)) return bot.sendMessage(chatId, `ℹ️ الأيدي ${tgId} موجود مسبقاً في القائمة.`);
+      ids.push(tgId);
+      const newList = ids.join(',');
+      await q(`INSERT INTO settings (key, value) VALUES ('maintenance_whitelist', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`, [newList]);
+      bot.sendMessage(chatId, `✅ *تم إضافة ${tgId} للقائمة البيضاء*\n\nالقائمة الحالية: ${ids.join(', ')}`, { parse_mode: 'Markdown' });
+    }
+
+    // -- Maintenance Remove --
+    if (pending.action === 'maint_remove') {
+      const tgId = text.trim();
+      if (!tgId || isNaN(tgId)) return bot.sendMessage(chatId, '❌ أيدي غير صحيح.');
+      const result = await q(`SELECT value FROM settings WHERE key = 'maintenance_whitelist'`);
+      let whitelist = result.rows.length > 0 ? (result.rows[0].value || '') : '';
+      const ids = whitelist.split(',').map(s => s.trim()).filter(Boolean);
+      if (!ids.includes(tgId)) return bot.sendMessage(chatId, `❌ الأيدي ${tgId} غير موجود في القائمة.`);
+      const newIds = ids.filter(id => id !== tgId);
+      const newList = newIds.join(',');
+      await q(`INSERT INTO settings (key, value) VALUES ('maintenance_whitelist', $1) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = NOW()`, [newList]);
+      bot.sendMessage(chatId, `✅ *تم إزالة ${tgId} من القائمة البيضاء*\n\nالقائمة الحالية: ${newIds.length > 0 ? newIds.join(', ') : 'فارغة'}`, { parse_mode: 'Markdown' });
+    }
+
+  } catch(e) {
+    bot.sendMessage(chatId, '❌ Error: ' + e.message);
   }
 });
 
