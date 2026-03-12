@@ -925,16 +925,17 @@ function showWithdrawSuccess(amount) {
   };
 }
 
-$("#whatsapp").onclick = ()=> window.open("https://wa.me/18259710501","_blank");
+$("#whatsapp").onclick = ()=> window.open("https://wa.me/message/P6BBPSDL2CC4D1","_blank");
 
 function hydrateUser(user){
   if(!user) return;
   const balance = Number(user.balance || 0);
   
-  $("#balance").textContent = "$" + balance.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  $("#balance").textContent = "$" + balance.toFixed(2);
   $("#subLeft").textContent = user.sub_expires ? new Date(user.sub_expires).toLocaleDateString() : "—";
   
   // pnlDay and pnlMonth are updated by loadHomeStats() from real API data
+  // Only set them here if stats haven't loaded yet
   if (!state.homeStatsLoaded) {
     $("#pnlDay").textContent = "$0.00";
     $("#pnlMonth").textContent = "$0.00";
@@ -950,44 +951,28 @@ function hydrateUser(user){
   if(spName) spName.textContent = name || "—";
   if(spEmail) spEmail.textContent = email || "—";
 
-  // Welcome text
-  const welcomeEl = $("#welcomeUser");
-  if(welcomeEl) welcomeEl.textContent = `Welcome, ${name || 'Trader'}`;
-
-  // ===== Rank Display (Premium Badge) =====
-  const rankIconMap = {
-    'عضو': '👤', 'وكيل': '⭐', 'وكيل ذهبي': '👑', 'شريك': '💎',
-    'Member': '👤', 'Agent': '⭐', 'Gold Agent': '👑', 'Partner': '💎', 'VIP': '🏆'
+  // ===== Rank Display (uses display_rank from server) =====
+  const rankColorMap = {
+    'عضو': '#ffd700',
+    'وكيل': '#58a6ff',
+    'وكيل ذهبي': '#ffd700',
+    'شريك': '#a371f7',
+    'Member': '#ffd700',
+    'Agent': '#58a6ff',
+    'Gold Agent': '#ffd700',
+    'Partner': '#a371f7'
   };
+  // Server sends display_rank which handles custom_rank + referral count logic
   const displayRank = user.display_rank || (Number(user.referral_count || 0) >= 5 ? 'وكيل' : 'عضو');
-  const rankIcon = rankIconMap[displayRank] || '👤';
+  const rankColor = rankColorMap[displayRank] || '#58a6ff';
   const rankBadge = $("#userRankBadge");
   const spRank = $("#spUserRank");
-  if(rankBadge){
-    const iconEl = rankBadge.querySelector('.rank-icon');
-    const textEl = rankBadge.querySelector('.rank-text');
-    if(iconEl) iconEl.textContent = rankIcon;
-    if(textEl) textEl.textContent = displayRank;
-  }
-  if(spRank){ spRank.textContent = `${rankIcon} ${displayRank}`; spRank.style.color = '#ffd700'; }
+  if(rankBadge) rankBadge.textContent = displayRank;
+  if(spRank){ spRank.textContent = displayRank; spRank.style.color = rankColor; }
 
-  // Days in platform
-  const daysEl = $("#spDaysInPlatform");
-  if(daysEl){
-    const created = user.created_at ? new Date(user.created_at) : null;
-    if(created){
-      const days = Math.floor((Date.now() - created.getTime()) / 86400000);
-      daysEl.textContent = `${days} يوم`;
-    } else {
-      daysEl.textContent = "— يوم";
-    }
-  }
-
-  // Referral trade commission
-  const refCommEl = $("#refCommission");
+  // Show referral trade commission
+  const refCommEl = $("#refTradeCommission");
   if(refCommEl) refCommEl.textContent = `$${Number(user.referral_trade_commission || 0).toFixed(2)}`;
-  const refCommEl2 = $("#refTradeCommission");
-  if(refCommEl2) refCommEl2.textContent = `$${Number(user.referral_trade_commission || 0).toFixed(2)}`;
 
   // Update country flag
   if (window._hydrateCountryHook) window._hydrateCountryHook(user);
@@ -1252,11 +1237,7 @@ async function loadStats(){
   }
 }
 
-const names = [
-  "أحمد","محمد","خالد","سارة","رامي","نور","ليلى","وسيم","حسن","طارق",
-  "عمر","فاطمة","يوسف","مريم","علي","هند","ياسر","دانا","كريم","لينا",
-  "سلطان","ريم","فيصل","جنى","ماجد","روان","بدر","شهد","تركي","نوف"
-];
+const names = ["أحمد","محمد","خالد","سارة","رامي","نور","ليلى","وسيم","حسن","طارق"];
 function startFeed(){
   if(state.feedTimer) clearInterval(state.feedTimer);
   const feed = $("#feed");
@@ -1277,20 +1258,24 @@ function startFeed(){
     const r = Math.random();
     const name = names[Math.floor(Math.random()*names.length)];
     
-    const markets = ["XAUUSD","BTCUSD","ETHUSD","XAGUSD","EURUSD","GBPUSD"];
-    const m = markets[Math.floor(Math.random()*markets.length)];
     if(r < 0.25){
+      // Withdrawal (25%)
       const v = 50+Math.floor(Math.random()*200);
-      push(`💳 ${name} سحب $${v} بنجاح`);
+      push(`🪙 ${name} سحب ${v}$ بنجاح`);
     } else if(r < 0.55){
+      // Profit (30%)
       const v = 20+Math.floor(Math.random()*120);
-      push(`📈 ${name} ربح $${v} من ${m}`);
+      const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
+      push(`💰 ${name} ربح ${v}$ من صفقة ${m}`);
     } else if(r < 0.75){
+      // Loss (20%) - NEW
       const v = 10+Math.floor(Math.random()*80);
-      push(`📉 ${name} خسر $${v} في ${m}`);
+      const m = ["Gold","BTC","ETH","Silver"][Math.floor(Math.random()*4)];
+      push(`🔻 ${name} خسر ${v}$ في صفقة ${m}`);
     } else {
+      // New Deposit (25%)
       const v = 150+Math.floor(Math.random()*400);
-      push(`🆕 مستخدم جديد انضم وأودع $${v}`);
+      push(`🎉 مستخدم جديد انضم وأودع ${v}$`);
     }
   };
   

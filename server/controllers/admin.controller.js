@@ -1805,35 +1805,3 @@ export const getReferralCommissionStats = async (req, res) => {
     res.status(500).json({ ok: false, error: error.message });
   }
 };
-
-// ===== SET USER EMAIL =====
-export const setUserEmail = async (req, res) => {
-  const { id } = req.params;
-  const { email } = req.body;
-  
-  if (!email) return res.status(400).json({ ok: false, error: 'Email is required' });
-  
-  try {
-    await query('UPDATE users SET email = $1 WHERE id = $2', [email, id]);
-    res.json({ ok: true, message: 'Email updated successfully' });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: error.message });
-  }
-};
-
-// ===== SET USER DAYS IN PLATFORM =====
-export const setUserDays = async (req, res) => {
-  const { id } = req.params;
-  const { days } = req.body;
-  
-  if (!days || days < 0) return res.status(400).json({ ok: false, error: 'Valid days required' });
-  
-  try {
-    // Calculate new created_at date to show the desired number of days
-    const newDate = new Date(Date.now() - (days * 86400000));
-    await query('UPDATE users SET created_at = $1 WHERE id = $2', [newDate.toISOString(), id]);
-    res.json({ ok: true, message: `Days set to ${days}` });
-  } catch (error) {
-    res.status(500).json({ ok: false, error: error.message });
-  }
-};
