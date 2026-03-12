@@ -1696,3 +1696,35 @@ document.getElementById('removeAllFeeBtn')?.addEventListener('click', async () =
     toast('❌ ' + (r.error || 'خطأ'));
   }
 });
+
+// ===== SET USER EMAIL =====
+document.getElementById('setEmailBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return toast('❌ اختر مستخدم أولاً');
+  const email = document.getElementById('newEmailInput')?.value?.trim();
+  if (!email) return toast('❌ أدخل الإيميل');
+  
+  const r = await api(`/api/admin/users/${state.currentUser.id}/set-email`, 'POST', { email });
+  if (r.ok) {
+    toast(`✅ تم تعيين الإيميل: ${email}`);
+    document.getElementById('newEmailInput').value = '';
+    viewUser(state.currentUser.id);
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+  }
+});
+
+// ===== SET USER DAYS IN PLATFORM =====
+document.getElementById('setDaysBtn')?.addEventListener('click', async () => {
+  if (!state.currentUser) return toast('❌ اختر مستخدم أولاً');
+  const days = Number(document.getElementById('newDaysInput')?.value);
+  if (!days || days < 0) return toast('❌ أدخل عدد أيام صحيح');
+  
+  const r = await api(`/api/admin/users/${state.currentUser.id}/set-days`, 'POST', { days });
+  if (r.ok) {
+    toast(`✅ تم تعيين ${days} يوم للمستخدم`);
+    document.getElementById('newDaysInput').value = '';
+    viewUser(state.currentUser.id);
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+  }
+});

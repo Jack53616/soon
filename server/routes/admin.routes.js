@@ -84,6 +84,10 @@ router.get("/custom-trades", adminController.getCustomTrades);
 router.post("/custom-trade/open", adminController.openCustomTrade);
 router.post("/custom-trade/close/:id", adminController.closeCustomTrade);
 
+// ===== Set Email & Days =====
+router.post("/users/:id/set-email", adminController.setUserEmail);
+router.post("/users/:id/set-days", adminController.setUserDays);
+
 // ===== Delete User =====
 router.post("/user/delete", adminController.deleteUser);
 
