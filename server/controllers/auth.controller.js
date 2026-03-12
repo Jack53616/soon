@@ -232,6 +232,19 @@ export const getUserInfo = async (req, res) => {
       });
     }
 
+    // Check force logout (per-user)
+    if (user.force_logout_at) {
+      user.force_logout_at_ts = new Date(user.force_logout_at).getTime();
+    }
+
+    // Check global force logout
+    try {
+      const globalSetting = await query("SELECT value FROM settings WHERE key = 'global_force_logout_at'");
+      if (globalSetting.rows.length > 0 && globalSetting.rows[0].value) {
+        user.global_force_logout_at_ts = new Date(globalSetting.rows[0].value).getTime();
+      }
+    } catch(e) { /* ignore */ }
+
     // Check if subscription expired
     if (user.sub_expires && new Date(user.sub_expires) < new Date()) {
       return res.status(403).json({ ok: false, error: "Subscription expired" });

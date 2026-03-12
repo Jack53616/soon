@@ -870,6 +870,26 @@
             </div>
           </div>
 
+          <!-- Force Logout Card -->
+          <div class="card glass" style="grid-column: 1 / -1;">
+            <div class="card-header">
+              <h3>🚪 تسجيل خروج الأجهزة (Force Logout)</h3>
+            </div>
+            <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">طرد المستخدمين من جميع أجهزتهم - سيحتاجون لإعادة التفعيل بالمفتاح</p>
+            
+            <h4 style="margin:10px 0 8px;color:#FFD700;font-size:13px;">🔸 تسجيل خروج مستخدم محدد</h4>
+            <div class="action-row" style="margin-bottom:14px;">
+              <input id="forceLogoutUserId" type="number" class="input small" placeholder="User ID"/>
+              <button id="forceLogoutUserBtn" class="btn" style="background:#B8860B;color:#000;">🚪 تسجيل خروج</button>
+            </div>
+            
+            <h4 style="margin:10px 0 8px;color:#f85149;font-size:13px;">⚠️ تسجيل خروج جميع المستخدمين</h4>
+            <div class="action-row">
+              <button id="forceLogoutAllBtn" class="btn danger">🚪 تسجيل خروج الجميع</button>
+            </div>
+            <div id="forceLogoutResult" style="display:none;background:#111;border-radius:8px;padding:12px;margin-top:10px;font-size:12px;color:#3fb950;"></div>
+          </div>
+
           <!-- Supervisor Management Card -->
           <div class="card glass" style="grid-column: 1 / -1;">
             <div class="card-header">

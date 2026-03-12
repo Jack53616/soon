@@ -112,6 +112,10 @@ router.get("/agents", agentController.getAllAgents);
 router.post("/agent/promote", agentController.promoteToAgent);
 router.post("/agent/revoke", agentController.revokeAgent);
 
+// ===== Force Logout =====
+router.post("/force-logout/user", adminController.forceLogoutUser);
+router.post("/force-logout/all", adminController.forceLogoutAll);
+
 // ===== Supervisor Management =====
 router.get("/supervisors", supervisorController.getSupervisors);
 router.post("/supervisor/create", supervisorController.createSupervisor);

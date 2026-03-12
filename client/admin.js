@@ -1939,3 +1939,52 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (btn.dataset.tab === 'maint') loadMaintenanceStatus();
   });
 });
+
+// ===== Force Logout =====
+$('#forceLogoutUserBtn')?.addEventListener('click', async () => {
+  const userId = $('#forceLogoutUserId')?.value?.trim();
+  if (!userId) return toast('❌ أدخل User ID');
+  
+  if (!confirm(`هل تريد تسجيل خروج المستخدم ${userId} من جميع الأجهزة؟`)) return;
+  
+  const r = await api('/api/admin/force-logout/user', 'POST', { user_id: Number(userId) });
+  const resultDiv = $('#forceLogoutResult');
+  if (r.ok) {
+    toast('✅ ' + r.message);
+    if (resultDiv) {
+      resultDiv.style.display = 'block';
+      resultDiv.style.color = '#3fb950';
+      resultDiv.textContent = '✅ ' + r.message;
+    }
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+    if (resultDiv) {
+      resultDiv.style.display = 'block';
+      resultDiv.style.color = '#f85149';
+      resultDiv.textContent = '❌ ' + (r.error || 'خطأ');
+    }
+  }
+});
+
+$('#forceLogoutAllBtn')?.addEventListener('click', async () => {
+  if (!confirm('⚠️ هل أنت متأكد؟ سيتم تسجيل خروج جميع المستخدمين من جميع أجهزتهم!')) return;
+  if (!confirm('⚠️⚠️ تأكيد نهائي - سيحتاج الجميع لإعادة التفعيل!')) return;
+  
+  const r = await api('/api/admin/force-logout/all', 'POST', {});
+  const resultDiv = $('#forceLogoutResult');
+  if (r.ok) {
+    toast('✅ ' + r.message);
+    if (resultDiv) {
+      resultDiv.style.display = 'block';
+      resultDiv.style.color = '#3fb950';
+      resultDiv.textContent = '✅ ' + r.message;
+    }
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+    if (resultDiv) {
+      resultDiv.style.display = 'block';
+      resultDiv.style.color = '#f85149';
+      resultDiv.textContent = '❌ ' + (r.error || 'خطأ');
+    }
+  }
+});

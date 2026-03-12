@@ -1898,3 +1898,46 @@ export const getUnlinkedUsers = async (req, res) => {
     res.status(500).json({ ok: false, error: error.message });
   }
 };
+
+// Force logout a single user (kick from all devices)
+export const forceLogoutUser = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) return res.status(400).json({ ok: false, error: "user_id required" });
+
+    await query(
+      "UPDATE users SET force_logout_at = NOW() WHERE id = $1",
+      [user_id]
+    );
+
+    const user = await query("SELECT name, tg_id FROM users WHERE id = $1", [user_id]);
+    const userName = user.rows[0]?.name || "Unknown";
+
+    res.json({ ok: true, message: `تم تسجيل خروج ${userName} من جميع الأجهزة` });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Force logout ALL users (kick everyone from all devices)
+export const forceLogoutAll = async (req, res) => {
+  try {
+    const now = new Date().toISOString();
+    
+    // Update global setting
+    await query(
+      "UPDATE settings SET value = $1 WHERE key = 'global_force_logout_at'",
+      [now]
+    );
+    
+    // Also update all users individually
+    await query("UPDATE users SET force_logout_at = NOW()");
+
+    const countResult = await query("SELECT COUNT(*) as count FROM users");
+    const count = countResult.rows[0].count;
+
+    res.json({ ok: true, message: `تم تسجيل خروج جميع المستخدمين (${count}) من جميع الأجهزة` });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};

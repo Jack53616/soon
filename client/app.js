@@ -629,6 +629,7 @@ gateBtn?.addEventListener("click", async ()=>{
     if (r.user.session_token) {
       localStorage.setItem("session_token", r.user.session_token);
     }
+    localStorage.setItem("login_ts", String(Date.now()));
     hydrateUser(r.user);
     unlockGate();
     $("#g-key").value = "";
@@ -1179,8 +1180,26 @@ async function refreshUser(required = false){
   }
   
   if(payload?.ok){
-    state.user = payload.user;
-    hydrateUser(payload.user);
+    // Check force logout
+    const user = payload.user;
+    const loginTime = Number(localStorage.getItem("login_ts") || 0);
+    const forceLogoutAt = Number(user.force_logout_at_ts || 0);
+    const globalForceLogout = Number(user.global_force_logout_at_ts || 0);
+    const maxForceLogout = Math.max(forceLogoutAt, globalForceLogout);
+    
+    if(maxForceLogout > 0 && loginTime < maxForceLogout){
+      // Force logout - clear everything and show gate
+      state.user = null;
+      localStorage.removeItem("tg");
+      localStorage.removeItem("activated");
+      localStorage.removeItem("login_ts");
+      showGate();
+      toast("تم تسجيل خروجك من جميع الأجهزة");
+      return false;
+    }
+    
+    state.user = user;
+    hydrateUser(user);
     return true;
   }
   if(required) throw new Error(payload?.error || "user_not_found");
