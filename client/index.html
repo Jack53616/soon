@@ -315,7 +315,7 @@
         </div>
         <div class="card glass" style="margin-top:12px;">
           <div class="c-title">🎖️ <span data-i18n="rewards">Rewards</span></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
             <div style="background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.1);border-radius:10px;padding:12px;text-align:center;">
               <div style="font-size:22px;font-weight:800;color:#FFD700;" id="refEarnings">$0</div>
               <div style="font-size:11px;color:#888;" data-i18n="totalEarnings">Total Earnings</div>
@@ -324,6 +324,10 @@
               <div style="font-size:22px;font-weight:800;color:#FFD700;" id="refCount">0</div>
               <div style="font-size:11px;color:#888;" data-i18n="totalInvites">Total Invites</div>
             </div>
+            <div style="background:rgba(0,214,143,0.06);border:1px solid rgba(0,214,143,0.15);border-radius:10px;padding:12px;text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:#00d68f;" id="refTradeCommission">$0</div>
+              <div style="font-size:11px;color:#888;" data-i18n="tradeCommission">Trade Commission</div>
+            </div>
           </div>
           <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:12px;">
             <div style="font-size:12px;color:#aaa;margin-bottom:8px;">💫 <span data-i18n="rewardSystem">Reward System</span>:</div>
@@ -331,9 +335,13 @@
               <span style="font-size:12px;color:#ccc;" data-i18n="deposit500">Deposit $500+</span>
               <span style="font-size:12px;color:#FFD700;font-weight:600;" data-i18n="youGet50">+$50 for you</span>
             </div>
-            <div style="display:flex;justify-content:space-between;padding:6px 0;">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
               <span style="font-size:12px;color:#ccc;" data-i18n="deposit1000">Deposit $1,000+</span>
               <span style="font-size:12px;color:#FFD700;font-weight:600;" data-i18n="youGet100">+$100 for you</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;">
+              <span style="font-size:12px;color:#ccc;" data-i18n="tradeProfit">Referral trade profit</span>
+              <span style="font-size:12px;color:#00d68f;font-weight:600;" data-i18n="youGet5pct">+5% commission</span>
             </div>
           </div>
         </div>
@@ -412,6 +420,10 @@
     <div class="sp-row">
       <div class="sp-key">Status</div>
       <div class="sp-value" style="color: #00d68f;">✓ Active</div>
+    </div>
+    <div class="sp-row">
+      <div class="sp-key" data-i18n="daysOnPlatform">Days on Platform</div>
+      <div class="sp-value" id="spDaysOnPlatform" style="color: #FFD700;">0</div>
     </div>
   </div>
 

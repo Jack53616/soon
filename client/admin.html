@@ -634,6 +634,16 @@
             <p>🔸 المكافأة تُضاف تلقائياً لرصيد المُحيل</p>
           </div>
         </div>
+
+        <!-- Assign Unlinked Members -->
+        <div class="card glass" style="border: 2px solid rgba(255,215,0,0.3);">
+          <div class="card-header">
+            <h3>🔗 ربط أعضاء غير مرتبطين</h3>
+            <button id="loadUnlinkedBtn" class="btn-small" style="background:rgba(255,215,0,0.2);border:1px solid #FFD700;color:#FFD700;">🔄 تحديث</button>
+          </div>
+          <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">💡 هؤلاء الأعضاء مسجلين بدون إحالة. يمكنك ربطهم تحت أي عضو آخر.</p>
+          <div id="unlinkedUsersList" style="max-height:400px;overflow-y:auto;">جاري التحميل...</div>
+        </div>
       </section>
 
       <!-- Settings Tab -->

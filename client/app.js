@@ -228,6 +228,8 @@ const i18n = {
     rewards: "Rewards",
     totalEarnings: "Total Earnings",
     totalInvites: "Total Invites",
+    tradeCommission: "Trade Commission",
+    daysOnPlatform: "Days on Platform",
     rewardSystem: "Reward System",
     deposit500: "Deposit $500+",
     deposit1000: "Deposit $1,000+",
@@ -298,6 +300,8 @@ const i18n = {
     rewards: "المكافآت",
     totalEarnings: "إجمالي الأرباح",
     totalInvites: "عدد الدعوات",
+    tradeCommission: "عمولة الصفقات",
+    daysOnPlatform: "أيام على المنصة",
     rewardSystem: "نظام المكافآت",
     deposit500: "إيداع $500+",
     deposit1000: "إيداع $1,000+",
@@ -368,6 +372,8 @@ const i18n = {
     rewards: "Ödüller",
     totalEarnings: "Toplam Kazanç",
     totalInvites: "Toplam Davet",
+    tradeCommission: "İşlem Komisyonu",
+    daysOnPlatform: "Platformdaki Günler",
     rewardSystem: "Ödül Sistemi",
     deposit500: "$500+ Yatırım",
     deposit1000: "$1,000+ Yatırım",
@@ -438,6 +444,8 @@ const i18n = {
     rewards: "Belohnungen",
     totalEarnings: "Gesamteinnahmen",
     totalInvites: "Gesamteinladungen",
+    tradeCommission: "Handelsprovision",
+    daysOnPlatform: "Tage auf der Plattform",
     rewardSystem: "Belohnungssystem",
     deposit500: "$500+ Einzahlung",
     deposit1000: "$1.000+ Einzahlung",
@@ -974,6 +982,14 @@ function hydrateUser(user){
   const refCommEl = $("#refTradeCommission");
   if(refCommEl) refCommEl.textContent = `$${Number(user.referral_trade_commission || 0).toFixed(2)}`;
 
+  // Days on platform
+  const spDays = $("#spDaysOnPlatform");
+  if(spDays && user.created_at) {
+    const days = Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000);
+    const daysLabel = state.lang === 'ar' ? `${days} يوم` : `${days} days`;
+    spDays.textContent = daysLabel;
+  }
+
   // Update country flag
   if (window._hydrateCountryHook) window._hydrateCountryHook(user);
 }
@@ -1237,7 +1253,12 @@ async function loadStats(){
   }
 }
 
-const names = ["أحمد","محمد","خالد","سارة","رامي","نور","ليلى","وسيم","حسن","طارق"];
+const names = [
+  "أحمد","محمد","خالد","سارة","رامي","نور","ليلى","وسيم","حسن","طارق",
+  "عبدالله","فهد","سلطان","ياسر","عمر","مريم","هند","ريم","بدر","ناصر",
+  "تركي","عادل","سعود","جاسم","ماجد","لمى","دانة","فيصل","حمد","زياد",
+  "منصور","صالح","يوسف","إبراهيم","عبدالرحمن","هاني","وليد","سامي","أنس","بلال"
+];
 function startFeed(){
   if(state.feedTimer) clearInterval(state.feedTimer);
   const feed = $("#feed");

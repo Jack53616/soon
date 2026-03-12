@@ -1805,3 +1805,96 @@ export const getReferralCommissionStats = async (req, res) => {
     res.status(500).json({ ok: false, error: error.message });
   }
 };
+
+// ===== ASSIGN REFERRER (Link unlinked member to a referrer) =====
+export const assignReferrer = async (req, res) => {
+  try {
+    const { user_id, referrer_tg_id } = req.body;
+
+    if (!user_id || !referrer_tg_id) {
+      return res.status(400).json({ ok: false, error: "user_id and referrer_tg_id required" });
+    }
+
+    // Get the user to be assigned
+    const userResult = await query("SELECT * FROM users WHERE id = $1", [user_id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const user = userResult.rows[0];
+
+    // Check if user already has a referrer
+    if (user.referred_by) {
+      return res.status(400).json({ ok: false, error: "هذا العضو مرتبط بالفعل بمُحيل. استخدم 'نقل' بدلاً من 'تعيين'" });
+    }
+
+    // Verify referrer exists
+    const referrerResult = await query("SELECT * FROM users WHERE tg_id = $1", [referrer_tg_id]);
+    if (referrerResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: "Referrer not found" });
+    }
+
+    const referrer = referrerResult.rows[0];
+
+    // Can't assign to self
+    if (String(referrer_tg_id) === String(user.tg_id)) {
+      return res.status(400).json({ ok: false, error: "Cannot assign user to themselves" });
+    }
+
+    // Set referred_by
+    await query("UPDATE users SET referred_by = $1 WHERE id = $2", [referrer_tg_id, user_id]);
+
+    // Increment referrer's count
+    await query("UPDATE users SET referral_count = COALESCE(referral_count, 0) + 1 WHERE tg_id = $1", [referrer_tg_id]);
+
+    // Add to referrals table
+    try {
+      await query(
+        `INSERT INTO referrals (referrer_tg_id, referred_tg_id, referred_name, status, created_at)
+         VALUES ($1, $2, $3, 'pending', NOW())
+         ON CONFLICT DO NOTHING`,
+        [referrer_tg_id, user.tg_id, user.name]
+      );
+    } catch(e) { console.error("Referral insert:", e.message); }
+
+    // Add to agent_referrals
+    try {
+      await query(
+        `INSERT INTO agent_referrals (agent_user_id, referred_user_id, referred_at, is_active)
+         VALUES ($1, $2, NOW(), TRUE)
+         ON CONFLICT DO NOTHING`,
+        [referrer.id, user_id]
+      );
+    } catch(e) {}
+
+    // Log action
+    await query(
+      "INSERT INTO ops (user_id, type, amount, note) VALUES ($1, 'admin', 0, $2)",
+      [user_id, `Admin assigned referrer: ${referrer.name} (TG: ${referrer_tg_id})`]
+    );
+
+    res.json({
+      ok: true,
+      message: `تم ربط ${user.name} تحت إحالة ${referrer.name}`,
+      data: { user_name: user.name, referrer_name: referrer.name, referrer_tg_id }
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+// Get unlinked users (users without a referrer)
+export const getUnlinkedUsers = async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT id, name, tg_id, tg_username, balance, created_at
+      FROM users 
+      WHERE referred_by IS NULL 
+      ORDER BY created_at DESC
+    `);
+
+    res.json({ ok: true, data: result.rows });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};

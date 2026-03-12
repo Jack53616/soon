@@ -1696,3 +1696,64 @@ document.getElementById('removeAllFeeBtn')?.addEventListener('click', async () =
     toast('❌ ' + (r.error || 'خطأ'));
   }
 });
+
+
+// ========== UNLINKED USERS (Assign Referrer) ==========
+async function loadUnlinkedUsers() {
+  const r = await api('/api/admin/users/unlinked');
+  const container = document.getElementById('unlinkedUsersList');
+  if (!container) return;
+  
+  if (!r.ok || !r.data || r.data.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">✅ جميع الأعضاء مرتبطين بإحالات</div>';
+    return;
+  }
+  
+  container.innerHTML = `
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">📊 ${r.data.length} عضو غير مرتبط</div>
+    ${r.data.map(u => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;border:1px solid rgba(255,255,255,0.05);">
+        <div style="flex:1;">
+          <div style="color:#eee;font-weight:600;">${u.name || 'بدون اسم'}</div>
+          <div style="color:#666;font-size:11px;">TG: ${u.tg_id} • ID: ${u.id}${u.tg_username ? ` • @${u.tg_username}` : ''}</div>
+          <div style="color:#555;font-size:10px;">الرصيد: $${Number(u.balance || 0).toFixed(2)} • ${new Date(u.created_at).toLocaleDateString('ar')}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="number" class="input small" id="assignTo_${u.id}" placeholder="TG ID المُحيل" style="width:130px;font-size:11px;padding:4px 6px;"/>
+          <button class="btn-small" style="background:rgba(255,215,0,0.2);border:1px solid #FFD700;color:#FFD700;font-size:11px;white-space:nowrap;" onclick="assignUserReferrer(${u.id})">🔗 ربط</button>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+window.assignUserReferrer = async (userId) => {
+  const inputEl = document.getElementById(`assignTo_${userId}`);
+  const referrerTgId = inputEl?.value?.trim();
+  if (!referrerTgId) return toast('أدخل Telegram ID للمُحيل');
+  if (!confirm(`هل تريد ربط العضو (ID: ${userId}) تحت المُحيل TG: ${referrerTgId}؟`)) return;
+  
+  const r = await api('/api/admin/referral/assign', 'POST', { 
+    user_id: userId, 
+    referrer_tg_id: referrerTgId 
+  });
+  if (r.ok) {
+    toast(`✅ ${r.message}`);
+    loadUnlinkedUsers();
+    loadReferralStats();
+  } else {
+    toast('❌ ' + (r.error || 'خطأ'));
+  }
+};
+
+// Load unlinked users on tab switch and button click
+document.getElementById('loadUnlinkedBtn')?.addEventListener('click', loadUnlinkedUsers);
+
+// Auto-load when referrals tab is opened
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'referrals') {
+      loadUnlinkedUsers();
+    }
+  });
+});

@@ -91,7 +91,9 @@ router.post("/user/delete", adminController.deleteUser);
 router.post("/referral/remove", adminController.removeReferral);
 router.post("/referral/transfer", adminController.transferReferral);
 router.post("/referral/remove-single", adminController.deleteReferral);
+router.post("/referral/assign", adminController.assignReferrer);
 router.get("/user/referrals/:user_id", adminController.getUserReferralsList);
+router.get("/users/unlinked", adminController.getUnlinkedUsers);
 
 // ===== Fee Management =====
 router.get("/user/fee/:user_id", walletController.getUserFeeInfo);
