@@ -91,13 +91,46 @@ app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/supervisor", supervisorRoutes);
 app.use("/api/agent", agentRoutes);
 
+// ===== Session Management API =====
+// Check if session is still valid
+app.get("/api/session/validate", async (req, res) => {
+  try {
+    const tgId = req.query.tg_id;
+    const token = req.query.token;
+    if (!tgId) return res.json({ ok: true, valid: true }); // no tg_id = skip check
+    
+    const result = await pool.query("SELECT session_token FROM users WHERE tg_id = $1", [tgId]);
+    if (result.rows.length === 0) return res.json({ ok: true, valid: true });
+    
+    const user = result.rows[0];
+    // If user has a session_token and it doesn't match, session is invalid
+    if (user.session_token && token && user.session_token !== token) {
+      return res.json({ ok: true, valid: false, reason: 'session_expired' });
+    }
+    
+    res.json({ ok: true, valid: true });
+  } catch (error) {
+    res.json({ ok: true, valid: true }); // fail open
+  }
+});
+
 // ===== Reward System API =====
-// Check if there's an active reward for user
+// Check if there's an active reward for user (global or personal)
 app.get("/api/reward/check", async (req, res) => {
   try {
     const tgId = req.query.tg_id;
     if (!tgId) return res.json({ ok: false, error: 'Missing tg_id' });
 
+    // 1. Check personal reward first (higher priority)
+    const personalResult = await pool.query("SELECT value FROM settings WHERE key = $1", [`personal_reward_${tgId}`]);
+    if (personalResult.rows.length > 0) {
+      const pReward = JSON.parse(personalResult.rows[0].value);
+      if (pReward.active && (!pReward.claimed || !pReward.claimed.includes(String(tgId)))) {
+        return res.json({ ok: true, hasReward: true, rewardId: pReward.id, amount: pReward.perUser, isPersonal: true });
+      }
+    }
+
+    // 2. Check global reward
     const result = await pool.query("SELECT value FROM settings WHERE key = 'active_reward'");
     if (result.rows.length === 0) return res.json({ ok: true, hasReward: false });
 
@@ -109,23 +142,40 @@ app.get("/api/reward/check", async (req, res) => {
       return res.json({ ok: true, hasReward: false, alreadyClaimed: true });
     }
 
-    res.json({ ok: true, hasReward: true, rewardId: reward.id, amount: reward.perUser });
+    res.json({ ok: true, hasReward: true, rewardId: reward.id, amount: reward.perUser, isPersonal: false });
   } catch (error) {
     res.json({ ok: false, error: error.message });
   }
 });
 
-// Claim reward
+// Claim reward (supports both global and personal rewards)
 app.post("/api/reward/claim", async (req, res) => {
   try {
-    const { tg_id } = req.body;
+    const { tg_id, isPersonal } = req.body;
     if (!tg_id) return res.json({ ok: false, error: 'Missing tg_id' });
 
-    const result = await pool.query("SELECT value FROM settings WHERE key = 'active_reward'");
-    if (result.rows.length === 0) return res.json({ ok: false, error: 'No active reward' });
+    let reward = null;
+    let settingsKey = 'active_reward';
 
-    const reward = JSON.parse(result.rows[0].value);
-    if (!reward.active) return res.json({ ok: false, error: 'Reward expired' });
+    // Check personal reward first
+    const personalResult = await pool.query("SELECT value FROM settings WHERE key = $1", [`personal_reward_${tg_id}`]);
+    if (personalResult.rows.length > 0) {
+      const pReward = JSON.parse(personalResult.rows[0].value);
+      if (pReward.active && (!pReward.claimed || !pReward.claimed.includes(String(tg_id)))) {
+        reward = pReward;
+        settingsKey = `personal_reward_${tg_id}`;
+      }
+    }
+
+    // If no personal reward, check global
+    if (!reward) {
+      const result = await pool.query("SELECT value FROM settings WHERE key = 'active_reward'");
+      if (result.rows.length === 0) return res.json({ ok: false, error: 'No active reward' });
+      reward = JSON.parse(result.rows[0].value);
+      settingsKey = 'active_reward';
+    }
+
+    if (!reward || !reward.active) return res.json({ ok: false, error: 'Reward expired' });
 
     // Check if already claimed
     if (reward.claimed && reward.claimed.includes(String(tg_id))) {
@@ -142,7 +192,7 @@ app.post("/api/reward/claim", async (req, res) => {
     // Mark as claimed
     if (!reward.claimed) reward.claimed = [];
     reward.claimed.push(String(tg_id));
-    await pool.query("UPDATE settings SET value = $1, updated_at = NOW() WHERE key = 'active_reward'", [JSON.stringify(reward)]);
+    await pool.query("UPDATE settings SET value = $1, updated_at = NOW() WHERE key = $2", [JSON.stringify(reward), settingsKey]);
 
     res.json({ ok: true, amount: reward.perUser, newBalance });
   } catch (error) {

@@ -625,6 +625,10 @@ gateBtn?.addEventListener("click", async ()=>{
     }
     state.user = r.user;
     localStorage.setItem("tg", r.user.tg_id);
+    // Save session token for device management
+    if (r.user.session_token) {
+      localStorage.setItem("session_token", r.user.session_token);
+    }
     hydrateUser(r.user);
     unlockGate();
     $("#g-key").value = "";
@@ -678,6 +682,26 @@ async function openApp(user = null, { auto = false } = {}){
     showGate();
     return false;
   }
+  
+  // Validate session token (device management)
+  try {
+    const savedToken = localStorage.getItem('session_token');
+    const tgId = state.user?.tg_id || localStorage.getItem('tg');
+    if (tgId && savedToken) {
+      const sessCheck = await fetch(`/api/session/validate?tg_id=${tgId}&token=${savedToken}`).then(r => r.json());
+      if (sessCheck.ok && !sessCheck.valid) {
+        // Session invalidated by admin (logout)
+        state.user = null;
+        localStorage.removeItem('tg');
+        localStorage.removeItem('session_token');
+        localStorage.removeItem('activated');
+        showGate();
+        toast(state.lang === 'ar' ? 'تم تسجيل خروجك من قبل الإدارة' : 'Session expired. Please sign in again.');
+        return false;
+      }
+    }
+  } catch(e) { /* fail open */ }
+  
   if(!user){
     try{
       await refreshUser(true);
@@ -864,6 +888,8 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
   const feeRate = feeData ? feeData.feeRate : 0;
   const extraFee = feeData ? feeData.extraFee : 0;
   const baseFee = feeData ? feeData.baseFee : 0;
+  const turkeyTax = feeData ? (feeData.turkeyTax || 0) : 0;
+  const turkeyTaxRate = feeData ? (feeData.turkeyTaxRate || 0) : 0;
 
   const labels = {
     title: isAr ? 'تأكيد طلب السحب' : isTr ? 'Çekim Onayı' : isDe ? 'Auszahlung bestätigen' : 'Confirm Withdrawal',
@@ -873,6 +899,7 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
     addressLabel: isAr ? 'العنوان' : isTr ? 'Adres' : isDe ? 'Adresse' : 'Address',
     feeLabel: isAr ? 'رسوم السحب' : isTr ? 'Çekim Ücreti' : isDe ? 'Gebühr' : 'Withdrawal Fee',
     extraFeeLabel: isAr ? 'رسوم إضافية (3% لكل $100)' : isTr ? 'Ek ücret (her $100 için %3)' : isDe ? 'Zusatzgebühr (3% pro $100)' : 'Extra fee (3% per $100)',
+    turkeyTaxLabel: isAr ? 'خصم من دولة تركيا (4%)' : isTr ? 'Türkiye vergi kesintisi (%4)' : isDe ? 'Türkei-Steuerabzug (4%)' : 'Turkey tax deduction (4%)',
     youReceive: isAr ? 'المبلغ المستلم' : isTr ? 'Alacağınız tutar' : isDe ? 'Sie erhalten' : 'You Receive',
     status: isAr ? 'الحالة' : isTr ? 'Durum' : isDe ? 'Status' : 'Status',
     underReview: isAr ? 'قيد المراجعة' : isTr ? 'İnceleniyor' : isDe ? 'In Prüfung' : 'Under Review',
@@ -911,6 +938,10 @@ function showWithdrawConfirm(tg, amount, method, address, feeData) {
           ${extraFee > 0 ? `<div style="display:flex;justify-content:space-between;padding:6px 0;">
             <span style="color:#ff8899;font-size:12px;">${labels.extraFeeLabel}</span>
             <span style="color:#ff8899;font-size:12px;font-weight:600;">-$${extraFee.toFixed(2)}</span>
+          </div>` : ''}
+          ${turkeyTax > 0 ? `<div style="display:flex;justify-content:space-between;padding:6px 0;">
+            <span style="color:#ff6b6b;font-size:12px;">🇹🇷 ${labels.turkeyTaxLabel}</span>
+            <span style="color:#ff6b6b;font-size:12px;font-weight:600;">-$${turkeyTax.toFixed(2)}</span>
           </div>` : ''}
           <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid rgba(0,214,143,0.15);margin-top:6px;">
             <span style="color:#00d68f;font-size:13px;font-weight:700;">${labels.youReceive}</span>

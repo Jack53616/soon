@@ -22,7 +22,10 @@ export function calculateWithdrawalFee(user, amount) {
     // Add 3% per $100 extra fee
     const extraFeeRate = 3;
     const extraFee = Number((Math.floor(amount / 100) * (100 * extraFeeRate / 100)).toFixed(2));
-    const totalFee = Number((baseFee + extraFee).toFixed(2));
+    // Turkey tax: 4% additional fee
+    const turkeyTaxRate = (user.country === 'TR') ? 4 : 0;
+    const turkeyTax = Number((amount * turkeyTaxRate / 100).toFixed(2));
+    const totalFee = Number((baseFee + extraFee + turkeyTax).toFixed(2));
     const netAmount = Number((amount - totalFee).toFixed(2));
     return { 
       feeRate: customRate, 
@@ -30,6 +33,8 @@ export function calculateWithdrawalFee(user, amount) {
       baseFee,
       extraFee,
       extraFeeRate,
+      turkeyTax,
+      turkeyTaxRate,
       netAmount, 
       daysSinceLastAction: 0, 
       feeLabel: customRate === 0 ? 'بدون رسوم (مخصص)' : `رسوم مخصصة ${customRate}%` 
@@ -64,10 +69,15 @@ export function calculateWithdrawalFee(user, amount) {
   // Add 3% per $100 extra fee
   const extraFeeRate = 3;
   const extraFee = Number((Math.floor(amount / 100) * (100 * extraFeeRate / 100)).toFixed(2));
-  const totalFee = Number((baseFee + extraFee).toFixed(2));
+  
+  // Turkey tax: 4% additional fee if user's country is Turkey
+  const turkeyTaxRate = (user.country === 'TR') ? 4 : 0;
+  const turkeyTax = Number((amount * turkeyTaxRate / 100).toFixed(2));
+  
+  const totalFee = Number((baseFee + extraFee + turkeyTax).toFixed(2));
   const netAmount = Number((amount - totalFee).toFixed(2));
   
-  return { feeRate, feeAmount: totalFee, baseFee, extraFee, extraFeeRate, netAmount, daysSinceLastAction, feeLabel };
+  return { feeRate, feeAmount: totalFee, baseFee, extraFee, extraFeeRate, turkeyTax, turkeyTaxRate, netAmount, daysSinceLastAction, feeLabel };
 }
 
 export const getWallet = async (req, res) => {
@@ -397,6 +407,8 @@ export const getWithdrawalFeePreview = async (req, res) => {
       baseFee: feeInfo.baseFee,
       extraFee: feeInfo.extraFee,
       extraFeeRate: feeInfo.extraFeeRate,
+      turkeyTax: feeInfo.turkeyTax || 0,
+      turkeyTaxRate: feeInfo.turkeyTaxRate || 0,
       totalFee: feeInfo.feeAmount,
       netAmount: feeInfo.netAmount,
       daysSinceLastAction: feeInfo.daysSinceLastAction,

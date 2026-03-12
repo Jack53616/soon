@@ -416,8 +416,13 @@ bot.onText(/^\/help$/, (msg) => {
 
 🎁 *Rewards System*
 \`/reward <amount>\` - Distribute reward to all users
+\`/reward_send <tg_id> <amount>\` - Send reward to specific user
 \`/reward_status\` - View active reward status
 \`/reward_cancel\` - Cancel active reward
+
+🔐 *Session Management*
+\`/logout <tg_id>\` - Logout user from all devices
+\`/logout_all\` - Logout ALL users from all devices
 
 🔧 *Maintenance*
 \`/maintenance\` - Enable maintenance mode
@@ -1035,6 +1040,50 @@ bot.onText(/^\/reward\s+([\d.]+)$/, async (msg, m) => {
   }
 });
 
+// /reward_send <tg_id> <amount> - إرسال مكافأة لشخص معين (يظهر له صندوق الهدية)
+bot.onText(/^\/reward_send\s+(\d+)\s+([\d.]+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tgId = m[1];
+  const amount = parseFloat(m[2]);
+  if (isNaN(amount) || amount <= 0) {
+    return bot.sendMessage(msg.chat.id, '❌ المبلغ غير صحيح.');
+  }
+
+  try {
+    // Check if user exists
+    const userResult = await q(`SELECT id, tg_id, name, first_name FROM users WHERE tg_id = $1`, [tgId]);
+    if (userResult.rows.length === 0) {
+      return bot.sendMessage(msg.chat.id, `❌ المستخدم ${tgId} غير موجود.`);
+    }
+
+    const user = userResult.rows[0];
+    const rewardId = 'p_' + Date.now().toString(36);
+
+    // Create a personal reward for this specific user
+    const rewardData = JSON.stringify({
+      id: rewardId,
+      totalAmount: amount,
+      perUser: amount,
+      totalUsers: 1,
+      targetUser: String(tgId),
+      claimed: [],
+      createdAt: new Date().toISOString(),
+      active: true,
+      isPersonal: true
+    });
+
+    // Store as personal reward (separate key per user)
+    await q(`INSERT INTO settings (key, value) VALUES ($1, $2)
+             ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`, 
+             [`personal_reward_${tgId}`, rewardData]);
+
+    const userName = user.name || user.first_name || tgId;
+    bot.sendMessage(msg.chat.id, `🎁 *تم إرسال المكافأة!*\n\n👤 المستخدم: ${userName} (${tgId})\n💰 المبلغ: $${amount}\n🆔 الرقم: ${rewardId}\n\n✨ سيظهر له صندوق "افتح واربح" عند فتح البوت.`, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
+  }
+});
+
 // /reward_status - عرض حالة المكافأة
 bot.onText(/^\/reward_status$/, async (msg) => {
   if (!isAdmin(msg)) return;
@@ -1066,6 +1115,48 @@ bot.onText(/^\/reward_cancel$/, async (msg) => {
     reward.active = false;
     await q(`UPDATE settings SET value = $1, updated_at = NOW() WHERE key = 'active_reward'`, [JSON.stringify(reward)]);
     bot.sendMessage(msg.chat.id, `✅ *تم إلغاء المكافأة*\n\n🆔 ${reward.id}\n✅ فتحوا: ${reward.claimed?.length || 0}/${reward.totalUsers}`, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
+  }
+});
+
+// ===== Session Management: Logout =====
+// /logout <tg_id> - Logout specific user from all devices
+bot.onText(/^\/logout\s+(\d+)$/, async (msg, m) => {
+  if (!isAdmin(msg)) return;
+  const tgId = m[1];
+
+  try {
+    // Check user exists
+    const userResult = await q(`SELECT id, name, first_name, tg_id FROM users WHERE tg_id = $1`, [tgId]);
+    if (userResult.rows.length === 0) {
+      return bot.sendMessage(msg.chat.id, `❌ المستخدم ${tgId} غير موجود.`);
+    }
+
+    const user = userResult.rows[0];
+    // Generate a new session token to invalidate all old sessions
+    const newToken = Date.now().toString(36) + Math.random().toString(36).slice(2);
+    await q(`UPDATE users SET session_token = $1, updated_at = NOW() WHERE tg_id = $2`, [newToken, tgId]);
+
+    const userName = user.name || user.first_name || tgId;
+    bot.sendMessage(msg.chat.id, `🔐 *تم تسجيل الخروج*\n\n👤 المستخدم: ${userName}\n🆔 ID: ${tgId}\n\n✅ تم تسجيل خروجه من جميع الأجهزة.\nسيحتاج إعادة تسجيل الدخول بالمفتاح.`, { parse_mode: 'Markdown' });
+  } catch (e) {
+    bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
+  }
+});
+
+// /logout_all - Logout ALL users from all devices
+bot.onText(/^\/logout_all$/, async (msg) => {
+  if (!isAdmin(msg)) return;
+
+  try {
+    // Generate new session tokens for all users
+    const result = await q(`SELECT COUNT(*) as cnt FROM users WHERE is_active = true`);
+    const count = result.rows[0].cnt;
+
+    await q(`UPDATE users SET session_token = CONCAT(EXTRACT(EPOCH FROM NOW())::text, '_', MD5(RANDOM()::text)), updated_at = NOW() WHERE is_active = true`);
+
+    bot.sendMessage(msg.chat.id, `🔐 *تم تسجيل خروج الجميع!*\n\n👥 عدد المستخدمين: ${count}\n\n✅ تم تسجيل خروج جميع المستخدمين من جميع الأجهزة.\nسيحتاجون إعادة تسجيل الدخول بالمفتاح.`, { parse_mode: 'Markdown' });
   } catch (e) {
     bot.sendMessage(msg.chat.id, '❌ Error: ' + e.message);
   }

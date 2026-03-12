@@ -176,6 +176,11 @@ export const activate = async (req, res) => {
       [tg_id, keyData.id]
     );
 
+    // Generate session token for device management
+    const sessionToken = Date.now().toString(36) + Math.random().toString(36).slice(2);
+    await query("UPDATE users SET session_token = $1 WHERE tg_id = $2", [sessionToken, tg_id]);
+    user.session_token = sessionToken;
+
     res.json({ ok: true, user, reused });
   } catch (error) {
     console.error("Activation error:", error);
